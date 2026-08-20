@@ -33,6 +33,7 @@
     <p>James Kajiya sformalizował w 1986 roku jedno równanie, które opisuje absolutnie każdy efekt świetlny z tej książki:</p>
 
     <div class="formula">L_o(p,ω_o) = L_e(p,ω_o) + ∫_Ω f(p,ω_i,ω_o) · L_i(p,ω_i) · (N·ω_i) dω_i<span class="sub">L_o — światło wychodzące; L_e — światło emitowane (źródła); f — BRDF z Rozdziałów 10–11; L_i — światło przychodzące z kierunku ω_i; Ω — cała hemisfera nad punktem</span></div>
+    <a class="inline-deeper" href="../dodatki/dodatek-u-kat-brylowy.html">↓ Dodatek U — czym dokładnie jest dω_i i Ω</a>
 
     <p>To równanie jest rekurencyjne: L_i w punkcie p, z kierunku ω_i, to po prostu L_o jakiejś <em>innej</em> powierzchni — tej, w którą trafia promień wysłany z p w kierunku ω_i. Diffuse i shadow rays z Rozdziału 6 to ta całka policzona tylko dla świateł punktowych (delta, bez integracji). Odbicia i załamania z Rozdziału 7 to ta całka policzona tylko wzdłuż jednego, idealnie zwierciadlanego kierunku. Czego wciąż brakuje: światła odbitego od <em>innych rozproszonych powierzchni</em> — czerwona ściana barwiąca sufit różowym blaskiem, klasyczne bounce light, które każdy widział na żywym renderze.</p>
 
@@ -72,6 +73,7 @@
     <p>Całka po hemisferze nie ma zamkniętej formy dla realnej scenie. Metoda Monte Carlo szacuje każdą całkę, losowo próbkując punkty i uśredniając wynik. Zastosowana do jednego kierunku ω_i naraz:</p>
 
     <div class="formula">L_o ≈ f(p,ω_i,ω_o) · L_i(p,ω_i) · (N·ω_i) / pdf(ω_i)<span class="sub">jedna losowa próbka kierunku, odpowiednio zważona przez gęstość prawdopodobieństwa (pdf), z której ją wylosowano — importance sampling: próbkuj częściej kierunki, które i tak wnoszą więcej (np. proporcjonalnie do BRDF)</span></div>
+    <a class="inline-deeper" href="../dodatki/dodatek-b-importance-sampling.html">↓ Dodatek B — importance sampling i MIS, z dowodem</a>
 
     <p>Uśrednienie wielu takich pojedynczych „ścieżek” na piksel zbiega do prawidłowej odpowiedzi — to dosłownie ten sam supersampling z Rozdziału 8, tylko teraz próbkujemy nie pozycję w pikselu, a całą ścieżkę światła przez scenę.</p>
 

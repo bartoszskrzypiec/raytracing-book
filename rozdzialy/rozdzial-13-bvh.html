@@ -168,6 +168,7 @@
   <div class="panel practice">
     <div class="panel-label">Z praktyki</div>
     <p>Budowa dobrego BVH — gdzie dzielić każdy węzeł — to osobne zagadnienie. Produkcyjne renderery używają SAH (Surface Area Heuristic): szacują koszt trawersowania dla różnych podziałów i wybierają ten, który minimalizuje oczekiwaną liczbę testów, zamiast dzielić po prostu na pół.</p>
+    <a class="inline-deeper" href="../dodatki/dodatek-c-bvh-sah.html">↓ Dodatek C — jak dokładnie działa SAH</a>
     <p>To dlatego animowana, deformująca się geometria (postacie ze szkieletem, symulacje tkaniny) jest droższa w ray tracingu niż statyczna: BVH trzeba przebudować albo dopasować (refit) co klatkę. Sprzętowy ray tracing (RTX, wspomniany w Rozdziale 1) to w dużej mierze dedykowany układ do właśnie tego trawersowania.</p>
   </div>
 

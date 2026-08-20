@@ -129,6 +129,7 @@
     <div class="formula">checker(u,v) = (⌊u·N⌋ + ⌊v·N⌋) mod 2<span class="sub">N — liczba pól szachownicy na jednostkę UV; wynik 0 albo 1 wybiera jeden z dwóch kolorów</span></div>
 
     <p>Bardziej organiczne wzory — marmur, drewno, obłoki — buduje się z <strong>szumu Perlina</strong>: gładkiej, pseudolosowej funkcji, która wygląda naturalnie i nie ma szwów. To dosłownie budulec każdego node’a „Noise” w grafie materiału.</p>
+    <a class="inline-deeper" href="../dodatki/dodatek-p-perlin-czesc1-idea.html">↓ Dodatek P — idea gradientowa</a>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Procedural.compare</span><span>formula vs noise</span></div>
@@ -162,7 +163,9 @@
   <div class="panel practice">
     <div class="panel-label">Z praktyki</div>
     <p>Base Color, Roughness, Normal, Metallic — każdy slot mapy w grafie materiału robi dokładnie ten sam odczyt UV z tego rozdziału, tylko wynik trafia do innego parametru równania z Rozdziału 5, nie tylko do kd.</p>
+    <a class="inline-deeper" href="../dodatki/dodatek-j-shading-network-obciazenie.html">↓ Dodatek J — ile kosztuje policzenie tej sieci</a>
     <p>Mipmapping — z góry wyliczone, mniejsze wersje tekstury — istnieje z tego samego powodu co antyaliasing z Rozdziału 8: gdy tekstura jest widziana z daleka albo pod kątem, jeden teksel odpowiada za wiele pikseli ekranu, i bez mipmap dostajesz migoczący moiré na przeskalowanej teksturze, nie tylko na geometrii.</p>
+    <a class="inline-deeper" href="../dodatki/dodatek-g-mipmapping.html">↓ Dodatek G — Mipmapping</a>
   </div>
 
   <div class="panel glossary">

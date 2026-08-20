@@ -36,6 +36,7 @@
     <p>Koło samochodu nie ma sensownej „pozycji w świecie” zapisanej na trwałe — ma pozycję <em>względem</em> nadwozia, a nadwozie ma pozycję względem świata. Gdy samochód rusza, każde koło porusza się automatycznie, bo dziedziczy transformację rodzica. To jest dosłownie ten sam mechanizm co parent/child w outlinerze Mayi albo Blendera.</p>
 
     <div class="formula">M_world = M_parent · M_local<span class="sub">macierze transformacji składają się przez mnożenie, od korzenia drzewa aż do konkretnego obiektu</span></div>
+    <a class="inline-deeper" href="../dodatki/dodatek-f-macierze.html">↓ Dodatek F — co dokładnie jest w środku macierzy M</a>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Scene.graph</span><span>parent → child</span></div>
@@ -66,6 +67,7 @@
     <div class="section-eyebrow">Pass: Instancing</div>
     <h2>Jedna siatka, tysiące kopii</h2>
     <p>Las z dziesięciu tysięcy drzew nie potrzebuje dziesięciu tysięcy kopii geometrii i BVH w pamięci. Instancing przechowuje jedną „master” siatkę z jednym BVH, a każde wystąpienie w scenie to tylko odniesienie do niej plus własna macierz transformacji (pozycja, rotacja, skala).</p>
+    <a class="inline-deeper" href="../dodatki/dodatek-i-geometria-obciazenie.html">↓ Dodatek I — dwa różne budżety kosztu geometrii</a>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Instancing</span><span>1 mesh, N transforms</span></div>

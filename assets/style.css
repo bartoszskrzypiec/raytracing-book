@@ -117,6 +117,8 @@ h1{font-family:var(--display);font-weight:600;font-size:clamp(30px,5vw,50px);lin
 .deeper a{display:block;color:var(--text);text-decoration:none;font-size:14.5px;margin-bottom:8px;border-bottom:1px dotted var(--border);padding-bottom:8px;}
 .deeper a:last-child{margin-bottom:0;border-bottom:none;padding-bottom:0;}
 .deeper a:hover{color:var(--amber);}
+.inline-deeper{display:inline-block;margin:8px 0 4px;padding:5px 14px;border:1px solid var(--border);border-radius:14px;font-family:var(--mono);font-size:12px;color:var(--violet);text-decoration:none;transition:border-color .15s,color .15s;}
+.inline-deeper:hover{border-color:var(--amber);color:var(--amber);}
 
 /* POMOCNIK OBLICZENIOWY */
 .toc{background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;padding:20px 28px;margin:36px 0;}

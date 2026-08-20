@@ -39,6 +39,7 @@
       <li><span class="term-cyan">right</span> — kierunek „w prawo” względem kamery.</li>
       <li><span class="term-violet">up</span> — kierunek „w górę” względem kamery.</li>
     </ul>
+    <a class="inline-deeper" href="../dodatki/dodatek-f-macierze.html">↓ Dodatek F — macierze i współrzędne jednorodne</a>
     <p>Skąd wziąć right i up, mając tylko forward i globalny „up świata” (najczęściej (0, 1, 0))? Tu wchodzi nowa operacja: <strong>iloczyn wektorowy (cross product)</strong>. W przeciwieństwie do iloczynu skalarnego z Rozdziału 2, który zwracał liczbę, A × B zwraca <em>wektor</em> — prostopadły jednocześnie do A i do B, zgodnie z regułą prawej ręki.</p>
 
     <div class="formula">right = normalize(forward × up_world)<br>up = right × forward<span class="sub">cross product: wektor prostopadły do obu wejściowych; drugie użycie gwarantuje, że up jest już idealnie prostopadły do forward</span></div>
