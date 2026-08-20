@@ -179,6 +179,7 @@
     <div class="panel-label">Z praktyki</div>
     <p>Wagi barycentryczne, które właśnie policzyłeś do testu przecięcia, to dokładnie ten sam mechanizm, który interpoluje UV, normalne i vertex color w każdym shaderze rasteryzującym trójkąt — GPU robi to sprzętowo przy każdym trójkącie. Ray tracer musi policzyć to samo ręcznie, dla każdego punktu trafienia.</p>
     <p>Znak iloczynu skalarnego N·D mówi, z której strony trójkąta nadchodzi promień — ujemny oznacza trafienie w przednią (front-facing) stronę. Odrzucanie trafień w tylną stronę (backface culling) przyspiesza render i jest źródłem znanego artefaktu: „dziury” w jednostronnych powierzchniach, jak liście czy plane’y UI, widziane z drugiej strony.</p>
+    <p>Dlaczego w ogóle trójkąt, a nie na przykład quad, na którym zwykle modelujesz w Blenderze czy Mayi? Trzy punkty zawsze leżą na jednej płaszczyźnie — trójkąt z definicji jest płaski i wypukły. Cztery punkty takiej gwarancji nie mają: poruszony niezależnie jeden wierzchołek quada robi z niego powierzchnię niepłaską (non-planar quad), a wtedy pytanie „którą przekątną go przeciąć” ma dwie różne odpowiedzi, dające dwa różne kształty. Dlatego każdy silnik renderujący — Arnold, Cycles, V-Ray, sprzętowy ray tracing w Unrealu — triangularyzuje geometrię, zanim promień w ogóle ją zobaczy; nawet powierzchnie podziałowe kończą jako mikropoligony albo trójkąty w momencie testu przecięcia. Modelujesz w quadach dla wygody edycji — renderer i tak zawsze widzi wyłącznie trójkąty.</p>
   </div>
 
   <div class="panel glossary">
@@ -190,6 +191,7 @@
       <dt>Algorytm Möllera–Trumbore</dt><dd>Standardowy, jednoetapowy test przecięcia promień–trójkąt.</dd>
       <dt>Backface culling</dt><dd>Odrzucanie trafień w tylną stronę trójkąta na podstawie znaku N·D.</dd>
       <dt>Interpolacja atrybutów</dt><dd>Liczenie UV/normalnej/koloru w punkcie trafienia z wag barycentrycznych wierzchołków.</dd>
+      <dt>Triangularyzacja</dt><dd>Zamiana quadów/n-gonów na trójkąty — wykonywana zawsze przed testem przecięcia z promieniem, niezależnie od tego, w czym modelowałeś.</dd>
     </dl>
   </div>
 
