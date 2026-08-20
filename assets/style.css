@@ -102,12 +102,21 @@ h1{font-family:var(--display);font-weight:600;font-size:clamp(30px,5vw,50px);lin
 .part-label{font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--cyan);text-transform:uppercase;margin-bottom:18px;padding-bottom:10px;border-bottom:1px solid var(--border);}
 .part-label.violet{color:var(--violet);}
 .part-label.amber{color:var(--amber);}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;}
-a.card{display:block;background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:14px 16px;text-decoration:none;color:var(--text);transition:border-color .15s,transform .15s;}
-a.card:hover{border-color:var(--amber);transform:translateY(-1px);}
-.card .num{font-family:var(--mono);font-size:10.5px;color:var(--text-dim);letter-spacing:.05em;text-transform:uppercase;display:block;margin-bottom:4px;}
-.card .title{font-size:14.5px;font-weight:500;}
+.index-list{display:flex;flex-direction:column;}
+.index-row{display:block;padding:14px 4px;text-decoration:none;color:var(--text);border-bottom:1px solid var(--border);transition:padding-left .15s,border-color .15s;}
+.index-list .index-row:first-child{border-top:1px solid var(--border);}
+.index-row:hover{padding-left:10px;border-color:var(--amber);}
+.index-num{font-family:var(--mono);font-size:10.5px;color:var(--text-dim);letter-spacing:.05em;text-transform:uppercase;display:block;margin-bottom:4px;}
+.index-title{font-size:15.5px;font-weight:500;display:block;}
+.index-hook{font-size:13.5px;color:var(--text-dim);display:block;margin-top:4px;max-width:640px;}
 .footer-note{margin-top:70px;padding-top:28px;border-top:1px solid var(--border);font-size:13.5px;color:var(--text-dim);}
+
+/* IDŹ GŁĘBIEJ (rozdziały/dodatki → dodatki którę je rozwijają) */
+.deeper{border-top:1px solid var(--border);margin-top:56px;padding-top:24px;}
+.deeper-label{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--violet);text-transform:uppercase;margin-bottom:12px;}
+.deeper a{display:block;color:var(--text);text-decoration:none;font-size:14.5px;margin-bottom:8px;border-bottom:1px dotted var(--border);padding-bottom:8px;}
+.deeper a:last-child{margin-bottom:0;border-bottom:none;padding-bottom:0;}
+.deeper a:hover{color:var(--amber);}
 
 /* POMOCNIK OBLICZENIOWY */
 .toc{background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;padding:20px 28px;margin:36px 0;}

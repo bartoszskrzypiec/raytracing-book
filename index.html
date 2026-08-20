@@ -17,108 +17,110 @@ h1{line-height:1.1;}
 
   <div class="eyebrow">Ray Tracing / Spis treści</div>
   <h1>Ray Tracing dla Artystów Technicznych</h1>
-  <p class="subtitle">22 rozdziały główne, dodatki A–Z rozwijające wybrane tematy w głąb, i osobny pomocnik obliczeniowy z zadaniami do samodzielnego liczenia.</p>
+  <p class="subtitle">Ta książka nie uczy pisać renderera od zera — zakłada, że i tak używasz Blendera, Arnolda, Unreala czy podobnego silnika. Uczy rozumieć, co dzieje się pod maską, kiedy przesuwasz slider „Roughness”, włączasz denoiser, albo zastanawiasz się, czemu scena zbiega się wolno. 22 rozdziały główne prowadzą liniowo od pojedynczego promienia przez piksel aż po atmosferę całej planety — każdy kolejny jawnie buduje na poprzednim, więc da się je czytać po kolei od początku do końca. Dodatki A–Z schodzą głębiej tam, gdzie rozdział główny musiał zatrzymać się na wzorze i przykładzie koncepcyjnym — z pełnym wyprowadzeniem i policzonym numerycznie przykładem; przy każdym rozdziale, który ma takie rozwinięcie, znajdziesz link „Idź głębiej”. To nie jest treść zamknięta: rozdziały i dodatki bywają rozwijane i przepisywane, kiedy okazują się zbyt płytkie.</p>
 
   <div class="part">
     <div class="part-label">Część I–II · Podstawy i shading (R.1–7)</div>
-    <div class="grid">
-      <a class="card" href="rozdzialy/rozdzial-01-wprowadzenie-do-renderowania.html"><span class="num">Rozdział 1</span><span class="title">Wprowadzenie do renderowania</span></a>
-      <a class="card" href="rozdzialy/rozdzial-02-wektory-i-przeciecia.html"><span class="num">Rozdział 2</span><span class="title">Wektory i przecięcia</span></a>
-      <a class="card" href="rozdzialy/rozdzial-03-model-kamery.html"><span class="num">Rozdział 3</span><span class="title">Model kamery</span></a>
-      <a class="card" href="rozdzialy/rozdzial-04-plaszczyzny-i-trojkaty.html"><span class="num">Rozdział 4</span><span class="title">Płaszczyzny i trójkąty</span></a>
-      <a class="card" href="rozdzialy/rozdzial-05-oswietlenie.html"><span class="num">Rozdział 5</span><span class="title">Oświetlenie: Lambert, Blinn-Phong</span></a>
-      <a class="card" href="rozdzialy/rozdzial-06-cienie.html"><span class="num">Rozdział 6</span><span class="title">Cienie</span></a>
-      <a class="card" href="rozdzialy/rozdzial-07-odbicia-i-zalamania.html"><span class="num">Rozdział 7</span><span class="title">Odbicia i załamania</span></a>
+    <div class="index-list">
+      <a class="index-row" href="rozdzialy/rozdzial-01-wprowadzenie-do-renderowania.html"><span class="index-num">Rozdział 1</span><span class="index-title">Wprowadzenie do renderowania</span><span class="index-hook">Co dzieje się w silniku renderującym, gdy przełączasz viewport z podglądu na finalny render — i czym różni się to od rasteryzacji.</span></a>
+      <a class="index-row" href="rozdzialy/rozdzial-02-wektory-i-przeciecia.html"><span class="index-num">Rozdział 2</span><span class="index-title">Wektory i przecięcia</span><span class="index-hook">Promień jako wzór matematyczny i pierwszy test przecięcia — ze sferą, najprostszym kształtem, jaki zaprogramujesz.</span></a>
+      <a class="index-row" href="rozdzialy/rozdzial-03-model-kamery.html"><span class="index-num">Rozdział 3</span><span class="index-title">Model kamery</span><span class="index-hook">Skąd bierze się kierunek promienia D — pozycja kamery, pole widzenia i piksel zamienione w wektor.</span></a>
+      <a class="index-row" href="rozdzialy/rozdzial-04-plaszczyzny-i-trojkaty.html"><span class="index-num">Rozdział 4</span><span class="index-title">Płaszczyzny i trójkąty</span><span class="index-hook">Prawie nic w produkcyjnej scenie nie jest sferą — przecięcia z płaszczyzną i trójkątem, czyli każdą siatką z Blendera czy Mayi.</span></a>
+      <a class="index-row" href="rozdzialy/rozdzial-05-oswietlenie.html"><span class="index-num">Rozdział 5</span><span class="index-title">Oświetlenie: Lambert, Blinn-Phong</span><span class="index-hook">Punkt trafienia i normalna zamienione w kolor na ekranie — pierwsze wzory, które decydują, jak wygląda materiał.</span></a>
+      <a class="index-row" href="rozdzialy/rozdzial-06-cienie.html"><span class="index-num">Rozdział 6</span><span class="index-title">Cienie</span><span class="index-hook">Wzór z Rozdziału 5 zakłada, że światło zawsze dociera do punktu trafienia. Ten rozdział to sprawdza — i naprawia najsłynniejszego buga w historii ray tracingu.</span></a>
+      <a class="index-row" href="rozdzialy/rozdzial-07-odbicia-i-zalamania.html"><span class="index-num">Rozdział 7</span><span class="index-title">Odbicia i załamania</span><span class="index-hook">Rekurencyjne odbicia i załamania — dokładnie to, co w 1980 roku opisał Turner Whitted.</span></a>
     </div>
   </div>
 
   <div class="part">
     <div class="part-label">Część III · Realizm i jakość obrazu (R.8–12)</div>
-    <div class="grid">
-      <a class="card" href="rozdzialy/rozdzial-08-antyaliasing.html"><span class="num">Rozdział 8</span><span class="title">Antyaliasing i próbkowanie</span></a>
-      <a class="card" href="rozdzialy/rozdzial-09-tekstury-i-uv.html"><span class="num">Rozdział 9</span><span class="title">Tekstury i UV</span></a>
-      <a class="card" href="rozdzialy/rozdzial-10-materialy.html"><span class="num">Rozdział 10</span><span class="title">Materiały: dielektryki, metale, BRDF</span></a>
-      <a class="card" href="rozdzialy/rozdzial-11-pbr-ggx.html"><span class="num">Rozdział 11</span><span class="title">PBR: rozkład GGX</span></a>
-      <a class="card" href="rozdzialy/rozdzial-12-efekty-kamery.html"><span class="num">Rozdział 12</span><span class="title">Efekty kamery: DOF, motion blur</span></a>
+    <div class="index-list">
+      <a class="index-row" href="rozdzialy/rozdzial-08-antyaliasing.html"><span class="index-num">Rozdział 8</span><span class="index-title">Antyaliasing i próbkowanie</span><span class="index-hook">Jeden promień na piksel daje poszarpane krawędzie. Naprawa nie zmienia żadnego wzoru na kolor — tylko to, ile razy go liczysz.</span></a>
+      <a class="index-row" href="rozdzialy/rozdzial-09-tekstury-i-uv.html"><span class="index-num">Rozdział 9</span><span class="index-title">Tekstury i UV</span><span class="index-hook">Płaski kolor materiału zaczyna zależeć od tego, w które miejsce powierzchni trafił promień.</span></a>
+      <a class="index-row" href="rozdzialy/rozdzial-10-materialy.html"><span class="index-num">Rozdział 10</span><span class="index-title">Materiały: dielektryki, metale, BRDF</span><span class="index-hook">Co materiał właściwie robi ze światłem — i dlaczego slider „Metallic” to nie estetyczny wybór, tylko przełącznik między dwoma zjawiskami fizycznymi.</span></a>
+      <a class="index-row" href="rozdzialy/rozdzial-11-pbr-ggx.html"><span class="index-num">Rozdział 11</span><span class="index-title">PBR: rozkład GGX</span><span class="index-hook">Konkretne wzory na D, G i F — te, które stoją za każdym „Principled”/„Standard Surface” shaderem.</span></a>
+      <a class="index-row" href="rozdzialy/rozdzial-12-efekty-kamery.html"><span class="index-num">Rozdział 12</span><span class="index-title">Efekty kamery: DOF, motion blur</span><span class="index-hook">Ostra wszędzie, zamrożona w jednej chwili kamera z Rozdziału 3 dostaje głębię ostrości i rozmycie ruchu — jedną sztuczką, którą już znasz.</span></a>
     </div>
   </div>
 
   <div class="part">
     <div class="part-label">Część IV–V · Wydajność i globalne oświetlenie (R.13–16)</div>
-    <div class="grid">
-      <a class="card" href="rozdzialy/rozdzial-13-bvh.html"><span class="num">Rozdział 13</span><span class="title">Struktury akceleracyjne: BVH</span></a>
-      <a class="card" href="rozdzialy/rozdzial-14-optymalizacja.html"><span class="num">Rozdział 14</span><span class="title">Optymalizacja i równoległość</span></a>
-      <a class="card" href="rozdzialy/rozdzial-15-path-tracing.html"><span class="num">Rozdział 15</span><span class="title">Path tracing i Monte Carlo</span></a>
-      <a class="card" href="rozdzialy/rozdzial-16-bdpt-photon-mapping.html"><span class="num">Rozdział 16</span><span class="title">BDPT i photon mapping</span></a>
+    <div class="index-list">
+      <a class="index-row" href="rozdzialy/rozdzial-13-bvh.html"><span class="index-num">Rozdział 13</span><span class="index-title">Struktury akceleracyjne: BVH</span><span class="index-hook">Testowanie promienia przeciw milionom trójkątów byłoby katastrofalnie wolne. BVH sprawia, że sprawdzasz dziesiątki, nie miliony.</span></a>
+      <a class="index-row" href="rozdzialy/rozdzial-14-optymalizacja.html"><span class="index-num">Rozdział 14</span><span class="index-title">Optymalizacja i równoległość</span><span class="index-hook">BVH zmniejsza liczbę testów na promień. Ten rozdział pyta, jak policzyć miliony promieni naraz, nie jeden po drugim.</span></a>
+      <a class="index-row" href="rozdzialy/rozdzial-15-path-tracing.html"><span class="index-num">Rozdział 15</span><span class="index-title">Path tracing i Monte Carlo</span><span class="index-hook">Ostatni brakujący kawałek: światło odbite od innych powierzchni, nie tylko wzdłuż jednego idealnego kierunku odbicia.</span></a>
+      <a class="index-row" href="rozdzialy/rozdzial-16-bdpt-photon-mapping.html"><span class="index-num">Rozdział 16</span><span class="index-title">BDPT i photon mapping</span><span class="index-hook">Co, gdy losowe próbkowanie z kamery praktycznie nigdy nie znajduje drogi do światła?</span></a>
     </div>
   </div>
 
   <div class="part">
     <div class="part-label">Część VI · Zastosowania praktyczne (R.17–22)</div>
-    <div class="grid">
-      <a class="card" href="rozdzialy/rozdzial-17-sceny-i-instancing.html"><span class="num">Rozdział 17</span><span class="title">Sceny, transformacje, instancing</span></a>
-      <a class="card" href="rozdzialy/rozdzial-18-wolumetria.html"><span class="num">Rozdział 18</span><span class="title">Wolumetria</span></a>
-      <a class="card" href="rozdzialy/rozdzial-19-denoising.html"><span class="num">Rozdział 19</span><span class="title">Denoising</span></a>
-      <a class="card" href="rozdzialy/rozdzial-20-wlosy-i-krzywe.html"><span class="num">Rozdział 20</span><span class="title">Włosy i krzywe</span></a>
-      <a class="card" href="rozdzialy/rozdzial-21-atmosfera.html"><span class="num">Rozdział 21</span><span class="title">Atmosfera i niebo</span></a>
-      <a class="card" href="rozdzialy/rozdzial-22-epilog.html"><span class="num">Rozdział 22</span><span class="title">Epilog: architektura renderera</span></a>
+    <div class="index-list">
+      <a class="index-row" href="rozdzialy/rozdzial-17-sceny-i-instancing.html"><span class="index-num">Rozdział 17</span><span class="index-title">Sceny, transformacje, instancing</span><span class="index-hook">Mamy kompletny silnik światła. Zostaje pytanie: jak zorganizować milion obiektów, kamerę i światła w jedną strukturę.</span></a>
+      <a class="index-row" href="rozdzialy/rozdzial-18-wolumetria.html"><span class="index-num">Rozdział 18</span><span class="index-title">Wolumetria</span><span class="index-hook">Mgła, dym i skóra nie mają jednej powierzchni — światło podróżuje przez nie, gubiąc i zyskując energię po drodze.</span></a>
+      <a class="index-row" href="rozdzialy/rozdzial-19-denoising.html"><span class="index-num">Rozdział 19</span><span class="index-title">Denoising</span><span class="index-hook">Sztuka wyciśnięcia gładkiego obrazu z za małej liczby próbek, bez oszukiwania na tyle, żeby ktoś to zauważył.</span></a>
+      <a class="index-row" href="rozdzialy/rozdzial-20-wlosy-i-krzywe.html"><span class="index-num">Rozdział 20</span><span class="index-title">Włosy i krzywe</span><span class="index-hook">Ludzka głowa ma sto tysięcy włosów — trójkątowanie każdego byłoby szaleństwem. Renderuje się je jako krzywe.</span></a>
+      <a class="index-row" href="rozdzialy/rozdzial-21-atmosfera.html"><span class="index-num">Rozdział 21</span><span class="index-title">Atmosfera i niebo</span><span class="index-hook">Niebieskie niebo, czerwony zachód słońca i biała poświata wokół słońca to jeden mechanizm: rozpraszanie światła na cząsteczkach powietrza.</span></a>
+      <a class="index-row" href="rozdzialy/rozdzial-22-epilog.html"><span class="index-num">Rozdział 22</span><span class="index-title">Epilog: architektura renderera</span><span class="index-hook">Zaczęliśmy od jednego promienia przez jeden piksel. Kończymy na atmosferze całej planety — czas zobaczyć to wszystko na jednym obrazku.</span></a>
     </div>
   </div>
 
+  <p class="subtitle">Dodatki poniżej nie trzeba czytać w kolejności liter — każdy rozwija jeden konkretny fragment rozdziału głównego (albo, czasem, inny dodatek) i można wchodzić do nich z dowolnego miejsca, tam gdzie akurat brakuje Ci głębi. Litera to tylko adres, nie kolejność czytania.</p>
+
   <div class="part">
     <div class="part-label violet">Dodatki A–K · Głębiej w wybrane tematy</div>
-    <div class="grid">
-      <a class="card" href="dodatki/dodatek-a-materialy.html"><span class="num">Dodatek A</span><span class="title">Warianty materiałów PBR</span></a>
-      <a class="card" href="dodatki/dodatek-b-importance-sampling.html"><span class="num">Dodatek B</span><span class="title">Importance sampling, MIS (z dowodem)</span></a>
-      <a class="card" href="dodatki/dodatek-c-bvh-sah.html"><span class="num">Dodatek C</span><span class="title">Budowa BVH: SAH</span></a>
-      <a class="card" href="dodatki/dodatek-d-denoising.html"><span class="num">Dodatek D</span><span class="title">Mechanika denoisera</span></a>
-      <a class="card" href="dodatki/dodatek-e-kolor-tonemapping.html"><span class="num">Dodatek E</span><span class="title">Kolor i tone mapping</span></a>
-      <a class="card" href="dodatki/dodatek-f-macierze.html"><span class="num">Dodatek F</span><span class="title">Macierze i współrzędne jednorodne</span></a>
-      <a class="card" href="dodatki/dodatek-g-mipmapping.html"><span class="num">Dodatek G</span><span class="title">Mipmapping</span></a>
-      <a class="card" href="dodatki/dodatek-h-dyspersja.html"><span class="num">Dodatek H</span><span class="title">Dyspersja i aberracja chromatyczna</span></a>
-      <a class="card" href="dodatki/dodatek-i-geometria-obciazenie.html"><span class="num">Dodatek I</span><span class="title">Złożoność geometrii a obciążenie</span></a>
-      <a class="card" href="dodatki/dodatek-j-shading-network-obciazenie.html"><span class="num">Dodatek J</span><span class="title">Złożoność sieci shaderów</span></a>
-      <a class="card" href="dodatki/dodatek-k-moller-trumbore-derivation.html"><span class="num">Dodatek K</span><span class="title">Wyprowodzenie Möller–Trumbore</span></a>
+    <div class="index-list">
+      <a class="index-row" href="dodatki/dodatek-a-materialy.html"><span class="index-num">Dodatek A</span><span class="index-title">Warianty materiałów PBR</span><span class="index-hook">Izotropowy, jednowarstwowy GGX z Rozdziałów 10–11 to fundament. Trzy realne materiały — szczotkowany metal, lakier, bardzo chropowaty metal — potrzebują trzech konkretnych rozszerzeń.</span></a>
+      <a class="index-row" href="dodatki/dodatek-b-importance-sampling.html"><span class="index-num">Dodatek B</span><span class="index-title">Importance sampling, MIS (z dowodem)</span><span class="index-hook">Różnica między szumiącym renderem po minucie a czystym po minucie. Żadna z tych technik nie zmienia wyniku — każda zmienia, jak szybko do niego dojdziesz.</span></a>
+      <a class="index-row" href="dodatki/dodatek-c-bvh-sah.html"><span class="index-num">Dodatek C</span><span class="index-title">Budowa BVH: SAH</span><span class="index-hook">Rozdział 13 pokazał, jak BVH przycina trawersowanie. Nie pokazał, jak zbudować dobre drzewo w pierwszej kolejności.</span></a>
+      <a class="index-row" href="dodatki/dodatek-d-denoising.html"><span class="index-num">Dodatek D</span><span class="index-title">Mechanika denoisera</span><span class="index-hook">Rozdział 19 powiedział „filtr waży sąsiadów po podobieństwie normalnej”. Ten dodatek pokazuje dokładnie, jak liczy się ta waga.</span></a>
+      <a class="index-row" href="dodatki/dodatek-e-kolor-tonemapping.html"><span class="index-num">Dodatek E</span><span class="index-title">Kolor i tone mapping</span><span class="index-hook">Liczby, na których liczysz Lamberta i GGX, muszą być liniowe — a liczby w plikach tekstur liniowe nie są. Najczęstszy praktyczny błąd w całym renderingu. Rozwinięte dalej w serii ACES (Dodatki L–O).</span></a>
+      <a class="index-row" href="dodatki/dodatek-f-macierze.html"><span class="index-num">Dodatek F</span><span class="index-title">Macierze i współrzędne jednorodne</span><span class="index-hook">Punkt kontra wektor, i macierze transformacji z Rozdziału 17 — jedna, elegancka konstrukcja robi to wszystko naraz.</span></a>
+      <a class="index-row" href="dodatki/dodatek-g-mipmapping.html"><span class="index-num">Dodatek G</span><span class="index-title">Mipmapping</span><span class="index-hook">Filtrowanie biliniowe jest dobre, gdy zbliżasz się do tekstury. Co się dzieje, gdy tekstura jest daleko albo widziana pod kątem?</span></a>
+      <a class="index-row" href="dodatki/dodatek-h-dyspersja.html"><span class="index-num">Dodatek H</span><span class="index-title">Dyspersja i aberracja chromatyczna</span><span class="index-hook">Współczynnik załamania zależy od długości fali — i to dosłownie ta zależność tworzy tęczę w pryzmacie.</span></a>
+      <a class="index-row" href="dodatki/dodatek-i-geometria-obciazenie.html"><span class="index-num">Dodatek I</span><span class="index-title">Złożoność geometrii a obciążenie</span><span class="index-hook">„Ile trójkątów mogę sobie pozwolić?” to źle postawione pytanie. Ray tracing ma dwa zupełnie różne budżety kosztu geometrii.</span></a>
+      <a class="index-row" href="dodatki/dodatek-j-shading-network-obciazenie.html"><span class="index-num">Dodatek J</span><span class="index-title">Złożoność sieci shaderów</span><span class="index-hook">To samo co Dodatek I, tylko dla sieci node’ów, którą renderer musi policzyć w każdym punkcie trafienia.</span></a>
+      <a class="index-row" href="dodatki/dodatek-k-moller-trumbore-derivation.html"><span class="index-num">Dodatek K</span><span class="index-title">Wyprowodzenie Möller–Trumbore</span><span class="index-hook">Rozdział 4 dał gotowy przepis. Ten dodatek pokazuje, że to nie magia — to wzór Cramera zapisany przez iloczyny wektorowe.</span></a>
     </div>
   </div>
 
   <div class="part">
     <div class="part-label amber">Wykład: ACES (L–O)</div>
-    <div class="grid">
-      <a class="card" href="dodatki/dodatek-l-aces-czesc1-problem.html"><span class="num">Dodatek L</span><span class="title">ACES cz.1 — problem interchange</span></a>
-      <a class="card" href="dodatki/dodatek-m-aces-czesc2-ap0-ap1.html"><span class="num">Dodatek M</span><span class="title">ACES cz.2 — AP0/AP1</span></a>
-      <a class="card" href="dodatki/dodatek-n-aces-czesc3-rrt-odt.html"><span class="num">Dodatek N</span><span class="title">ACES cz.3 — RRT/ODT</span></a>
-      <a class="card" href="dodatki/dodatek-o-aces-czesc4-1v2.html"><span class="num">Dodatek O</span><span class="title">ACES cz.4 — 1.0 kontra 2.0</span></a>
+    <div class="index-list">
+      <a class="index-row" href="dodatki/dodatek-l-aces-czesc1-problem.html"><span class="index-num">Dodatek L</span><span class="index-title">ACES cz.1 — problem interchange</span><span class="index-hook">ACES to nie kolejny operator tone mapowania — cały standard, który mówi, jak łączyć je w jeden przewidywalny pipeline.</span></a>
+      <a class="index-row" href="dodatki/dodatek-m-aces-czesc2-ap0-ap1.html"><span class="index-num">Dodatek M</span><span class="index-title">ACES cz.2 — AP0/AP1</span><span class="index-hook">ACES ma własne, dużo szersze podstawowe barwy niż sRGB — i dwa warianty, bo archiwizacja i liczenie to dwa różne zadania.</span></a>
+      <a class="index-row" href="dodatki/dodatek-n-aces-czesc3-rrt-odt.html"><span class="index-num">Dodatek N</span><span class="index-title">ACES cz.3 — RRT/ODT</span><span class="index-hook">Jak scene-referred wartości zamieniają się w konkretne piksele na monitorze, projektorze kinowym albo telewizorze HDR.</span></a>
+      <a class="index-row" href="dodatki/dodatek-o-aces-czesc4-1v2.html"><span class="index-num">Dodatek O</span><span class="index-title">ACES cz.4 — 1.0 kontra 2.0</span><span class="index-hook">W 2025 roku Academy wydała ACES 2.0 — pierwszą fundamentalną przebudowę od dekady. Co i czemu się zmieniło.</span></a>
     </div>
   </div>
 
   <div class="part">
     <div class="part-label amber">Wykład: Perlin Noise (P–S)</div>
-    <div class="grid">
-      <a class="card" href="dodatki/dodatek-p-perlin-czesc1-idea.html"><span class="num">Dodatek P</span><span class="title">Perlin cz.1 — idea gradientowa</span></a>
-      <a class="card" href="dodatki/dodatek-q-perlin-czesc2-algorytm.html"><span class="num">Dodatek Q</span><span class="title">Perlin cz.2 — algorytm krok po kroku</span></a>
-      <a class="card" href="dodatki/dodatek-r-perlin-czesc3-oktawy.html"><span class="num">Dodatek R</span><span class="title">Perlin cz.3 — oktawy i fBm</span></a>
-      <a class="card" href="dodatki/dodatek-s-perlin-czesc4-simplex.html"><span class="num">Dodatek S</span><span class="title">Perlin cz.4 — simplex i praktyka</span></a>
+    <div class="index-list">
+      <a class="index-row" href="dodatki/dodatek-p-perlin-czesc1-idea.html"><span class="index-num">Dodatek P</span><span class="index-title">Perlin cz.1 — idea gradientowa</span><span class="index-hook">Rozdział 9 pokazał szum Perlina jako czarną skrzynkę. Ten wykład ją otwiera: skąd bierze się gładkość i dlaczego akurat gradienty.</span></a>
+      <a class="index-row" href="dodatki/dodatek-q-perlin-czesc2-algorytm.html"><span class="index-num">Dodatek Q</span><span class="index-title">Perlin cz.2 — algorytm krok po kroku</span><span class="index-hook">Cztery gradienty, cztery iloczyny skalarne, jedna funkcja wygładzająca — rozpisane tak, żebyś mógł policzyć własny punkt na kartce.</span></a>
+      <a class="index-row" href="dodatki/dodatek-r-perlin-czesc3-oktawy.html"><span class="index-num">Dodatek R</span><span class="index-title">Perlin cz.3 — oktawy i fBm</span><span class="index-hook">Jedna warstwa szumu wygląda gładko, ale nienaturalnie jednorodnie. fBm dokłada detal w wielu skalach naraz.</span></a>
+      <a class="index-row" href="dodatki/dodatek-s-perlin-czesc4-simplex.html"><span class="index-num">Dodatek S</span><span class="index-title">Perlin cz.4 — simplex i praktyka</span><span class="index-hook">W 2001 roku Ken Perlin sam poprawił dwie realne wady własnego wynalazku.</span></a>
     </div>
   </div>
 
   <div class="part">
     <div class="part-label violet">Dodatki T–Z · Fundamenty fizyczne, Monte Carlo, światło</div>
-    <div class="grid">
-      <a class="card" href="dodatki/dodatek-t-radiometria.html"><span class="num">Dodatek T</span><span class="title">Radiometria</span></a>
-      <a class="card" href="dodatki/dodatek-u-kat-brylowy.html"><span class="num">Dodatek U</span><span class="title">Kąt bryłowy i geometria sferyczna</span></a>
-      <a class="card" href="dodatki/dodatek-v-monte-carlo-estymatory.html"><span class="num">Dodatek V</span><span class="title">Estymatory i odwrotna CDF</span></a>
-      <a class="card" href="dodatki/dodatek-w-transformacja-rozkladow.html"><span class="num">Dodatek W</span><span class="title">Transformacja między rozkładami</span></a>
-      <a class="card" href="dodatki/dodatek-x-rough-dielectric.html"><span class="num">Dodatek X</span><span class="title">Rough dielectric BSDF</span></a>
-      <a class="card" href="dodatki/dodatek-y-environment-lighting.html"><span class="num">Dodatek Y</span><span class="title">Environment lighting / HDRI</span></a>
-      <a class="card" href="dodatki/dodatek-z-henyey-greenstein.html"><span class="num">Dodatek Z</span><span class="title">Funkcja fazowa Henyeya-Greensteina</span></a>
+    <div class="index-list">
+      <a class="index-row" href="dodatki/dodatek-t-radiometria.html"><span class="index-num">Dodatek T</span><span class="index-title">Radiometria</span><span class="index-hook">Od Rozdziału 15 piszesz L, Li, Lo w każdym wzorze. L czego? W jakich jednostkach?</span></a>
+      <a class="index-row" href="dodatki/dodatek-u-kat-brylowy.html"><span class="index-num">Dodatek U</span><span class="index-title">Kąt bryłowy i geometria sferyczna</span><span class="index-hook">Formalna definicja „hemisfery Ω”, którą całkujemy od Rozdziału 15 — i wzór na kąt bryłowy prawdziwego kształtu światła.</span></a>
+      <a class="index-row" href="dodatki/dodatek-v-monte-carlo-estymatory.html"><span class="index-num">Dodatek V</span><span class="index-title">Estymatory i odwrotna CDF</span><span class="index-hook">Krok wcześniejszy niż Dodatek B: co to znaczy, że estymator jest poprawny, i jak wylosować próbkę z zadanego rozkładu.</span></a>
+      <a class="index-row" href="dodatki/dodatek-w-transformacja-rozkladow.html"><span class="index-num">Dodatek W</span><span class="index-title">Transformacja między rozkładami</span><span class="index-hook">Próbkujesz punkt na powierzchni światła, ale całkujesz po kącie bryłowym. Pomylenie tych dwóch gęstości to klasyczny, cichy błąd.</span></a>
+      <a class="index-row" href="dodatki/dodatek-x-rough-dielectric.html"><span class="index-num">Dodatek X</span><span class="index-title">Rough dielectric BSDF</span><span class="index-hook">Rozdział 7 dał gładkie szkło, Rozdział 11 chropowaty metal. Nikt nie dał chropowatego szkła — czyli szyby prysznicowej.</span></a>
+      <a class="index-row" href="dodatki/dodatek-y-environment-lighting.html"><span class="index-num">Dodatek Y</span><span class="index-title">Environment lighting / HDRI</span><span class="index-hook">Najczęstsze źródło światła w prawdziwej produkcji to nie wzór na niebo — to zdjęcie panoramiczne.</span></a>
+      <a class="index-row" href="dodatki/dodatek-z-henyey-greenstein.html"><span class="index-num">Dodatek Z</span><span class="index-title">Funkcja fazowa Henyeya-Greensteina</span><span class="index-hook">Rozdziały 18 i 21 nazwały tę funkcję z imienia, nigdy nie podając wzoru. Ten krótki dodatek to naprawia.</span></a>
     </div>
   </div>
 
   <div class="part">
     <div class="part-label">Pomocnik obliczeniowy</div>
-    <div class="grid">
-      <a class="card" href="pomocnik/pomocnik-obliczeniowy-tom-1.html"><span class="num">Tom 1</span><span class="title">Rozdziały 2–5 krok po kroku, z zadaniami</span></a>
+    <div class="index-list">
+      <a class="index-row" href="pomocnik/pomocnik-obliczeniowy-tom-1.html"><span class="index-num">Tom 1</span><span class="index-title">Rozdziały 2–5 krok po kroku, z zadaniami</span><span class="index-hook">Te same przykłady co w rozdziałach głównych, ale policzone ręcznie, krok po kroku — z zadaniami do samodzielnego rozwiązania i ukrytymi odpowiedziami.</span></a>
     </div>
   </div>
 
