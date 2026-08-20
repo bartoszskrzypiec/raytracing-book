@@ -92,7 +92,7 @@
     <p><strong>Oryginalny Phong (1975):</strong> policz R = 2(N·L)N − L, czyli odbicie L względem N, a potem specular = ks · I · max(0, R·V)^shininess.</p>
     <p><strong>Blinn-Phong (1977):</strong> zamiast liczyć R, użyj wektora <em>half-way</em> H = normalize(L + V) — leżącego w połowie drogi między L i V — i policz max(0, N·H)^shininess. Inny wzór matematycznie, ale wizualnie bardzo podobny błysk, a dużo taniej: żadnego liczenia odbicia, tylko dodawanie i normalizacja.</p>
 
-    <div class="formula">H = normalize(L + V)<br>specular = ks · I · max(0, N · H)^shininess</div>
+    <div class="formula">H = normalize(L + V)<br>specular = ks · I · max(0, N · H)^shininess<span class="sub">H — wektor „w pół drogi” między L i V; ks — kolor/intensywność odbicia specular (analogicznie do kd dla diffuse); shininess — wykładnik: im wyższy, tym węższy i ostrzejszy błysk</span></div>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Blinn-Phong.vectors</span><span>H vs R</span></div>

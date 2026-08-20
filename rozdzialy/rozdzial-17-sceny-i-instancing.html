@@ -95,7 +95,7 @@
 
     <p>Żeby to zadziałało bez kopiowania geometrii, promień testowany przeciw instancji jest transformowany odwrotną macierzą instancji do jej lokalnej przestrzeni — i tam trafia w dokładnie tę samą siatkę i BVH, co każda inna instancja.</p>
 
-    <div class="formula">ray_local = M⁻¹ · ray_world<br>hit_world = M · hit_local</div>
+    <div class="formula">ray_local = M⁻¹ · ray_world<br>hit_world = M · hit_local<span class="sub">M — macierz transformacji instancji (z wyżej); promień idzie do przestrzeni lokalnej jej odwrotnością, a wynik trafienia wraca do świata tą samą macierzą wprost</span></div>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Transform.the.ray</span><span>not the geometry</span></div>
