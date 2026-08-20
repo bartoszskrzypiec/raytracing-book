@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek N — ACES, część 3: od sceny do ekranu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>LMT · opcjonalny look</span><span>RRT · jedna, wspólna</span><span>ODT · per ekran</span><span>SERIA · ACES 3/4</span>
+  </div>
+
+  <div class="eyebrow">Wykład: ACES — część 3 z 4</div>
+  <h1>Od sceny do ekranu: LMT, RRT, ODT</h1>
+  <p class="subtitle">Masz już materiał w ACES (część 2). Teraz droga w drugą stronę: jak te wciąż-scene-referred wartości zamieniają się w konkretne piksele na konkretnym monitorze, projektorze kinowym albo telewizorze HDR.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>LMT (opcjonalnie) — kreatywny grading, wciąż w przestrzeni scene-referred, przed jakimkolwiek tone mappingiem.</li>
+      <li>RRT — jedna, wspólna dla całego ACES 1.x transformacja: scene-referred → znormalizowany, „filmowy” wygląd (OCES), z rolloffem świateł z Dodatku E.</li>
+      <li>ODT — osobny, konkretny krok na sam koniec, dopasowany do jednego wyświetlacza: sRGB, DCI-P3, Rec.2020 HDR — każdy dostaje inny ODT z tego samego OCES.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Pipeline</div>
+    <h2>Cała droga, krok po kroku</h2>
+    <p>LMT (Look Modification Transform) to opcjonalny krok kreatywnego gradingu — kolorysta może przyciemnić, ocieplić albo stylizować obraz, wciąż operując na wartościach scene-referred, więc zmiany są odwracalne i niezależne od tego, na jakim ekranie w końcu obraz wyświetlisz. Dopiero potem wchodzi RRT.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Full.ACES.pipeline</span><span>camera to display</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="fp1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+        </defs>
+        <g font-family="IBM Plex Sans" font-size="10.5" fill="#ecebe4">
+          <rect x="10" y="90" width="100" height="60" rx="7" fill="#20242c" stroke="#4fc3c0" stroke-opacity="0.7"/>
+          <text x="60" y="115" text-anchor="middle">Kamera</text><text x="60" y="130" text-anchor="middle">+ IDT</text>
+
+          <rect x="130" y="90" width="100" height="60" rx="7" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="180" y="115" text-anchor="middle">ACES</text><text x="180" y="130" text-anchor="middle">(AP0/AP1)</text>
+
+          <rect x="250" y="90" width="100" height="60" rx="7" fill="#20242c" stroke="#9c82d8" stroke-opacity="0.7"/>
+          <text x="300" y="115" text-anchor="middle">LMT</text><text x="300" y="130" text-anchor="middle">(opcjonalny)</text>
+
+          <rect x="370" y="90" width="100" height="60" rx="7" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="420" y="115" text-anchor="middle">RRT</text><text x="420" y="130" text-anchor="middle">→ OCES</text>
+
+          <rect x="490" y="90" width="100" height="60" rx="7" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="540" y="115" text-anchor="middle">ODT</text><text x="540" y="130" text-anchor="middle">(per ekran)</text>
+
+          <rect x="610" y="90" width="140" height="60" rx="7" fill="#20242c" stroke="#4fc3c0"/>
+          <text x="680" y="115" text-anchor="middle" font-weight="600">Ekran</text><text x="680" y="130" text-anchor="middle">(sRGB/P3/2020)</text>
+        </g>
+        <line x1="110" y1="120" x2="128" y2="120" stroke="#e8a33d" stroke-width="2" marker-end="url(#fp1)"/>
+        <line x1="230" y1="120" x2="248" y2="120" stroke="#e8a33d" stroke-width="2" marker-end="url(#fp1)"/>
+        <line x1="350" y1="120" x2="368" y2="120" stroke="#e8a33d" stroke-width="2" marker-end="url(#fp1)"/>
+        <line x1="470" y1="120" x2="488" y2="120" stroke="#e8a33d" stroke-width="2" marker-end="url(#fp1)"/>
+        <line x1="590" y1="120" x2="608" y2="120" stroke="#e8a33d" stroke-width="2" marker-end="url(#fp1)"/>
+        <text x="380" y="220" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">scene-referred (Dodatek E) —————————————————→ display-referred</text>
+      </svg>
+      <div class="diagram-caption">RRT jest jedna dla wszystkich ekranów. ODT jest tam, gdzie pipeline się rozdziela.</div>
+    </div>
+
+    <p>RRT stosuje ten sam rodzaj rolloffu świateł, o którym mówił Dodatek E — zaprojektowany jako „wirtualna taśma filmowa”, hipotetyczny, idealny wyświetlacz odniesienia. Wynik tego kroku nazywa się OCES (Output Color Encoding Specification) — wciąż nie jest to obraz gotowy do wyświetlenia na żadnym realnym ekranie, to pośredni, znormalizowany punkt odniesienia.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: ODT</div>
+    <h2>Jeden OCES, wiele ekranów</h2>
+    <p>ODT bierze ten wspólny OCES i dopasowuje go do <em>konkretnego</em> urządzenia: jego primaries, funkcji EOTF (odpowiednik gammy z Dodatku E), punktu bieli i środowiska oglądania (ciemna sala kinowa kontra jasny pokój biurowy). To dlaczego ten sam plik ACES daje różne, ale <em>przewidywalnie</em> różne, obrazy na monitorze referencyjnym, projektorze DCI-P3 i telewizorze Rec.2020 HDR — różnice są zamierzone i kontrolowane, nie przypadkowe.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>One.OCES.many.ODTs</span><span>sRGB / P3 / Rec.2020</span></div>
+      <svg viewBox="0 0 760 240" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="od1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8b909b"/></marker>
+        </defs>
+        <rect x="330" y="100" width="100" height="50" rx="7" fill="#20242c" stroke="#e8a33d" stroke-width="1.8"/>
+        <text x="380" y="130" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">OCES</text>
+
+        <line x1="430" y1="115" x2="600" y2="60" stroke="#8b909b" stroke-width="1.5" marker-end="url(#od1)"/>
+        <rect x="600" y="35" width="120" height="45" rx="6" fill="#20242c" stroke="#4fc3c0" stroke-width="1.5"/>
+        <text x="660" y="62" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#4fc3c0">ODT: sRGB</text>
+
+        <line x1="430" y1="125" x2="600" y2="125" stroke="#8b909b" stroke-width="1.5" marker-end="url(#od1)"/>
+        <rect x="600" y="102" width="120" height="45" rx="6" fill="#20242c" stroke="#4fc3c0" stroke-width="1.5"/>
+        <text x="660" y="129" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#4fc3c0">ODT: DCI-P3</text>
+
+        <line x1="430" y1="135" x2="600" y2="190" stroke="#8b909b" stroke-width="1.5" marker-end="url(#od1)"/>
+        <rect x="600" y="168" width="120" height="45" rx="6" fill="#20242c" stroke="#4fc3c0" stroke-width="1.5"/>
+        <text x="660" y="195" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#4fc3c0">ODT: Rec.2020</text>
+      </svg>
+      <div class="diagram-caption">Ten sam wynik RRT, trzy różne, celowo zaprojektowane wyjścia.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Gdy w Nuke albo Resolve wybierasz „Output Transform: Rec.709” czy „P3-D65” — wybierasz konkretny ODT z tego rozdziału, nie osobny „look”. Podłączenie ODT-u P3 do monitora, który fizycznie pokazuje tylko sRGB, nie ma sensu — dostaniesz obraz zoptymalizowany pod gamut, którego ekran nie jest w stanie odtworzyć.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>LMT (Look Modification Transform)</dt><dd>Opcjonalny kreatywny grading w przestrzeni scene-referred.</dd>
+      <dt>RRT (Reference Rendering Transform)</dt><dd>Jedna, wspólna transformacja do znormalizowanego OCES.</dd>
+      <dt>OCES</dt><dd>Output Color Encoding Specification — wynik RRT, wciąż nie dla konkretnego ekranu.</dd>
+      <dt>ODT (Output Device Transform)</dt><dd>Krok dopasowujący OCES do jednego, konkretnego wyświetlacza.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Część 4 pokazuje, dlaczego ten dwustopniowy RRT+ODT z ACES 1.x bywał krytykowany — i jak ACES 2.0 (2025) go zastąpił.</p>
+    <div class="series-nav">
+      <span>Część 1: Problem</span><span>Część 2: AP0/AP1</span><span class="current">Część 3: RRT/ODT</span><span>Część 4: 1.0 vs 2.0</span>
+    </div>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+</div>
+</div>
+</body>
+</html>

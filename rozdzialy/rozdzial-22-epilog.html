@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Rozdział 22 — Epilog: architektura kompletnego renderera</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.page{padding-bottom:120px;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>CHAPTERS · 1–21</span><span>STATUS · complete pipeline</span><span>SCOPE · honest edges</span><span>DEPTH · ∞ (well, finite)</span>
+  </div>
+
+  <div class="eyebrow">Rozdział 22 / Epilog</div>
+  <h1>Architektura kompletnego renderera</h1>
+  <p class="subtitle">Zaczęliśmy od jednego promienia przez jeden piksel. Skończyliśmy na atmosferze całej planety i sieciach neuronowych czyszczących szum. Czas zobaczyć to wszystko na jednym obrazku.</p>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Synteza</div>
+    <h2>Cała książka na jednym diagramie</h2>
+    <p>Każda „skrzynka” poniżej to jeden fragment tego, co zbudowałeś, rozdział po rozdziale. Pętla w środku to dosłownie ta sama rekurencja, którą Whitted opisał w 1980 roku, wspomniana już na pierwszej stronie tej książki.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Full.pipeline</span><span>Rozdziały 1–21</span></div>
+      <svg viewBox="0 0 760 480" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="ep1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+        </defs>
+
+        <g font-family="IBM Plex Sans" font-size="11.5" fill="#ecebe4">
+          <rect x="30" y="60" width="120" height="72" rx="8" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="90" y="88" text-anchor="middle">Promień z</text><text x="90" y="103" text-anchor="middle">kamery</text>
+          <text x="90" y="120" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">R.2, R.3</text>
+
+          <rect x="175" y="60" width="120" height="72" rx="8" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="235" y="88" text-anchor="middle">Przecięcie</text><text x="235" y="103" text-anchor="middle">BVH</text>
+          <text x="235" y="120" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">R.4, R.13, R.20</text>
+
+          <rect x="320" y="60" width="120" height="72" rx="8" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="380" y="88" text-anchor="middle">Materiał</text><text x="380" y="103" text-anchor="middle">BRDF / PBR</text>
+          <text x="380" y="120" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">R.5,9,10,11</text>
+
+          <rect x="465" y="60" width="120" height="72" rx="8" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="525" y="88" text-anchor="middle">Cień + GI</text><text x="525" y="103" text-anchor="middle">Monte Carlo</text>
+          <text x="525" y="120" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">R.6,15,16</text>
+
+          <rect x="610" y="60" width="120" height="72" rx="8" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="670" y="88" text-anchor="middle">Odbicie /</text><text x="670" y="103" text-anchor="middle">załamanie</text>
+          <text x="670" y="120" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">R.7</text>
+        </g>
+
+        <line x1="150" y1="96" x2="173" y2="96" stroke="#e8a33d" stroke-width="2" marker-end="url(#ep1)"/>
+        <line x1="295" y1="96" x2="318" y2="96" stroke="#e8a33d" stroke-width="2" marker-end="url(#ep1)"/>
+        <line x1="440" y1="96" x2="463" y2="96" stroke="#e8a33d" stroke-width="2" marker-end="url(#ep1)"/>
+        <line x1="585" y1="96" x2="608" y2="96" stroke="#e8a33d" stroke-width="2" marker-end="url(#ep1)"/>
+        <path d="M 670,132 C 670,180 235,180 235,132" fill="none" stroke="#9c82d8" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#ep1)"/>
+        <text x="452" y="172" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#9c82d8">rekurencja — Whitted, 1980 (R.1)</text>
+
+        <rect x="175" y="200" width="290" height="52" rx="8" fill="none" stroke="#9c82d8" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <text x="320" y="222" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#9c82d8">rozszerzenia: scena/instancing (R.17),</text>
+        <text x="320" y="238" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#9c82d8">wolumetria/atmosfera (R.18,21), włosy (R.20)</text>
+        <line x1="235" y1="132" x2="270" y2="198" stroke="#9c82d8" stroke-width="1" stroke-dasharray="3 3"/>
+        <line x1="380" y1="132" x2="370" y2="198" stroke="#9c82d8" stroke-width="1" stroke-dasharray="3 3"/>
+
+        <line x1="525" y1="132" x2="525" y2="290" stroke="#8b909b" stroke-width="1.5" stroke-dasharray="0"/>
+        <line x1="525" y1="290" x2="300" y2="335" stroke="#8b909b" stroke-width="1.5" marker-end="url(#ep1)"/>
+
+        <g font-family="IBM Plex Sans" font-size="11.5" fill="#ecebe4">
+          <rect x="140" y="345" width="170" height="70" rx="8" fill="#20242c" stroke="#4fc3c0" stroke-opacity="0.8"/>
+          <text x="225" y="372" text-anchor="middle">Próbkowanie</text><text x="225" y="387" text-anchor="middle">AA / DOF / motion blur</text>
+          <text x="225" y="403" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">R.8, R.12</text>
+
+          <rect x="340" y="345" width="170" height="70" rx="8" fill="#20242c" stroke="#4fc3c0" stroke-opacity="0.8"/>
+          <text x="425" y="372" text-anchor="middle">Denoising</text>
+          <text x="425" y="403" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">R.19</text>
+
+          <rect x="540" y="345" width="150" height="70" rx="8" fill="#20242c" stroke="#e8a33d"/>
+          <text x="615" y="385" text-anchor="middle" font-weight="700" font-size="14">PIKSEL</text>
+        </g>
+        <line x1="310" y1="380" x2="338" y2="380" stroke="#4fc3c0" stroke-width="2" marker-end="url(#ep1)"/>
+        <line x1="510" y1="380" x2="538" y2="380" stroke="#4fc3c0" stroke-width="2" marker-end="url(#ep1)"/>
+      </svg>
+      <div class="diagram-caption">Dwadzieścia jeden rozdziałów, jedna pętla i jeden piksel na wyjściu — powtórzona kilka milionów razy na obraz.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Uczciwa mapa</div>
+    <h2>Czego tu nie ma</h2>
+    <p>Ta książka nie jest wszystkim, co istnieje w ray tracingu — jest solidnym fundamentem, na którym stoi reszta. Zostawiliśmy z boku: rendering spektralny (osobna długość fali zamiast RGB, ważny dla dyspersji i dokładnej kolorymetrii), transport światła z polaryzacją, Metropolis Light Transport (jeszcze inny sposób próbkowania ścieżek dla ekstremalnie trudnych scen), oraz techniki specyficzne dla czasu rzeczywistego, jak ReSTIR czy rekonstrukcja neuronowa klatek. Każdy z tych tematów buduje na dokładnie tych samych podstawach — wektorach z Rozdziału 2, BRDF z Rozdziału 10, równaniu renderowania z Rozdziału 15.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Mapa książki</div>
+    <dl>
+      <dt>Część I — Podstawy (R.1–4)</dt><dd>Wektory, promień, kamera, przecięcia z płaszczyzną i trójkątem.</dd>
+      <dt>Część II — Shading (R.5–7)</dt><dd>Lambert, Blinn-Phong, cienie, odbicia i załamania.</dd>
+      <dt>Część III — Realizm i jakość obrazu (R.8–12)</dt><dd>Antyaliasing, tekstury, materiały, PBR, efekty kamery.</dd>
+      <dt>Część IV — Wydajność (R.13–14)</dt><dd>BVH, równoległość CPU/GPU.</dd>
+      <dt>Część V — Globalne oświetlenie (R.15–16)</dt><dd>Równanie renderowania, Monte Carlo, BDPT, photon mapping.</dd>
+      <dt>Część VI — Zastosowania praktyczne (R.17–21)</dt><dd>Sceny, wolumetria, denoising, włosy, atmosfera.</dd>
+    </dl>
+  </div>
+
+  <div class="closing">
+    <p>Zaczęliśmy od pytania „który trójkąt zakrywa ten piksel” kontra „co zobaczyłby promień światła”. Dwadzieścia jeden rozdziałów później to drugie pytanie ma już pełną, matematyczną odpowiedź — od wektora po atmosferę planety.</p>
+    <p>Reszta to już Twoja scena.</p>
+    <div class="sign">Koniec</div>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="rozdzial-21-atmosfera.html">← Poprzedni</a>
+</div>
+</div>
+</body>
+</html>

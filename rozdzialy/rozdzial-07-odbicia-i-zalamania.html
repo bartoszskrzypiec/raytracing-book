@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Rozdział 7 — Odbicia i załamania: powrót do rekurencji</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.formula{font-size:15px;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>DEPTH · ≤ 8</span><span>IOR · n1 / n2</span><span>FRESNEL · Schlick</span><span>TIR · check</span>
+  </div>
+
+  <div class="eyebrow">Rozdział 7 / Shading</div>
+  <h1>Odbicia i załamania: powrót do rekurencji</h1>
+  <p class="subtitle">To jest dosłownie to, co w 1980 roku opisał Turner Whitted — rekurencyjne odbicia i załamania, wspomniane w Rozdziale 1 jako fundament branży. Mamy już wszystko, żeby to policzyć: promień, normalną i wektory z poprzednich rozdziałów.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Odbicie zwierciadlane to R = D − 2(D·N)N — ten sam wzór z Rozdziału 5, tylko odwrócony: odbijamy promień, nie światło.</li>
+      <li>Załamanie rządzi się prawem Snella — kąt załamania zależy od względnego współczynnika załamania (IOR) dwóch materiałów.</li>
+      <li>Równania Fresnela (w praktyce: aproksymacja Schlicka) mówią, jaka część światła się odbija, a jaka załamuje — to one dają realistyczne szkło i wodę, nie arbitralny „reflectivity slider”.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Odbicie</div>
+    <h2>Odbicie: ten sam wzór, nowy kontekst</h2>
+    <p>W Rozdziale 5 odbijałeś kierunek do światła L względem normalnej, żeby policzyć błysk specular. Teraz robimy to samo z samym promieniem D, żeby wystrzelić nowy promień — rekurencyjnie, tak jak zapowiadał diagram z Rozdziału 1.</p>
+
+    <div class="formula">R = D − 2(D · N)N<span class="sub">D — kierunek promienia wchodzącego (znormalizowany); podstaw L' = −D do wzoru z Rozdziału 5 i wyjdzie identyczny wynik</span></div>
+
+    <p>Nowy promień startuje z punktu trafienia — z tym samym biasem wzdłuż N co promień cienia z Rozdziału 6, z tego samego powodu — i ma kierunek R. Wywołujesz na nim tę samą funkcję śledzenia promienia, w której właśnie jesteś: to jest rekurencja. Musi mieć limit — głębokość odbić (bounce depth) z glosariusza Rozdziału 1 — inaczej promień odbijający się między dwoma zwierciadłami nigdy się nie zatrzyma.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Reflection.angle</span><span>θ_in = θ_out</span></div>
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="r1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+          <marker id="r2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4fc3c0"/></marker>
+          <marker id="r3" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9c82d8"/></marker>
+        </defs>
+
+        <line x1="120" y1="220" x2="620" y2="220" stroke="#8b909b" stroke-width="2"/>
+        <circle cx="360" cy="220" r="4.5" fill="#ecebe4"/>
+
+        <line x1="200" y1="120" x2="360" y2="220" stroke="#e8a33d" stroke-width="2.5" marker-end="url(#r1)"/>
+        <text x="230" y="145" font-family="IBM Plex Mono" font-size="13" fill="#e8a33d">D</text>
+
+        <line x1="360" y1="220" x2="360" y2="110" stroke="#9c82d8" stroke-width="2.5" marker-end="url(#r3)"/>
+        <text x="368" y="105" font-family="IBM Plex Mono" font-size="13" fill="#9c82d8">N</text>
+
+        <line x1="360" y1="220" x2="470" y2="151" stroke="#4fc3c0" stroke-width="2.5" marker-end="url(#r2)"/>
+        <text x="480" y="145" font-family="IBM Plex Mono" font-size="13" fill="#4fc3c0">R</text>
+
+        <path d="M 335,195 Q 320,208 328,224" fill="none" stroke="#9c82d8" stroke-width="1.3"/>
+        <text x="308" y="204" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">θ</text>
+        <path d="M 385,195 Q 400,208 392,224" fill="none" stroke="#9c82d8" stroke-width="1.3"/>
+        <text x="404" y="204" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">θ</text>
+      </svg>
+      <div class="diagram-caption">Kąt padania równy kątowi odbicia — mierzone od tej samej normalnej N.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Załamanie</div>
+    <h2>Załamanie: prawo Snella</h2>
+    <p>Gdy promień wchodzi w przezroczysty materiał — szkło, wodę — zmienia kierunek. O ile, mówi prawo Snella, znane jeszcze z fizyki w szkole średniej:</p>
+
+    <div class="formula">n1 · sin θ1 = n2 · sin θ2<span class="sub">n1, n2 — współczynniki załamania (IOR) obu materiałów; θ1, θ2 — kąty od normalnej, po obu stronach granicy</span></div>
+
+    <p>W formie wektorowej, przydatnej w kodzie, z η = n1/n2:</p>
+
+    <div class="formula">sin²θ2 = η² · (1 − cos²θ1)<span class="sub">gdy prawa strona &gt; 1 → całkowite wewnętrzne odbicie (TIR): promień nie może się załamać, cała energia wraca jako odbicie</span></div>
+
+    <p>Typowe wartości IOR, przydatne od razu w node’ach materiału: powietrze ≈ 1,00 · woda ≈ 1,33 · szkło ≈ 1,50 · diament ≈ 2,42.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Snell.law</span><span>bend vs TIR</span></div>
+      <svg viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="sn1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+          <marker id="sn2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4fc3c0"/></marker>
+        </defs>
+
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">ZAŁAMANIE · n1 &lt; n2</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">TIR · kąt &gt; kąt krytyczny</text>
+        <line x1="380" y1="20" x2="380" y2="300" stroke="#2a2f38"/>
+
+        <!-- left: refraction -->
+        <rect x="40" y="90" width="300" height="80" fill="#1b1e24"/>
+        <rect x="40" y="170" width="300" height="110" fill="#20242c"/>
+        <line x1="40" y1="170" x2="340" y2="170" stroke="#8b909b" stroke-width="1.5"/>
+        <line x1="190" y1="90" x2="190" y2="280" stroke="#3a4048" stroke-width="1.2" stroke-dasharray="3 4"/>
+        <text x="55" y="108" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">n1 (rzadszy)</text>
+        <text x="55" y="255" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">n2 (gęstszy)</text>
+        <line x1="110" y1="100" x2="190" y2="170" stroke="#e8a33d" stroke-width="2.3" marker-end="url(#sn1)"/>
+        <line x1="190" y1="170" x2="230" y2="270" stroke="#4fc3c0" stroke-width="2.3" marker-end="url(#sn2)"/>
+        <text x="140" y="140" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">θ1</text>
+        <text x="196" y="205" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">θ2</text>
+
+        <!-- right: TIR -->
+        <rect x="420" y="90" width="300" height="80" fill="#1b1e24"/>
+        <rect x="420" y="170" width="300" height="110" fill="#20242c"/>
+        <line x1="420" y1="170" x2="720" y2="170" stroke="#8b909b" stroke-width="1.5"/>
+        <line x1="570" y1="90" x2="570" y2="280" stroke="#3a4048" stroke-width="1.2" stroke-dasharray="3 4"/>
+        <text x="435" y="108" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">n1 (rzadszy)</text>
+        <text x="435" y="255" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">n2 (gęstszy)</text>
+        <line x1="650" y1="270" x2="570" y2="170" stroke="#e8a33d" stroke-width="2.3" marker-end="url(#sn1)"/>
+        <line x1="570" y1="170" x2="508" y2="248" stroke="#4fc3c0" stroke-width="2.3" marker-end="url(#sn2)"/>
+      </svg>
+      <div class="diagram-caption">Po prawej: promień z gęstszego materiału pod płytkim kątem nie ma dokąd się załamać — wraca jako odbicie.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Fresnel</div>
+    <h2>Fresnel: ile się odbija, ile załamuje</h2>
+    <p>Na każdej granicy dwóch materiałów światło zwykle częściowo się odbija, a częściowo załamuje — proporcje zależą od kąta padania i IOR. To właśnie opisują równania Fresnela. W grafice praktycznie nikt nie liczy ich w pełnej, fizycznej formie — używa się szybkiej aproksymacji Schlicka (1994):</p>
+
+    <div class="formula">R0 = ((n1 − n2) / (n1 + n2))²<br>R(θ) = R0 + (1 − R0)·(1 − cosθ)⁵<span class="sub">R0 — odbicie przy patrzeniu na wprost (θ=0); reszta narasta gwałtownie w stronę kąta stycznego</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Fresnel.curve</span><span>Schlick approx</span></div>
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+        <line x1="60" y1="250" x2="680" y2="250" stroke="#8b909b" stroke-width="1.5"/>
+        <line x1="60" y1="250" x2="60" y2="40" stroke="#8b909b" stroke-width="1.5"/>
+
+        <g font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">
+          <text x="60" y="268" text-anchor="middle">0°</text>
+          <text x="266" y="268" text-anchor="middle">30°</text>
+          <text x="473" y="268" text-anchor="middle">60°</text>
+          <text x="680" y="268" text-anchor="middle">90°</text>
+          <text x="380" y="288" text-anchor="middle">kąt padania θ</text>
+
+          <text x="48" y="253" text-anchor="end">0</text>
+          <text x="48" y="147" text-anchor="end">0,5</text>
+          <text x="48" y="44" text-anchor="end">1,0</text>
+        </g>
+        <text x="20" y="150" font-family="IBM Plex Mono" font-size="11" fill="#8b909b" transform="rotate(-90 20 150)">R(θ)</text>
+
+        <line x1="60" y1="241.6" x2="680" y2="241.6" stroke="#9c82d8" stroke-width="1" stroke-dasharray="4 4"/>
+        <text x="686" y="245" font-family="IBM Plex Mono" font-size="10.5" fill="#9c82d8">R0 ≈ 0,04 (szkło)</text>
+
+        <path d="M 60,241.6 C 200,238 350,225 473,218 C 550,200 610,150 680,40" fill="none" stroke="#e8a33d" stroke-width="2.5"/>
+      </svg>
+      <div class="diagram-caption">Nawet szkło o niskim R0 przy kącie stycznym odbija praktycznie 100% światła — dlatego okno widziane pod kątem robi się zwierciadłem.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Node „Fresnel” w Blenderze, Unrealu czy Substance to dosłownie aproksymacja Schlicka z tego rozdziału — artyści dodają go do materiałów nieprzezroczystych, żeby uzyskać rim light / edge highlight, często nie wiedząc, że sięgają po ten sam wzór, który liczy odbicia w szkle.</p>
+    <p>Podstawowy, rekurencyjny ray tracer Whitteda śledzi oba promienie na każdym przezroczystym trafieniu — odbity i załamany — ważone Fresnelem, i sumuje wyniki. To podwaja liczbę promieni na każdym poziomie rekurencji: przy głębokości 8 to potencjalnie 2⁸ = 256 promieni z jednego pierwotnego trafienia w szkło.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Odbicie zwierciadlane (R)</dt><dd>R = D − 2(D·N)N.</dd>
+      <dt>Prawo Snella</dt><dd>n1·sinθ1 = n2·sinθ2.</dd>
+      <dt>Współczynnik załamania (IOR)</dt><dd>n — stosunek prędkości światła w próżni do prędkości w materiale.</dd>
+      <dt>Całkowite wewnętrzne odbicie (TIR)</dt><dd>Brak załamania, gdy kąt przekracza kąt krytyczny.</dd>
+      <dt>Równania Fresnela</dt><dd>Opisują podział energii między odbicie i załamanie w funkcji kąta.</dd>
+      <dt>Aproksymacja Schlicka</dt><dd>Szybki, praktyczny wzór na Fresnela używany w grafice.</dd>
+      <dt>Głębokość rekurencji (max depth)</dt><dd>Limit liczby odbić/załamań, zapobiegający nieskończonej pętli.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Mamy teraz kompletny, rekurencyjny model materiału: diffuse, specular, cienie, odbicia i załamania. Ale jeden promień na piksel wciąż daje poszarpane krawędzie. W następnym rozdziale: antyaliasing i próbkowanie — jak wiele promieni na piksel zamienia postrzępione linie w gładkie.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="rozdzial-06-cienie.html">← Poprzedni</a>
+    <a href="rozdzial-08-antyaliasing.html">Następny →</a>
+</div>
+</div>
+</body>
+</html>

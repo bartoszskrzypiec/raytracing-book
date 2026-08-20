@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Pomocnik obliczeniowy — Tom 1: Wektory, Kamera, Płaszczyzny, Materiały</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.page{padding-bottom:120px;}
+.panel{margin:36px 0;}
+.formula{padding:14px 18px;margin:16px 0;line-height:1.7;}
+.formula .sub{font-size:12px;}
+h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>TOM · 1</span><span>ROZDZIAŁY · 2–5</span><span>TRYB · krok po kroku</span><span>WERYFIKACJA · numeryczna</span>
+  </div>
+
+  <div class="eyebrow">Pomocnik obliczeniowy / Tom 1</div>
+  <h1>Wektory, kamera, płaszczyzny i materiały — obliczenia krok po kroku</h1>
+  <p class="subtitle">Osobny zeszyt do książki o ray tracingu. Każda sekcja daje wzór, jeden w pełni rozpisany przykład liczbowy — sprawdzony numerycznie, nie „na oko” — i zadania z odpowiedzią do samodzielnej weryfikacji. Miej pod ręką kartkę, kalkulator i te same wzory z Rozdziałów 2–5.</p>
+
+  <div class="panel">
+    <div class="panel-label">Jak z tego korzystać</div>
+    <ul>
+      <li>Przepisz dane z przykładu na kartkę i policz samodzielnie, zanim zerknij na rozpisane kroki.</li>
+      <li>Każdy „Krok” w przykładzie to jedna operacja — jedno dodawanie wektorów, jeden iloczyn skalarny, jedno pierwiastkowanie. Jeśli Twój wynik różni się już na pierwszym kroku, błąd jest w danych wejściowych, nie w metodzie.</li>
+      <li>Zadania mają schowaną odpowiedź — kliknij, żeby sprawdzić się po policzeniu, nie przed.</li>
+      <li>Liczby dziesiętne zapisane przecinkiem (0,743), tak jak w głównej książce.</li>
+    </ul>
+  </div>
+
+  <div class="toc">
+    <div class="panel-label" style="margin-bottom:12px;">Spis treści</div>
+    <ol>
+      <li><a href="#powtorka">Powtórka: operacje wektorowe</a></li>
+      <li><a href="#r2">Rozdział 2 — Promień i przecięcie ze sferą</a></li>
+      <li><a href="#r3">Rozdział 3 — Baza kamery i promień z piksela</a></li>
+      <li><a href="#r4">Rozdział 4 — Płaszczyzna i algorytm Möllera–Trumbore</a></li>
+      <li><a href="#r5">Rozdział 5 — Lambert i Blinn-Phong</a></li>
+    </ol>
+  </div>
+
+  <!-- ============ POWTÓRKA ============ -->
+  <div class="chapter-head" id="powtorka">
+    <span class="num">POWTÓRKA</span>
+    <h2>Operacje wektorowe — odświeżenie</h2>
+  </div>
+
+  <div class="subsection">
+    <h3>Odejmowanie punktów, długość, normalizacja</h3>
+    <div class="formula">V = A − B<br>|V| = √(Vx² + Vy² + Vz²)<br>V̂ = V / |V|</div>
+
+    <div class="worked">
+      <div class="wlabel">Przykład</div>
+      <div class="step">Dane: <span class="k">A</span> = (3, 1, 4), <span class="k">B</span> = (1, 1, 1)</div>
+      <div class="step">Krok 1 — odejmowanie: <span class="v">V = A − B = (3−1, 1−1, 4−1) = (2, 0, 3)</span></div>
+      <div class="step">Krok 2 — długość: <span class="v">|V| = √(2² + 0² + 3²) = √(4+0+9) = √13 ≈ 3,606</span></div>
+      <div class="step">Krok 3 — normalizacja: <span class="v">V̂ = (2/3,606; 0/3,606; 3/3,606) ≈ (0,555; 0; 0,832)</span></div>
+      <div class="result">Wynik: V̂ ≈ (0,555; 0; 0,832)</div>
+      <div class="check">Sprawdzenie: |V̂| powinno wyjść 1 — 0,555²+0²+0,832² = 0,308+0,692 = 1,000 ✓</div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <h3>Iloczyn skalarny i kąt między wektorami</h3>
+    <div class="formula">A·B = Ax·Bx + Ay·By + Az·Bz = |A||B|·cosθ<br>θ = arccos( A·B / (|A||B|) )</div>
+
+    <div class="worked">
+      <div class="wlabel">Przykład</div>
+      <div class="step">Dane: <span class="k">A</span> = (2, −1, 3), <span class="k">B</span> = (0, 4, −2)</div>
+      <div class="step">Krok 1 — iloczyn skalarny: <span class="v">A·B = 2·0 + (−1)·4 + 3·(−2) = 0 − 4 − 6 = −10</span></div>
+      <div class="step">Krok 2 — długości: <span class="v">|A| = √(4+1+9) = √14 ≈ 3,742</span>, <span class="v">|B| = √(0+16+4) = √20 ≈ 4,472</span></div>
+      <div class="step">Krok 3 — cosinus: <span class="v">cosθ = −10 / (3,742·4,472) = −10/16,74 ≈ −0,598</span></div>
+      <div class="step">Krok 4 — kąt: <span class="v">θ = arccos(−0,598) ≈ 126,7°</span></div>
+      <div class="result">Wynik: A·B = −10, θ ≈ 126,7° (kąt rozwarty — wektory w większości „przeciwne”)</div>
+      <div class="check">Sprawdzenie znaku: iloczyn skalarny ujemny ⇒ kąt &gt; 90°, zgodnie z wynikiem.</div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <h3>Iloczyn wektorowy</h3>
+    <div class="formula">A × B = (Ay·Bz − Az·By,  Az·Bx − Ax·Bz,  Ax·By − Ay·Bx)</div>
+    <p>Zapamiętaj schemat: każda współrzędna wyniku „pomija” tę samą współrzędną wejściową i mnoży na krzyż pozostałe dwie, w cyklicznej kolejności x→y→z→x.</p>
+  </div>
+
+  <!-- ============ ROZDZIAŁ 2 ============ -->
+  <div class="chapter-head" id="r2">
+    <span class="num">ROZDZIAŁ 2</span>
+    <h2>Promień i przecięcie ze sferą</h2>
+  </div>
+
+  <div class="subsection">
+    <h3>Wzór</h3>
+    <div class="formula">P(t) = O + t·D<br>a = D·D,  b = 2·D·L,  c = L·L − r²,  gdzie L = O − C<br>Δ = b² − 4ac</div>
+  </div>
+
+  <div class="subsection">
+    <h3>Przykład: promień trafia w sferę</h3>
+    <div class="worked">
+      <div class="wlabel">Dane wejściowe</div>
+      <div class="step">Kamera: <span class="k">O</span> = (0, 0, 0). Kierunek surowy: <span class="k">D_raw</span> = (1, 0, 2). Sfera: środek <span class="k">C</span> = (2, 0, 4), radius <span class="k">r</span> = 1,5.</div>
+    </div>
+    <div class="worked">
+      <div class="wlabel">Krok po kroku</div>
+      <div class="step">1) Normalizacja D: |D_raw| = √(1+0+4) = √5 ≈ 2,236 → <span class="v">D = (0,447; 0; 0,894)</span></div>
+      <div class="step">2) L = O − C = (0−2, 0−0, 0−4) = <span class="v">(−2, 0, −4)</span></div>
+      <div class="step">3) a = D·D = 0,447² + 0² + 0,894² = 0,2 + 0,8 = <span class="v">1,0</span> (jak zawsze dla znormalizowanego D)</div>
+      <div class="step">4) b = 2·(D·L) = 2·[(0,447·−2)+(0·0)+(0,894·−4)] = 2·(−0,894−3,578) = 2·(−4,472) = <span class="v">−8,944</span></div>
+      <div class="step">5) c = L·L − r² = [(−2)²+0²+(−4)²] − 1,5² = 20 − 2,25 = <span class="v">17,75</span></div>
+      <div class="step">6) Δ = b² − 4ac = (−8,944)² − 4·1·17,75 = 80,0 − 71,0 = <span class="v">9,0</span></div>
+      <div class="step">7) √Δ = <span class="v">3,0</span> (Δ dodatnie ⇒ dwa przecięcia)</div>
+      <div class="step">8) t₀ = (−b − √Δ)/(2a) = (8,944 − 3)/2 = <span class="v">2,972</span></div>
+      <div class="step">9) t₁ = (−b + √Δ)/(2a) = (8,944 + 3)/2 = <span class="v">5,972</span></div>
+      <div class="step">10) Punkt trafienia: P(t₀) = O + 2,972·D = (2,972·0,447; 0; 2,972·0,894) = <span class="v">(1,329; 0; 2,658)</span></div>
+      <div class="result">Wynik: t₀ ≈ 2,972 (bliższe trafienie), punkt (1,329; 0; 2,658)</div>
+      <div class="check">Sprawdzenie: odległość P(t₀) od C powinna równać się r=1,5. √[(1,329−2)²+0²+(2,658−4)²] = √[0,450+1,801] = √2,251 ≈ 1,500 ✓</div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <h3>Zadania</h3>
+
+    <div class="exercise">
+      <div class="elabel">Zadanie 1 — trafienie na wprost</div>
+      <div class="given">O = (0,0,0), D = (0,0,1) (już znormalizowany), sfera C = (0,0,5), r = 2. Policz a, b, c, Δ, t₀ i t₁.</div>
+      <button class="reveal-btn" onclick="toggleAnswer('ans1')">Pokaż odpowiedź</button>
+      <div class="answer" id="ans1">
+        <div class="line">L = (0,0,−5). a = 1. b = 2·(D·L) = 2·(−5) = <span class="res">−10</span>. c = L·L−r² = 25−4 = <span class="res">21</span>.</div>
+        <div class="line">Δ = 100 − 84 = <span class="res">16</span>, √Δ = 4.</div>
+        <div class="line">t₀ = (10−4)/2 = <span class="res">3,0</span>, t₁ = (10+4)/2 = <span class="res">7,0</span>.</div>
+      </div>
+    </div>
+
+    <div class="exercise">
+      <div class="elabel">Zadanie 2 — promień mija sferę</div>
+      <div class="given">O = (0,0,0), D = (1,0,0), sfera C = (5,3,0), r = 1. Sprawdź, czy promień trafia w sferę.</div>
+      <button class="reveal-btn" onclick="toggleAnswer('ans2')">Pokaż odpowiedź</button>
+      <div class="answer" id="ans2">
+        <div class="line">L = (−5,−3,0). a=1. b = 2·(D·L) = 2·(−5) = <span class="res">−10</span>. c = L·L−r² = 34−1 = <span class="res">33</span>.</div>
+        <div class="line">Δ = 100 − 132 = <span class="res">−32</span> — ujemne ⇒ promień <strong>mija</strong> sferę, brak rzeczywistych t.</div>
+      </div>
+    </div>
+
+    <div class="exercise">
+      <div class="elabel">Zadanie 3 — przypadek tangentny</div>
+      <div class="given">O = (0,0,0), D = (1,0,0), sfera C = (5,1,0), r = 1. Sprawdź Δ i zinterpretuj wynik.</div>
+      <button class="reveal-btn" onclick="toggleAnswer('ans3')">Pokaż odpowiedź</button>
+      <div class="answer" id="ans3">
+        <div class="line">L = (−5,−1,0). a=1. b = 2·(−5) = <span class="res">−10</span>. c = 26−1 = <span class="res">25</span>.</div>
+        <div class="line">Δ = 100 − 100 = <span class="res">0</span> — promień jest <strong>tangentny</strong>, dotyka sfery w jednym punkcie, t = −b/2a = 5,0.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ROZDZIAŁ 3 ============ -->
+  <div class="chapter-head" id="r3">
+    <span class="num">ROZDZIAŁ 3</span>
+    <h2>Baza kamery i promień z piksela</h2>
+  </div>
+
+  <div class="subsection">
+    <h3>Wzór</h3>
+    <div class="formula">forward = normalize(target − eye)<br>right = normalize(forward × up_world)<br>up = right × forward</div>
+  </div>
+
+  <div class="subsection">
+    <h3>Przykład: baza kamery</h3>
+    <div class="worked">
+      <div class="wlabel">Dane wejściowe</div>
+      <div class="step">eye = (0,0,0), target = (2,1,−3), up_world = (0,1,0)</div>
+    </div>
+    <div class="worked">
+      <div class="wlabel">Krok po kroku</div>
+      <div class="step">1) forward_raw = target − eye = <span class="v">(2, 1, −3)</span></div>
+      <div class="step">2) |forward_raw| = √(4+1+9) = √14 ≈ 3,742 → <span class="v">forward = (0,535; 0,267; −0,802)</span></div>
+      <div class="step">3) right_raw = forward × up_world:<br>
+        x: fy·uz − fz·uy = 0,267·0 − (−0,802)·1 = 0,802<br>
+        y: fz·ux − fx·uz = (−0,802)·0 − 0,535·0 = 0<br>
+        z: fx·uy − fy·ux = 0,535·1 − 0,267·0 = 0,535<br>
+        → <span class="v">right_raw = (0,802; 0; 0,535)</span></div>
+      <div class="step">4) |right_raw| = √(0,643+0+0,286) = √0,929 ≈ 0,964 → <span class="v">right = (0,832; 0; 0,555)</span></div>
+      <div class="step">5) up = right × forward:<br>
+        x: ry·fz − rz·fy = 0·(−0,802) − 0,555·0,267 = −0,148<br>
+        y: rz·fx − rx·fz = 0,555·0,535 − 0,832·(−0,802) = 0,297+0,667 = 0,964<br>
+        z: rx·fy − ry·fx = 0,832·0,267 − 0·0,535 = 0,222<br>
+        → <span class="v">up = (−0,148; 0,964; 0,222)</span></div>
+      <div class="result">Wynik: forward=(0,535; 0,267; −0,802), right=(0,832; 0; 0,555), up=(−0,148; 0,964; 0,222)</div>
+      <div class="check">Sprawdzenie: forward·right i forward·up powinny wyjść ≈0 (prostopadłość). |up| powinno wyjść ≈1.</div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <h3>Przykład: viewport i promień dla konkretnego piksela</h3>
+    <div class="formula">viewport_height = 2·tan(FOV/2)<br>viewport_width = aspect · viewport_height<br>s = (2(i+0,5)/W − 1)·(vw/2),  t = (1 − 2(j+0,5)/H)·(vh/2)<br>D_final = normalize(eye + forward + s·right + t·up − eye)</div>
+
+    <div class="worked">
+      <div class="wlabel">Dane wejściowe</div>
+      <div class="step">FOV = 60°, W×H = 800×450, piksel (i,j) = (600, 100). Baza kamery z poprzedniego przykładu.</div>
+    </div>
+    <div class="worked">
+      <div class="wlabel">Krok po kroku</div>
+      <div class="step">1) aspect = 800/450 ≈ <span class="v">1,778</span></div>
+      <div class="step">2) viewport_height = 2·tan(30°) = 2·0,577 ≈ <span class="v">1,155</span></div>
+      <div class="step">3) viewport_width = 1,778·1,155 ≈ <span class="v">2,053</span></div>
+      <div class="step">4) s = (2·(600,5)/800 − 1)·(2,053/2) = (1,501−1)·1,026 ≈ <span class="v">0,514</span></div>
+      <div class="step">5) t = (1 − 2·(100,5)/450)·(1,155/2) = (1−0,447)·0,577 ≈ <span class="v">0,319</span></div>
+      <div class="step">6) P = eye + forward + s·right + t·up<br>
+        = (0,535; 0,267; −0,802) + 0,514·(0,832; 0; 0,555) + 0,319·(−0,148; 0,964; 0,222)<br>
+        = (0,535+0,428−0,047; 0,267+0+0,308; −0,802+0,285+0,071)<br>
+        ≈ <span class="v">(0,915; 0,575; −0,445)</span></div>
+      <div class="step">7) D_final = normalize(P − eye) = normalize(0,915; 0,575; −0,445), |.| ≈ 1,169 → <span class="v">(0,783; 0,492; −0,381)</span></div>
+      <div class="result">Wynik: promień dla piksela (600,100): O=(0,0,0), D≈(0,783; 0,492; −0,381)</div>
+      <div class="check">Sprawdzenie: |D_final| powinno wyjść 1 — 0,783²+0,492²+0,381² = 0,613+0,242+0,145 = 1,000 ✓</div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <h3>Zadanie</h3>
+    <div class="exercise">
+      <div class="elabel">Zadanie 4 — inna baza kamery</div>
+      <div class="given">eye = (0,0,0), target = (1,−1,−2), up_world = (0,1,0). Policz forward, right, up.</div>
+      <button class="reveal-btn" onclick="toggleAnswer('ans4')">Pokaż odpowiedź</button>
+      <div class="answer" id="ans4">
+        <div class="line">forward_raw=(1,−1,−2), |.|=√6≈2,449 → forward ≈ <span class="res">(0,408; −0,408; −0,816)</span></div>
+        <div class="line">right_raw = forward×up_world ≈ (0,894; 0; 0,447), już bliskie unormowaniu → right ≈ <span class="res">(0,894; 0; 0,447)</span></div>
+        <div class="line">up = right×forward ≈ <span class="res">(0,183; 0,913; −0,365)</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ROZDZIAŁ 4 ============ -->
+  <div class="chapter-head" id="r4">
+    <span class="num">ROZDZIAŁ 4</span>
+    <h2>Płaszczyzna i algorytm Möllera–Trumbore</h2>
+  </div>
+
+  <div class="subsection">
+    <h3>Wzór — płaszczyzna</h3>
+    <div class="formula">t = N·(Q−O) / (N·D)</div>
+
+    <div class="worked">
+      <div class="wlabel">Przykład</div>
+      <div class="step">Dane: N_raw=(1,2,2) → N=(1/3; 2/3; 2/3) [już policzone: |N_raw|=3]. Q=(1,0,0). O=(0,0,5), D=(0,0,−1).</div>
+      <div class="step">1) Q−O = (1−0, 0−0, 0−5) = <span class="v">(1, 0, −5)</span></div>
+      <div class="step">2) N·(Q−O) = (1/3·1)+(2/3·0)+(2/3·−5) = 0,333 − 3,333 = <span class="v">−3,0</span></div>
+      <div class="step">3) N·D = (1/3·0)+(2/3·0)+(2/3·−1) = <span class="v">−0,667</span></div>
+      <div class="step">4) t = −3,0 / −0,667 = <span class="v">4,5</span></div>
+      <div class="step">5) P = O + t·D = (0,0,5) + 4,5·(0,0,−1) = <span class="v">(0, 0, 0,5)</span></div>
+      <div class="result">Wynik: t = 4,5, punkt trafienia (0, 0, 0,5)</div>
+      <div class="check">Sprawdzenie: N·(P−Q) powinno wyjść 0. P−Q=(−1,0,0,5). N·(P−Q) = −0,333+0,333 = 0 ✓</div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <h3>Wzór — Möller–Trumbore</h3>
+    <div class="formula">edge1=B−A, edge2=C−A, h=D×edge2, det=edge1·h<br>s=O−A, u=(s·h)/det, q=s×edge1, v=(D·q)/det, t=(edge2·q)/det</div>
+
+    <div class="worked">
+      <div class="wlabel">Przykład</div>
+      <div class="step">Trójkąt: A=(0,0,0), B=(4,0,0), C=(0,3,0). Promień: O=(1,1,5), D=(0,0,−1).</div>
+      <div class="step">1) edge1 = B−A = <span class="v">(4,0,0)</span>. edge2 = C−A = <span class="v">(0,3,0)</span>.</div>
+      <div class="step">2) h = D × edge2:<br>
+        x: Dy·e2z − Dz·e2y = 0·0 − (−1)·3 = 3<br>
+        y: Dz·e2x − Dx·e2z = (−1)·0 − 0·0 = 0<br>
+        z: Dx·e2y − Dy·e2x = 0·3 − 0·0 = 0<br>
+        → <span class="v">h = (3, 0, 0)</span></div>
+      <div class="step">3) det = edge1·h = 4·3 + 0·0 + 0·0 = <span class="v">12</span> (≠0, promień nie jest równoległy do płaszczyzny trójkąta)</div>
+      <div class="step">4) s = O−A = <span class="v">(1, 1, 5)</span></div>
+      <div class="step">5) u = (s·h)/det = (1·3+1·0+5·0)/12 = 3/12 = <span class="v">0,25</span> — spełnia 0≤u≤1 ✓</div>
+      <div class="step">6) q = s × edge1:<br>
+        x: sy·e1z − sz·e1y = 1·0 − 5·0 = 0<br>
+        y: sz·e1x − sx·e1z = 5·4 − 1·0 = 20<br>
+        z: sx·e1y − sy·e1x = 1·0 − 1·4 = −4<br>
+        → <span class="v">q = (0, 20, −4)</span></div>
+      <div class="step">7) v = (D·q)/det = (0·0+0·20+(−1)·(−4))/12 = 4/12 = <span class="v">0,333</span> — u+v=0,583≤1 ✓</div>
+      <div class="step">8) t = (edge2·q)/det = (0·0+3·20+0·(−4))/12 = 60/12 = <span class="v">5,0</span></div>
+      <div class="step">9) Punkt trafienia: P = O+t·D = (1,1,5)+5·(0,0,−1) = <span class="v">(1, 1, 0)</span></div>
+      <div class="result">Wynik: TRAFIENIE. t=5,0, u=0,25, v=0,333, punkt (1,1,0)</div>
+      <div class="check">Sprawdzenie barycentryczne: (1−u−v)·A + u·B + v·C = 0,417·(0,0,0) + 0,25·(4,0,0) + 0,333·(0,3,0) = (1,0,0)+(0,1,0) = (1,1,0) ✓ zgadza się z P.</div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <h3>Zadanie</h3>
+    <div class="exercise">
+      <div class="elabel">Zadanie 5 — przecięcie z płaszczyzną</div>
+      <div class="given">N=(0,0,1), Q=(0,0,3), O=(1,1,0), D=(0,0,1). Policz t i punkt trafienia.</div>
+      <button class="reveal-btn" onclick="toggleAnswer('ans5')">Pokaż odpowiedź</button>
+      <div class="answer" id="ans5">
+        <div class="line">Q−O = (−1,−1,3). N·(Q−O) = 3. N·D = 1. t = 3/1 = <span class="res">3,0</span>.</div>
+        <div class="line">P = O+3·D = (1,1,0)+(0,0,3) = <span class="res">(1, 1, 3)</span>.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ROZDZIAŁ 5 ============ -->
+  <div class="chapter-head" id="r5">
+    <span class="num">ROZDZIAŁ 5</span>
+    <h2>Lambert i Blinn-Phong</h2>
+  </div>
+
+  <div class="subsection">
+    <h3>Wzór</h3>
+    <div class="formula">diffuse = kd·I·max(0,N·L)<br>H = normalize(L+V),  specular = ks·I·max(0,N·H)^shininess<br>color = ka·Ia + diffuse + specular</div>
+  </div>
+
+  <div class="subsection">
+    <h3>Przykład: kompletne shading jednego punktu</h3>
+    <div class="worked">
+      <div class="wlabel">Dane wejściowe</div>
+      <div class="step">Punkt trafienia P=(0,0,0), normalna N=(0,1,0). Światło w Lpos=(2,4,3). Kamera (eye) w (3,5,4). kd=(0,8; 0,2; 0,2), ks=1,0 (biały), shininess=16, ka=0,1, I=Ia=1.</div>
+    </div>
+    <div class="worked">
+      <div class="wlabel">Krok po kroku</div>
+      <div class="step">1) L_raw = Lpos−P = (2,4,3). |L_raw| = √(4+16+9) = √29 ≈ 5,385 → <span class="v">L = (0,371; 0,743; 0,557)</span></div>
+      <div class="step">2) N·L = 0·0,371 + 1·0,743 + 0·0,557 = <span class="v">0,743</span></div>
+      <div class="step">3) diffuse = kd·I·(N·L) = (0,8; 0,2; 0,2)·1·0,743 = <span class="v">(0,594; 0,149; 0,149)</span></div>
+      <div class="step">4) V_raw = eye−P = (3,5,4). |V_raw| = √(9+25+16) = √50 ≈ 7,071 → <span class="v">V = (0,424; 0,707; 0,566)</span></div>
+      <div class="step">5) H_raw = L+V = (0,371+0,424; 0,743+0,707; 0,557+0,566) = <span class="v">(0,796; 1,450; 1,123)</span></div>
+      <div class="step">6) |H_raw| = √(0,633+2,102+1,261) = √3,996 ≈ 1,999 → <span class="v">H = (0,398; 0,725; 0,562)</span></div>
+      <div class="step">7) N·H = 0·0,398 + 1·0,725 + 0·0,562 = <span class="v">0,725</span></div>
+      <div class="step">8) (N·H)^16: ln(0,725)≈−0,322, ×16≈−5,157, e^(−5,157) ≈ <span class="v">0,00587</span></div>
+      <div class="step">9) specular = ks·I·0,00587 = <span class="v">0,00587</span> (biały, dodaje się do każdego kanału RGB równo)</div>
+      <div class="step">10) ambient = ka·Ia = 0,1·1 = <span class="v">0,1</span> (każdy kanał)</div>
+      <div class="step">11) color = ambient + diffuse + specular:<br>
+        R: 0,1+0,594+0,006 = <span class="v">0,700</span><br>
+        G: 0,1+0,149+0,006 = <span class="v">0,254</span><br>
+        B: 0,1+0,149+0,006 = <span class="v">0,254</span></div>
+      <div class="result">Wynik: color ≈ (0,700; 0,254; 0,254) — nasycona czerwień z małym białym błyskiem</div>
+      <div class="check">Sprawdzenie rzędu wielkości: N·L=0,743 jest duże (światło blisko „nad” punktem) — diffuse dominuje, zgodnie z wynikiem. Specular jest mały, bo N·H=0,725 podniesione do 16. potęgi szybko maleje.</div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <h3>Zadanie</h3>
+    <div class="exercise">
+      <div class="elabel">Zadanie 6 — samo N·L</div>
+      <div class="given">N=(0,1,0), światło w Lpos=(0,1,0), punkt P=(0,0,0) (światło idealnie nad punktem). Policz L i N·L.</div>
+      <button class="reveal-btn" onclick="toggleAnswer('ans6')">Pokaż odpowiedź</button>
+      <div class="answer" id="ans6">
+        <div class="line">L_raw = (0,1,0), już znormalizowany (|.|=1) → L = <span class="res">(0,1,0)</span>.</div>
+        <div class="line">N·L = 0·0+1·1+0·0 = <span class="res">1,0</span> — maksymalna możliwa wartość, światło idealnie na wprost normalnej.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Tom 2 mógłby rozwinąć w ten sam sposób Rozdziały 6–11: bias przy cieniach, odbicie/załamanie z prawem Snella, i pełne liczenie GGX/Cook-Torrance krok po kroku. Powiedz, czy kontynuować.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+</div>
+</div>
+
+<script>
+function toggleAnswer(id){
+  var el = document.getElementById(id);
+  el.classList.toggle('shown');
+}
+</script>
+</body>
+</html>

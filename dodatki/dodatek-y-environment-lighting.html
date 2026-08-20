@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek Y — Environment lighting: HDRI jako źródło światła</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>TYP · infinite area light</span><span>MAPA · equirectangular</span><span>SAMPLING · ważony jasnością</span><span>EXT OF · R.15,16,21 · Dodatek B,V</span>
+  </div>
+
+  <div class="eyebrow">Dodatek Y / Światła</div>
+  <h1>Environment lighting: HDRI jako źródło światła</h1>
+  <p class="subtitle">Rozdział 21 nauczył Cię liczyć niebo proceduralnie, wzorem. Ale najczęstsze źródło światła w prawdziwej produkcji to nie wzór — to zdjęcie panoramiczne. Ten dodatek pokazuje, jak jeden obraz staje się źródłem światła dla całej scenie.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Environment light (infinite area light) to obraz panoramiczny, w którym każdy piksel to światło dochodzące z jego kierunku — kiedy promień z Rozdziału 15 „ucieka” ze scenie, zamiast czerni dostaje wartość z tego obrazu.</li>
+      <li>Standardowe mapowanie kierunku 3D na piksel to equirectangular (lat-long) — to samo, co dałaby kamera sferyczna, tylko w drugą stronę.</li>
+      <li>Jednorodne próbkowanie takiego światła jest tragicznie nieefektywne, jeśli obraz ma małe, jasne miejsce (słońce w kadrze) — trzeba próbkować proporcjonalnie do jasności pikseli, dokładnie metodą z Dodatku V.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Idea</div>
+    <h2>Obraz jako światło z każdego kierunku naraz</h2>
+    <p>W Rozdziale 15, gdy promień nie trafiał w żaden obiekt, po prostu kończył ścieżkę bez wkładu światła. Environment light zmienia to: kierunek promienia, który uciekł ze scenę, odpytuje panoramiczny obraz (HDRI — High Dynamic Range Image, żeby poprawnie reprezentować bardzo jasne słońce i bardzo ciemne cienie w jednym pliku) i zwraca jego wartość jako Le — tak, jakby całe niebo (albo cała otaczająca scena, nagrana w realnym studiu czy plenerze) było jednym, nieskończenie odległym światłem.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Equirectangular.mapping</span><span>sphere ↔ panorama</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="eq1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8b909b"/></marker>
+        </defs>
+        <circle cx="150" cy="130" r="90" fill="#20242c" stroke="#4fc3c0" stroke-width="1.6"/>
+        <g stroke="#4fc3c0" stroke-opacity="0.4">
+          <ellipse cx="150" cy="130" rx="90" ry="30"/>
+          <ellipse cx="150" cy="130" rx="90" ry="60"/>
+          <line x1="60" y1="130" x2="240" y2="130"/>
+          <path d="M 150,40 Q 90,130 150,220"/>
+          <path d="M 150,40 Q 210,130 150,220"/>
+        </g>
+        <text x="150" y="245" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">sfera kierunków (θ,φ)</text>
+
+        <line x1="260" y1="130" x2="420" y2="130" stroke="#8b909b" stroke-width="1.5" marker-end="url(#eq1)"/>
+
+        <rect x="440" y="80" width="280" height="100" fill="#20242c" stroke="#e8a33d" stroke-width="1.6"/>
+        <g stroke="#e8a33d" stroke-opacity="0.35">
+          <line x1="510" y1="80" x2="510" y2="180"/><line x1="580" y1="80" x2="580" y2="180"/><line x1="650" y1="80" x2="650" y2="180"/>
+          <line x1="440" y1="105" x2="720" y2="105"/><line x1="440" y1="130" x2="720" y2="130"/><line x1="440" y1="155" x2="720" y2="155"/>
+        </g>
+        <text x="580" y="200" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">u = φ/2π, v = θ/π</text>
+      </svg>
+      <div class="diagram-caption">Ta sama siatka, rozwinięta — tak samo, jak mapa świata rozwija globus.</div>
+    </div>
+
+    <div class="formula">u = φ / 2π,  v = θ / π<span class="sub">(θ, φ) — standardowe współrzędne sferyczne kierunku promienia; (u,v) — współrzędne piksela w obrazie panoramicznym, dokładnie ta sama logika co „spherical camera” z Rozdziału 3, tylko w drugą stronę</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Sampling</div>
+    <h2>Czemu nie próbkujesz jednorodnie</h2>
+    <p>Jednorodne próbkowanie kierunku (jak w podstawowym Rozdziale 15) działa źle, jeśli w HDRI jest mały, bardzo jasny obszar — widoczne słońce, okno, żarówka w kadrze zdjęcia panoramicznego. To dokładnie problem „igły w stogu siana” z Rozdziału 16, tylko teraz igła jest zaszyta w pikselach obrazu, nie w geometrii szkła.</p>
+    <p>Rozwiązanie: zbuduj rozkład prawdopodobieństwa proporcjonalny do jasności (luminancji) każdego piksela, i próbkuj dokładnie metodą odwrotnej CDF z Dodatku V — najpierw wybierz wiersz (skumulowana jasność wierszy), potem kolumnę w tym wierszu (skumulowana jasność pikseli w wierszu). To dwuwymiarowe rozszerzenie tej samej, jednej techniki.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Luminance.importance.sampling</span><span>bright spot in HDRI</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <rect x="60" y="60" width="640" height="140" fill="#20242c" stroke="#2a2f38" stroke-width="1.5"/>
+        <circle cx="620" cy="92" r="26" fill="#f0c880" fill-opacity="0.35"/>
+        <circle cx="620" cy="92" r="12" fill="#f0c880" fill-opacity="0.6"/>
+        <text x="620" y="55" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">jasny obszar (np. słońce w HDRI)</text>
+
+        <circle cx="637.1" cy="108.4" r="2.8" fill="#e8a33d"/><circle cx="603.4" cy="78.0" r="2.8" fill="#e8a33d"/><circle cx="628.3" cy="114.3" r="2.8" fill="#e8a33d"/><circle cx="629.4" cy="74.3" r="2.8" fill="#e8a33d"/><circle cx="603.9" cy="89.7" r="2.8" fill="#e8a33d"/><circle cx="641.2" cy="90.3" r="2.8" fill="#e8a33d"/><circle cx="612.8" cy="87.3" r="2.8" fill="#e8a33d"/><circle cx="624.3" cy="80.2" r="2.8" fill="#e8a33d"/><circle cx="620.7" cy="94.1" r="2.8" fill="#e8a33d"/><circle cx="656.0" cy="89.6" r="2.8" fill="#e8a33d"/><circle cx="641.5" cy="76.3" r="2.8" fill="#e8a33d"/><circle cx="639.2" cy="92.7" r="2.8" fill="#e8a33d"/><circle cx="609.1" cy="90.1" r="2.8" fill="#e8a33d"/><circle cx="640.1" cy="86.0" r="2.8" fill="#e8a33d"/><circle cx="642.8" cy="111.3" r="2.8" fill="#e8a33d"/><circle cx="655.7" cy="112.7" r="2.8" fill="#e8a33d"/><circle cx="593.3" cy="95.1" r="2.8" fill="#e8a33d"/><circle cx="606.0" cy="103.5" r="2.8" fill="#e8a33d"/><circle cx="622.3" cy="93.6" r="2.8" fill="#e8a33d"/><circle cx="630.7" cy="82.4" r="2.8" fill="#e8a33d"/><circle cx="622.8" cy="80.6" r="2.8" fill="#e8a33d"/><circle cx="665.7" cy="84.2" r="2.8" fill="#e8a33d"/>
+
+        <circle cx="108.3" cy="161.4" r="2.2" fill="#e8a33d" fill-opacity="0.5"/><circle cx="147.9" cy="187.5" r="2.2" fill="#e8a33d" fill-opacity="0.5"/><circle cx="235.2" cy="184.9" r="2.2" fill="#e8a33d" fill-opacity="0.5"/><circle cx="171.7" cy="125.5" r="2.2" fill="#e8a33d" fill-opacity="0.5"/><circle cx="382.0" cy="149.4" r="2.2" fill="#e8a33d" fill-opacity="0.5"/><circle cx="272.2" cy="79.7" r="2.2" fill="#e8a33d" fill-opacity="0.5"/>
+        <text x="380" y="225" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">próbki skupione tam, gdzie jasność jest największa</text>
+      </svg>
+      <div class="diagram-caption">Ta sama liczba próbek — skupiona tam, gdzie każda z nich wnosi najwięcej do obrazu.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>„World Background” w Blenderze, „Skydome/HDRI light” w Arnoldzie i V-Rayu, „Env Light” w Unrealu — wszystkie robią dokładnie to. Format .hdr/.exr przechowuje pełny zakres jasności (stąd „HDR” — słońce może mieć wartość tysięcy, cień 0,01, bez utraty informacji, dokładnie jak scene-referred z Dodatku E). Jeśli render z HDRI jest wyjątkowo szumiący przy niskiej liczbie próbek, prawdopodobnie silnik nie ma włączonego (albo nie ma wcale) importance sampling po jasności obrazu — to pierwsze ustawienie do sprawdzenia.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Environment light / infinite area light</dt><dd>Źródło światła zdefiniowane obrazem panoramicznym, nieskończenie odległe.</dd>
+      <dt>HDRI</dt><dd>Obraz o wysokim zakresie dynamiki, przechowujący realne wartości radiancji.</dd>
+      <dt>Mapowanie equirectangular</dt><dd>Liniowe odwzorowanie kierunku sferycznego na piksel obrazu panoramicznego.</dd>
+      <dt>Importance sampling po luminancji</dt><dd>Próbkowanie obrazu proporcjonalnie do jasności jego pikseli.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Ostatni dodatek z tej rundy: pełny wzór funkcji fazowej Henyeya-Greensteina, nazwanej z imienia w Rozdziale 18, ale nigdy nie wypisanej.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-15-path-tracing.html">↑ Rozdział 15: Path tracing i Monte Carlo</a>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Rozdział 1 — Wprowadzenie do renderowania</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.subtitle{max-width:620px;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>CAM · PERSPECTIVE</span><span>RAYS/PX · 1</span><span>BOUNCES · ∞</span><span>DENOISER · OFF</span>
+  </div>
+
+  <div class="eyebrow">Rozdział 1 / Podstawy</div>
+  <h1>Wprowadzenie do renderowania</h1>
+  <p class="subtitle">Zanim zaczniemy pisać kod śledzący promienie, warto zrozumieć, co dzieje się w silniku renderującym, gdy przełączasz viewport z podglądu na tryb finalnego renderu — i czym różni się to od klasycznej rasteryzacji.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Rasteryzacja rzutuje trójkąty na ekran i działa błyskawicznie, ale światło musi „udawać” za pomocą map cieni, sond świetlnych i SSR.</li>
+      <li>Ray tracing symuluje fizyczną drogę światła promień po promieniu, dlatego naturalnie daje realistyczne odbicia, cienie i załamania.</li>
+      <li>To ta sama logika, którą uruchamiasz, przełączając viewport na „Rendered” albo odpalając Arnolda czy V-Raya — tylko rozpisana na czynniki pierwsze.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <p>Rendering to proces zamiany opisu sceny 3D — geometrii, materiałów, świateł i kamery — na dwuwymiarowy obraz. Od czterech dekad istnieją dwie rodziny podejść do tego problemu, i jako artysta techniczny prawdopodobnie korzystasz z obu, często bez zastanawiania się, co dzieje się pod maską.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Rasteryzacja vs Ray Tracing</div>
+    <h2>Dwa różne pytania o ten sam piksel</h2>
+    <p><span class="term-amber">Rasteryzacja</span> odpowiada na pytanie: „który trójkąt zakrywa ten piksel?”. Geometria jest rzutowana na ekran, a bufor głębi (z-buffer) decyduje, co jest bliżej kamery. To podejście jest błyskawiczne i doskonale współpracuje z GPU — ale samo z siebie nic nie wie o świetle odbitym od innych obiektów. Stąd cały arsenał sztuczek: mapy cieni, sondy świetlne (light probes), odbicia w przestrzeni ekranu (SSR), zapieczone lightmapy.</p>
+    <p><span class="term-cyan">Ray tracing</span> zadaje inne pytanie: „co zobaczyłby promień światła, gdybyśmy wysłali go z kamery przez ten piksel?”. Zamiast pracować tylko na widocznej geometrii, promień może odpytać całą scenę — również to, czego nie widać na ekranie. Dzięki temu odbicia, cienie i załamania wychodzą naturalnie, jako efekt samego algorytmu, a nie dodatkowej sztuczki.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Pipeline.compare</span><span>Stages · 5</span></div>
+      <svg viewBox="0 0 760 430" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrRaster" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#6e93be"/>
+          </marker>
+          <marker id="arrRT" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/>
+          </marker>
+        </defs>
+
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="13" letter-spacing="1.5" fill="#6e93be">RASTERYZACJA</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="13" letter-spacing="1.5" fill="#e8a33d">RAY TRACING</text>
+
+        <!-- left column boxes -->
+        <g font-family="IBM Plex Sans" font-size="12.5" fill="#ecebe4">
+          <rect x="40" y="64" width="300" height="50" rx="8" fill="#20242c" stroke="#6e93be" stroke-opacity="0.55"/>
+          <text x="190" y="84" text-anchor="middle">Geometria</text>
+          <text x="190" y="100" text-anchor="middle" fill="#8b909b">→ trójkąty w screen space</text>
+
+          <rect x="40" y="138" width="300" height="50" rx="8" fill="#20242c" stroke="#6e93be" stroke-opacity="0.55"/>
+          <text x="190" y="158" text-anchor="middle">Rasteryzacja</text>
+          <text x="190" y="174" text-anchor="middle" fill="#8b909b">→ który piksel pod trójkątem</text>
+
+          <rect x="40" y="212" width="300" height="50" rx="8" fill="#20242c" stroke="#6e93be" stroke-opacity="0.55"/>
+          <text x="190" y="232" text-anchor="middle">Z-buffer</text>
+          <text x="190" y="248" text-anchor="middle" fill="#8b909b">→ co jest bliżej kamery</text>
+
+          <rect x="40" y="286" width="300" height="50" rx="8" fill="#20242c" stroke="#6e93be" stroke-opacity="0.55"/>
+          <text x="190" y="306" text-anchor="middle">Shading + sztuczki</text>
+          <text x="190" y="322" text-anchor="middle" fill="#8b909b">(shadow maps, SSR, probes)</text>
+
+          <rect x="40" y="360" width="300" height="46" rx="8" fill="#20242c" stroke="#6e93be"/>
+          <text x="190" y="388" text-anchor="middle" font-weight="600">Piksel na ekranie</text>
+        </g>
+
+        <line x1="190" y1="114" x2="190" y2="136" stroke="#6e93be" stroke-width="2" marker-end="url(#arrRaster)"/>
+        <line x1="190" y1="188" x2="190" y2="210" stroke="#6e93be" stroke-width="2" marker-end="url(#arrRaster)"/>
+        <line x1="190" y1="262" x2="190" y2="284" stroke="#6e93be" stroke-width="2" marker-end="url(#arrRaster)"/>
+        <line x1="190" y1="336" x2="190" y2="358" stroke="#6e93be" stroke-width="2" marker-end="url(#arrRaster)"/>
+
+        <!-- right column boxes -->
+        <g font-family="IBM Plex Sans" font-size="12.5" fill="#ecebe4">
+          <rect x="420" y="64" width="300" height="50" rx="8" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="570" y="84" text-anchor="middle">Kamera → promień</text>
+          <text x="570" y="100" text-anchor="middle" fill="#8b909b">przez piksel</text>
+
+          <rect x="420" y="138" width="300" height="50" rx="8" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="570" y="158" text-anchor="middle">Test przecięcia</text>
+          <text x="570" y="174" text-anchor="middle" fill="#8b909b">promienia ze sceną</text>
+
+          <rect x="420" y="212" width="300" height="50" rx="8" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="570" y="232" text-anchor="middle">Punkt trafienia</text>
+          <text x="570" y="248" text-anchor="middle" fill="#8b909b">na powierzchni</text>
+
+          <rect x="420" y="286" width="300" height="50" rx="8" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="570" y="306" text-anchor="middle">Promień cienia +</text>
+          <text x="570" y="322" text-anchor="middle" fill="#8b909b">promienie odbite</text>
+
+          <rect x="420" y="360" width="300" height="46" rx="8" fill="#20242c" stroke="#e8a33d"/>
+          <text x="570" y="388" text-anchor="middle" font-weight="600">Piksel na ekranie</text>
+        </g>
+
+        <line x1="570" y1="114" x2="570" y2="136" stroke="#e8a33d" stroke-width="2" marker-end="url(#arrRT)"/>
+        <line x1="570" y1="188" x2="570" y2="210" stroke="#e8a33d" stroke-width="2" marker-end="url(#arrRT)"/>
+        <line x1="570" y1="262" x2="570" y2="284" stroke="#e8a33d" stroke-width="2" marker-end="url(#arrRT)"/>
+        <line x1="570" y1="336" x2="570" y2="358" stroke="#e8a33d" stroke-width="2" marker-end="url(#arrRT)"/>
+      </svg>
+      <div class="diagram-caption">Obie ścieżki kończą się tym samym pikselem — różnica leży w tym, jak dochodzą do jego koloru.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Mechanika</div>
+    <h2>Jak to działa konceptualnie</h2>
+    <p>Na najbardziej podstawowym poziomie ray tracing robi trzy rzeczy w kółko, dla każdego piksela obrazu:</p>
+    <ul class="compact">
+      <li>Wysyła <span class="term-amber">promień pierwotny</span> z kamery przez dany piksel, w głąb sceny.</li>
+      <li>Szuka najbliższego miejsca, w którym ten promień przecina jakąkolwiek geometrię — <span class="term-amber">punktu trafienia</span>.</li>
+      <li>W punkcie trafienia liczy kolor: wysyła <span class="term-violet">promień cienia</span> do każdego światła, sprawdzając, czy coś je zasłania, a jeśli materiał odbija lub przepuszcza światło — wysyła kolejne, <span class="term-cyan">promienie drugorzędne</span> i rekurencyjnie powtarza cały proces.</li>
+    </ul>
+    <p>Ta rekurencja jest kluczowa. Promień odbity, trafiając w kolejną powierzchnię, sam staje się nowym „promieniem pierwotnym” dla tamtego punktu — stąd realistyczne odbicia w odbiciach, które w rasteryzacji trzeba by ręcznie symulować kaskadą sond i cubemap.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Scene.preview</span><span>Cam: persp · fov 50°</span></div>
+      <svg viewBox="0 0 760 440" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrAmber" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/>
+          </marker>
+          <marker id="arrViolet" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#9c82d8"/>
+          </marker>
+          <marker id="arrCyan" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#4fc3c0"/>
+          </marker>
+          <radialGradient id="sphereGrad" cx="35%" cy="30%" r="70%">
+            <stop offset="0%" stop-color="#3a4552"/>
+            <stop offset="60%" stop-color="#242b34"/>
+            <stop offset="100%" stop-color="#171b21"/>
+          </radialGradient>
+        </defs>
+
+        <!-- floor grid -->
+        <g stroke="#2a2f38">
+          <line x1="0" y1="360" x2="760" y2="360" stroke-opacity="0.5"/>
+          <line x1="0" y1="385" x2="760" y2="385" stroke-opacity="0.32"/>
+          <line x1="0" y1="410" x2="760" y2="410" stroke-opacity="0.18"/>
+        </g>
+
+        <!-- camera -->
+        <g>
+          <rect x="30" y="240" width="34" height="26" rx="3" fill="#8b909b"/>
+          <polygon points="64,244 96,228 96,278 64,262" fill="#8b909b"/>
+          <text x="45" y="292" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">CAM</text>
+        </g>
+
+        <!-- viewport / image plane -->
+        <line x1="180" y1="130" x2="180" y2="340" stroke="#8b909b" stroke-width="1.5" stroke-dasharray="1 5"/>
+        <text x="180" y="118" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" letter-spacing="1" fill="#8b909b">VIEWPORT</text>
+
+        <!-- light -->
+        <g>
+          <circle cx="650" cy="58" r="10" fill="#f0c880"/>
+          <g stroke="#f0c880" stroke-width="2">
+            <line x1="650" y1="30" x2="650" y2="18"/>
+            <line x1="622" y1="46" x2="612" y2="38"/>
+            <line x1="678" y1="46" x2="688" y2="38"/>
+          </g>
+          <text x="650" y="84" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">LIGHT</text>
+        </g>
+
+        <!-- sphere -->
+        <circle cx="480" cy="230" r="60" fill="url(#sphereGrad)" stroke="#3a4552"/>
+
+        <!-- ray groups -->
+        <g id="g-primary" class="ray-group">
+          <line x1="64" y1="253" x2="428" y2="205" stroke="#e8a33d" stroke-width="2.5" marker-end="url(#arrAmber)"/>
+          <text x="250" y="215" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#e8a33d">promień pierwotny</text>
+        </g>
+
+        <g id="g-shadow" class="ray-group">
+          <line x1="428" y1="205" x2="644" y2="62" stroke="#9c82d8" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrViolet)"/>
+          <text x="560" y="118" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#9c82d8">promień cienia</text>
+        </g>
+
+        <g id="g-reflect" class="ray-group">
+          <line x1="428" y1="205" x2="705" y2="195" stroke="#4fc3c0" stroke-width="2.5" marker-end="url(#arrCyan)"/>
+          <text x="610" y="228" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#4fc3c0">promień odbity</text>
+        </g>
+
+        <circle cx="428" cy="205" r="3.5" fill="#ecebe4"/>
+      </svg>
+
+      <div class="legend">
+        <div class="chip" onclick="toggleRay('g-primary', this)"><span class="dot" style="background:#e8a33d"></span>Promień pierwotny</div>
+        <div class="chip" onclick="toggleRay('g-shadow', this)"><span class="dot" style="background:#9c82d8"></span>Promień cienia</div>
+        <div class="chip" onclick="toggleRay('g-reflect', this)"><span class="dot" style="background:#4fc3c0"></span>Promień odbity</div>
+      </div>
+      <div class="diagram-caption">Kliknij etykietę, żeby wyizolować pojedynczy typ promienia — tak jak izolujesz AOV w kompozycji.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Kontekst historyczny</div>
+    <h2>Skąd się to wzięło</h2>
+    <p>Idea nie jest nowa. W 1980 roku Turner Whitted opublikował pracę opisującą rekurencyjny ray tracing z odbiciami, cieniami i załamaniami — fundament, na którym stoi cała branża. Sześć lat później James Kajiya sformalizował to w postaci równania renderowania i wprowadził path tracing, czyli losowe próbkowanie metodą Monte Carlo, które dziś stoi za każdym „porządnym” rendererem offline. Ray tracing w czasie rzeczywistym, choć teoretycznie możliwy wcześniej, stał się praktyczny dopiero z pojawieniem się sprzętowej akceleracji — kart GPU z dedykowanymi jednostkami RT, wprowadzonych komercyjnie w 2018 roku.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Zastosowania</div>
+    <h2>Gdzie to spotkasz w praktyce</h2>
+    <p>Prawdopodobnie już dziś pracujesz z ray tracingiem częściej, niż myślisz:</p>
+    <ul class="compact">
+      <li><strong>Rendery finalne w VFX i animacji</strong> — Arnold, RenderMan, V-Ray, Redshift; wszystkie oparte na path tracingu.</li>
+      <li><strong>Silniki real-time</strong> — Lumen i sprzętowy ray tracing w Unreal Engine, ray-traced GI i odbicia w Unity HDRP, zwykle jako hybryda z rasteryzacją.</li>
+      <li><strong>Wizualizacje architektoniczne i produktowe</strong> — V-Ray, Corona, Twinmotion.</li>
+    </ul>
+    <p>Jako artysta techniczny rzadko piszesz raytracer od zera — ale gdy w renderze pojawia się szum, „fireflies” albo światło przecieka przez ścianę, to właśnie zrozumienie tego, co robi pojedynczy promień, pozwala zdiagnozować problem szybciej niż grzebanie w presetach.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Promień pierwotny (primary ray)</dt>
+      <dd>Wysyłany z kamery przez piksel obrazu.</dd>
+      <dt>Punkt trafienia (hit point)</dt>
+      <dd>Miejsce, w którym promień przecina geometrię.</dd>
+      <dt>Promień cienia (shadow ray)</dt>
+      <dd>Testowy promień od punktu trafienia do źródła światła.</dd>
+      <dt>Promień drugorzędny (secondary ray)</dt>
+      <dd>Odbicie lub załamanie wysłane rekurencyjnie z punktu trafienia.</dd>
+      <dt>Głębokość odbić (bounce depth)</dt>
+      <dd>Limit tej rekurencji, ustawiany w silniku renderującym.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>W następnym rozdziale rozłożymy to, co właśnie poznałeś intuicyjnie, na wektory, punkty i operacje, które zaprogramujesz: jak dokładnie wygląda promień jako obiekt matematyczny i jak liczy się jego przecięcie ze sferą.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="rozdzial-02-wektory-i-przeciecia.html">Następny →</a>
+</div>
+</div>
+
+<script>
+function toggleRay(id, el){
+  var g = document.getElementById(id);
+  g.classList.toggle('ray-off');
+  el.classList.toggle('off');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek I — Głębiej: złożoność geometrii a obciążenie ray tracingu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>TRAVERSAL · O(log n)</span><span>BUILD/MEM · ~O(n log n)</span><span>INSTANCE · shared mem, not shared work</span><span>EXT OF · R.13,17,20</span>
+  </div>
+
+  <div class="eyebrow">Dodatek I / Głębiej: Wydajność</div>
+  <h1>Złożoność geometrii a obciążenie ray tracingu</h1>
+  <p class="subtitle">„Ile trójkątów mogę sobie pozwolić?” to źle postawione pytanie. Ray tracing ma dwa zupełnie różne budżety kosztu geometrii — jeden rośnie zaskakująco wolno, drugi zaskakująco szybko. Ten dodatek rozdziela je.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Koszt trawersowania promienia przez BVH rośnie z liczbą trójkątów logarytmicznie — 10 000× więcej geometrii to tylko ~2,3× głębsze drzewo.</li>
+      <li>Koszt budowy BVH i zużycie pamięci rosną dużo szybciej, praktycznie liniowo z liczbą trójkątów — to one, nie trawersowanie, zwykle są prawdziwym limitem.</li>
+      <li>Instancing (Rozdział 17) dzieli pamięć między kopiami, ale nie dzieli pracy trawersowania — las z 10 000 drzew wciąż potrzebuje 10 000 testów, tylko bez 10 000 kopii siatki w RAM-ie.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Dwa budżety</div>
+    <h2>Trawersowanie kontra budowa: różne tempo wzrostu</h2>
+    <p>Rozdział 13 pokazał, że dobre BVH zamienia test O(n) na O(log n) na promień. To ma konkretną, policzalną konsekwencję: zwiększenie sceny z 1000 do 10 milionów trójkątów — 10 000 razy więcej geometrii — head głębokość drzewa z ~10 do ~23 poziomów. Nie 10 000 razy więcej pracy. Odczuwalnie więcej, ale nieproporcjonalnie mało.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Triangle.count.vs.BVH.depth</span><span>10 000× vs 2,3×</span></div>
+      <svg viewBox="0 0 760 240" xmlns="http://www.w3.org/2000/svg">
+        <text x="20" y="45" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">LICZBA TRÓJKĄTÓW</text>
+        <line x1="80" y1="80" x2="700" y2="80" stroke="#8b909b" stroke-width="1.5"/>
+        <circle cx="80" cy="80" r="4" fill="#e8a33d"/><text x="80" y="100" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">1 tys.</text>
+        <circle cx="220" cy="80" r="4" fill="#e8a33d"/><text x="220" y="100" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">10 tys.</text>
+        <circle cx="360" cy="80" r="4" fill="#e8a33d"/><text x="360" y="100" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">100 tys.</text>
+        <circle cx="500" cy="80" r="4" fill="#e8a33d"/><text x="500" y="100" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">1 mln</text>
+        <circle cx="640" cy="80" r="4" fill="#e8a33d"/><text x="640" y="100" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">10 mln</text>
+        <text x="700" y="45" text-anchor="end" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">każdy krok = ×10</text>
+
+        <text x="20" y="150" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">GŁĘBOKOŚĆ BVH (poziomy)</text>
+        <line x1="80" y1="200" x2="700" y2="200" stroke="#8b909b" stroke-width="1.5"/>
+        <line x1="80" y1="80" x2="80" y2="200" stroke="#2a2f38" stroke-width="1" stroke-dasharray="2 3"/>
+        <line x1="220" y1="80" x2="220" y2="200" stroke="#2a2f38" stroke-width="1" stroke-dasharray="2 3"/>
+        <line x1="360" y1="80" x2="360" y2="200" stroke="#2a2f38" stroke-width="1" stroke-dasharray="2 3"/>
+        <line x1="500" y1="80" x2="500" y2="200" stroke="#2a2f38" stroke-width="1" stroke-dasharray="2 3"/>
+        <line x1="640" y1="80" x2="640" y2="200" stroke="#2a2f38" stroke-width="1" stroke-dasharray="2 3"/>
+
+        <rect x="76" y="160" width="8" height="40" fill="#4fc3c0"/><text x="80" y="220" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">~10</text>
+        <rect x="216" y="147" width="8" height="53" fill="#4fc3c0"/><text x="220" y="220" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">~13</text>
+        <rect x="356" y="134" width="8" height="66" fill="#4fc3c0"/><text x="360" y="220" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">~17</text>
+        <rect x="496" y="120" width="8" height="80" fill="#4fc3c0"/><text x="500" y="220" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">~20</text>
+        <rect x="636" y="107" width="8" height="93" fill="#4fc3c0"/><text x="640" y="220" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">~23</text>
+      </svg>
+      <div class="diagram-caption">Ta sama, dziesięciokrotna skala kroków na górze — słupki głębokości rosną łagodnie, nie wykładniczo.</div>
+    </div>
+
+    <p>To dobra wiadomość dla <em>trawersowania</em>. Zła wiadomość: budowa tego drzewa (Rozdział 13/Dodatek C) i jego rozmiar w pamięci rosną dużo szybciej — z grubsza liniowo do proporcjonalnie-do-n-log-n, nie logarytmicznie. Dla sceny animowanej, przebudowywanej co klatkę, to właśnie budowa, nie trawersowanie, zwykle najpierw uderza w limit czasu klatki.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Displacement</div>
+    <h2>Tesselacja: geometria, która nie istnieje, aż jest potrzebna</h2>
+    <p>Displacement i adaptacyjna subdywizja (Rozdział 4 rozszerzony) potrafią zamienić skromną siatkę kontrolną w miliardy mikro-trójkątów w momencie renderu — mapa wysokości nakładana na płaską płaszczyznę może wygenerować więcej geometrii niż cała reszta sceny razem wzięta. To właśnie ustawienia „dicing rate” / „subdivision iterations” w Arnoldzie i RenderManie kontrolują ten kompromis: więcej szczegółu kontra większe, droższe BVH.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Displacement.explosion</span><span>cage → micropolygons</span></div>
+      <svg viewBox="0 0 760 240" xmlns="http://www.w3.org/2000/svg">
+        <text x="150" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">SIATKA KONTROLNA (kilka trójkątów)</text>
+        <polygon points="80,180 220,180 250,90 150,60 80,100" fill="#20242c" stroke="#4fc3c0" stroke-width="1.8"/>
+        <line x1="80" y1="180" x2="250" y2="90" stroke="#4fc3c0" stroke-width="1"/>
+        <line x1="150" y1="60" x2="80" y2="180" stroke="#4fc3c0" stroke-width="1"/>
+
+        <text x="570" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">MIKRO-TRÓJKĄTY PO DISPLACEMENT</text>
+        <path d="M 440,180 L 460,165 L 475,178 L 495,155 L 510,172 L 530,148 L 545,168 L 565,140 L 585,165 L 600,135 L 620,160 L 640,145 L 660,175 L 680,150 L 700,180 L 700,220 L 440,220 Z" fill="#20242c" stroke="#e8a33d" stroke-width="1.2"/>
+        <g stroke="#3a4048" stroke-width="0.6">
+          <line x1="460" y1="180" x2="460" y2="165"/><line x1="480" y1="180" x2="480" y2="163"/><line x1="500" y1="180" x2="500" y2="158"/>
+          <line x1="520" y1="180" x2="520" y2="150"/><line x1="540" y1="180" x2="540" y2="162"/><line x1="560" y1="180" x2="560" y2="145"/>
+          <line x1="580" y1="180" x2="580" y2="155"/><line x1="600" y1="180" x2="600" y2="140"/><line x1="620" y1="180" x2="620" y2="158"/>
+          <line x1="640" y1="180" x2="640" y2="148"/><line x1="660" y1="180" x2="660" y2="168"/><line x1="680" y1="180" x2="680" y2="152"/>
+        </g>
+      </svg>
+      <div class="diagram-caption">Ta sama powierzchnia — po prawej dosłownie tysiące razy więcej trójkątów, generowanych „w locie” przez silnik.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Instancing</div>
+    <h2>Instancing: darmowa pamięć, niedarmowe promienie</h2>
+    <p>Rozdział 17 pokazał, że instancing pozwala tysiącom kopii dzielić jedną siatkę i jedno BVH. To realnie oszczędza pamięć i czas budowy. Nie oszczędza jednak pracy <em>trawersowania</em> — każda widoczna instancja wciąż wymaga własnego testu ray-AABB (Rozdział 13) i, jeśli trafiona, własnego zejścia w dzielone BVH. Las z 10 000 identycznych drzew jest tani w pamięci, ale niekoniecznie tani w czasie renderu, jeśli promień musi sprawdzić większość z nich.</p>
+
+    <div class="formula">koszt_pamięci ≈ 1 × (siatka + BVH)<br>koszt_trawersowania ≈ N_widocznych_instancji × koszt_pojedynczego_testu<span class="sub">N — liczba instancji, które promień faktycznie odwiedza; instancing nie zmienia tego czynnika</span></div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Kiedy render zwalnia po dodaniu detalu, sprawdź, co faktycznie wzrosło: jeśli to czas „Building BVH” / „Updating Acceleration Structure” w logu renderu — to budowa, jednorazowy koszt na klatkę, poprawiany przez lepszy SAH albo cache’owanie BVH dla statycznej geometrii. Jeśli to czas samego renderu przy tej samej liczbie próbek — to prawdziwe trawersowanie, i warto sprawdzić, czy naprawdę tyle instancji jest widocznych, czy część można zredukować proxy/LOD-em pod GI.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Koszt trawersowania</dt><dd>Praca na promień, rosnąca logarytmicznie z liczbą trójkątów.</dd>
+      <dt>Koszt budowy / pamięć BVH</dt><dd>Rośnie dużo szybciej niż trawersowanie — zwykle prawdziwy limit skali sceny.</dd>
+      <dt>Micropolygon displacement</dt><dd>Generowanie ogromnej liczby mikro-trójkątów z mapy wysokości w czasie renderu.</dd>
+      <dt>Instancing</dt><dd>Dzieli pamięć geometrii między kopiami; nie dzieli kosztu trawersowania.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Dodatek J przenosi to samo pytanie na drugą stronę równania: nie geometria, którą promień trafia, a sieć shaderów, którą musi policzyć w tym punkcie.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-13-bvh.html">↑ Rozdział 13: Struktury akceleracyjne</a>
+</div>
+</div>
+</body>
+</html>

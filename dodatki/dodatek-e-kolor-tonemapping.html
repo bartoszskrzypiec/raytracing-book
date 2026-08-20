@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek E — Głębiej: przestrzenie kolorów i tone mapping</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>SPACE · linear vs sRGB</span><span>DECODE · ^(1/2.2)</span><span>HDR → LDR · tone map</span><span>GAP · not yet covered</span>
+  </div>
+
+  <div class="eyebrow">Dodatek E / Głębiej: Kolor</div>
+  <h1>Przestrzenie kolorów, gamma i tone mapping</h1>
+  <p class="subtitle">Żaden z poprzednich 22 rozdziałów nie powiedział wprost: liczby, na których liczysz Lamberta, Fresnela i GGX, muszą być liniowe — a liczby w plikach tekstur i na ekranie liniowe nie są. To najczęstszy praktyczny błąd w całym renderingu.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Cała matematyka światła w tej książce (Lambert, Fresnel, GGX) działa na liniowych wartościach światła — podwojenie liczby = podwojenie jasności.</li>
+      <li>Pliki obrazów i ekrany kodują kolor gamma (~sRGB) — trzeba je zdekodować do liniowej przestrzeni, zanim wejdą do wzoru, i zakodować z powrotem, zanim trafią na ekran.</li>
+      <li>Finalny render jest liniowym HDR bez górnego limitu — tone mapping (Reinhard, ACES) ściska go do wyświetlanego zakresu 0–1 bez brutalnego obcinania.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Gamma</div>
+    <h2>Linear light kontra gamma: 0,5 nie znaczy „w połowie jasne”</h2>
+    <p>Oko ludzkie jest dużo czulsze na różnice w ciemnych partiach obrazu niż w jasnych — z tego powodu formaty obrazów od dekad kodują jasność krzywą gamma (~potęga 1/2,2), przydzielając więcej „poziomów” tam, gdzie oko i tak widzi więcej szczegółu. To kodowanie <em>percepcyjne</em>, nie fizyczne.</p>
+
+    <div class="formula">V_sRGB ≈ V_linear^(1/2,2)<span class="sub">uproszczona aproksymacja; prawdziwe sRGB ma dodatkowy liniowy odcinek blisko czerni, ale kształt krzywej jest ten sam</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Linear.vs.gamma</span><span>same 0–1 range</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <line x1="60" y1="220" x2="340" y2="220" stroke="#8b909b" stroke-width="1.5"/>
+        <line x1="60" y1="220" x2="60" y2="40" stroke="#8b909b" stroke-width="1.5"/>
+        <text x="60" y="238" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">0</text>
+        <text x="340" y="238" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">1 (wartość liniowa)</text>
+
+        <path d="M 60.0,40.0 L 74.0,49.0 L 88.0,58.0 L 102.0,67.0 L 116.0,76.0 L 130.0,85.0 L 144.0,94.0 L 158.0,103.0 L 172.0,112.0 L 186.0,121.0 L 200.0,130.0 L 214.0,139.0 L 228.0,148.0 L 242.0,157.0 L 256.0,166.0 L 270.0,175.0 L 284.0,184.0 L 298.0,193.0 L 312.0,202.0 L 326.0,211.0 L 340.0,220.0" fill="none" stroke="#4fc3c0" stroke-width="2.3"/>
+        <path d="M 60.0,40.0 L 74.0,86.1 L 88.0,103.2 L 102.0,116.0 L 116.0,126.6 L 130.0,135.9 L 144.0,144.1 L 158.0,151.7 L 172.0,158.7 L 186.0,165.2 L 200.0,171.4 L 214.0,177.2 L 228.0,182.7 L 242.0,188.0 L 256.0,193.1 L 270.0,197.9 L 284.0,202.6 L 298.0,207.2 L 312.0,211.6 L 326.0,215.9 L 340.0,220.0" fill="none" stroke="#e8a33d" stroke-width="2.3"/>
+
+        <circle cx="500" cy="55" r="5" fill="#4fc3c0"/><text x="512" y="59" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">liniowe (fizyka)</text>
+        <circle cx="500" cy="75" r="5" fill="#e8a33d"/><text x="512" y="79" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">gamma / sRGB (plik, ekran)</text>
+      </svg>
+      <div class="diagram-caption">Ta sama para liczb — gamma podnosi ciemne wartości wyżej, żeby zmieściło się w nich więcej odcieni.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Tekstury</div>
+    <h2>Dlaczego trzeba dekodować teksturę, zanim wejdzie do wzoru</h2>
+    <p>Tekstura zapisana jako PNG czy JPG (Rozdział 9) jest prawie zawsze w sRGB — bo to, co widzisz w przeglądarce plików, ma wyglądać dobrze na ekranie. Zanim jej kolor wejdzie jako kd do wzoru Lamberta z Rozdziału 5, trzeba go zdekodować z powrotem do liniowej przestrzeni (odwrotność gamma). Zapomnienie o tym kroku to jeden z najczęstszych błędów: render wygląda spłowiały albo zbyt kontrastowy, mimo że wzory są matematycznie poprawne.</p>
+    <p>Uwaga: to dotyczy tylko tekstur <em>kolorowych</em> (Base Color, Albedo). Mapy „danych” — normal maps, roughness, metallic, maski — nie reprezentują jasności światła, tylko surowe liczby, więc <strong>nie</strong> przechodzą dekodowania gamma. To dokładnie ta sama para: przełącznik „sRGB” / „Non-Color” przy każdym slocie tekstury w Blenderze, Unrealu i Unity.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Tone mapping</div>
+    <h2>Z liniowego HDR do wyświetlacza 0–1</h2>
+    <p>Wynik z path tracingu (Rozdział 15) jest liniowym HDR — jasne piksele (słońce, żarówka widziana z bliska) mogą mieć wartości znacznie większe niż 1, bez górnego limitu. Ekran przyjmuje tylko 0–1. Zwykłe obcięcie (clip) każdej wartości &gt;1 do 1 daje brutalnie „wypalone”, płaskie highlighty.</p>
+
+    <div class="formula">Reinhard: color' = color / (1 + color)<span class="sub">gładka kompresja w stronę 1, bez twardego progu — prosty, klasyczny operator z 2002 roku</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Tone.mapping.curves</span><span>clip vs Reinhard vs ACES</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <line x1="60" y1="230" x2="680" y2="230" stroke="#8b909b" stroke-width="1.5"/>
+        <line x1="60" y1="230" x2="60" y2="40" stroke="#8b909b" stroke-width="1.5"/>
+        <text x="60" y="248" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">0</text>
+        <text x="680" y="248" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">wejście HDR (3,0)</text>
+        <text x="48" y="44" text-anchor="end" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">1,0</text>
+
+        <path d="M 60.0,40.0 L 75.0,54.2 L 90.0,68.5 L 105.0,82.8 L 120.0,97.0 L 135.0,111.2 L 150.0,125.5 L 165.0,139.8 L 180.0,154.0 L 195.0,168.2 L 210.0,182.5 L 225.0,196.8 L 240.0,211.0 L 255.0,225.2 L 270.0,230.0 L 660.0,230.0" fill="none" stroke="#9c82d8" stroke-width="2" stroke-dasharray="5 4"/>
+        <path d="M 60.0,40.0 L 75.0,53.3 L 90.0,64.8 L 105.0,74.9 L 120.0,83.8 L 135.0,91.8 L 150.0,99.0 L 165.0,105.4 L 180.0,111.2 L 195.0,116.6 L 210.0,121.4 L 225.0,125.9 L 240.0,130.0 L 255.0,133.8 L 270.0,137.3 L 285.0,140.6 L 300.0,143.6 L 315.0,146.5 L 330.0,149.1 L 345.0,151.6 L 360.0,154.0 L 375.0,156.2 L 390.0,158.3 L 405.0,160.3 L 420.0,162.1 L 435.0,163.9 L 450.0,165.6 L 465.0,167.2 L 480.0,168.7 L 495.0,170.2 L 510.0,171.5 L 525.0,172.9 L 540.0,174.1 L 555.0,175.3 L 570.0,176.5 L 585.0,177.6 L 600.0,178.6 L 615.0,179.7 L 630.0,180.6 L 645.0,181.6 L 660.0,182.5" fill="none" stroke="#4fc3c0" stroke-width="2.2"/>
+        <path d="M 60.0,40.0 L 75.0,55.7 L 90.0,80.9 L 105.0,104.2 L 120.0,123.3 L 135.0,138.4 L 150.0,150.5 L 165.0,160.1 L 180.0,167.9 L 195.0,174.4 L 210.0,179.8 L 225.0,184.4 L 240.0,188.3 L 255.0,191.7 L 270.0,194.6 L 285.0,197.2 L 300.0,199.5 L 315.0,201.6 L 330.0,203.4 L 345.0,205.1 L 360.0,206.6 L 375.0,208.0 L 390.0,209.2 L 405.0,210.3 L 420.0,211.4 L 435.0,212.4 L 450.0,213.3 L 465.0,214.1 L 480.0,214.9 L 495.0,215.6 L 510.0,216.3 L 525.0,216.9 L 540.0,217.5 L 555.0,218.1 L 570.0,218.6 L 585.0,219.1 L 600.0,219.6 L 615.0,220.0 L 630.0,220.4 L 645.0,220.8 L 660.0,221.2" fill="none" stroke="#e8a33d" stroke-width="2.2"/>
+
+        <circle cx="470" cy="55" r="5" fill="#9c82d8"/><text x="482" y="59" font-family="IBM Plex Mono" font-size="11" fill="#9c82d8">obcięcie (clip)</text>
+        <circle cx="470" cy="75" r="5" fill="#4fc3c0"/><text x="482" y="79" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">Reinhard</text>
+        <circle cx="470" cy="95" r="5" fill="#e8a33d"/><text x="482" y="99" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">ACES (filmic)</text>
+      </svg>
+      <div class="diagram-caption">Obcięcie ucina wszystko nagle przy 1,0. Reinhard i ACES ściskają płynnie — ACES zachowuje więcej kontrastu w środkowych tonach.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>„Color Management” w Blenderze (Standard vs Filmic vs AgX), „OCIO” w Nuke, domyślny ACES w Unrealu i Arnoldzie — to wszystko wybór operatora tone mapowania z tego rozdziału. Klasyczny symptom „mój render wygląda płasko/wyblakło” w 90% przypadków to niedopasowanie color management, nie problem z oświetleniem.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Linear light</dt><dd>Wartości proporcjonalne do fizycznej ilości światła.</dd>
+      <dt>Gamma encoding / sRGB</dt><dd>Percepcyjne kodowanie jasności do zapisu i wyświetlania.</dd>
+      <dt>Kolor kontra dane</dt><dd>Tekstury Base Color dekoduje się z sRGB; mapy danych (normal, roughness) nie.</dd>
+      <dt>Tone mapping</dt><dd>Ściskanie liniowego HDR do wyświetlanego zakresu 0–1.</dd>
+      <dt>Operator Reinharda</dt><dd>color/(1+color) — prosty, gładki operator tone mapowania.</dd>
+      <dt>ACES</dt><dd>Standard filmic tone mapowania używany domyślnie w większości silników.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Dodatek F wraca do Rozdziałów 3 i 17: pełna matematyka macierzy 4×4 i współrzędnych jednorodnych, która stoi za każdą transformacją w tej książce.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+</div>
+</div>
+</body>
+</html>

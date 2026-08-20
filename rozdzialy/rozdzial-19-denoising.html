@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Rozdział 19 — Denoising</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.formula{font-size:15px;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>NOISE · Monte Carlo</span><span>GUIDE · albedo+normal</span><span>FILTER · edge-aware</span><span>TEMPORAL · accumulate</span>
+  </div>
+
+  <div class="eyebrow">Rozdział 19 / Zastosowania praktyczne</div>
+  <h1>Denoising</h1>
+  <p class="subtitle">Path tracing z Rozdziału 15 zbiega się do prawidłowego obrazu — w teorii, przy nieskończonej liczbie próbek. W praktyce zawsze kończysz wcześniej. Denoising to sztuka wyciśnięcia gładkiego obrazu z za małej liczby próbek, bez oszukiwania na tyle, żeby ktoś to zauważył.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Szum Monte Carlo z Rozdziału 15 jest przypadkowy — bufory pomocnicze (albedo, normalna) prawie nie są, bo nie zależą od losowego próbkowania światła.</li>
+      <li>Denoiser filtruje beauty pass, ucząc się z tych czystych buforów, gdzie są prawdziwe krawędzie, a gdzie tylko szum.</li>
+      <li>W czasie rzeczywistym pomaga też akumulacja czasowa: uśrednianie kolejnych klatek, nie tylko próbek w jednej.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Bufory</div>
+    <h2>Beauty jest szumiący, ale nie wszystko wokół niego</h2>
+    <p>Beauty pass (finalny kolor) niesie cały szum Monte Carlo — losowość ścieżek światła z Rozdziału 15. Ale albedo (surowy kolor materiału, Rozdział 9) i normalna w punkcie trafienia (Rozdział 4) nie zależą od losowego próbkowania odbić — są praktycznie czyste, nawet przy jednej próbce na piksel. To te same AOV-y, o których wspominał Rozdział 1.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>AOV.buffers</span><span>noisy vs clean</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="beautyNoise" x="0%" y="0%" width="100%" height="100%">
+            <feTurbulence type="turbulence" baseFrequency="0.25 0.25" numOctaves="2" seed="4" result="n"/>
+            <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.9  0 0 0 0 0.64  0 0 0 0 0.24  0 0 0 1 0"/>
+          </filter>
+          <linearGradient id="normalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#9c82d8"/>
+            <stop offset="100%" stop-color="#4a3f73"/>
+          </linearGradient>
+        </defs>
+        <text x="130" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">BEAUTY (szum)</text>
+        <rect x="30" y="45" width="200" height="160" filter="url(#beautyNoise)" stroke="#2a2f38" stroke-width="1.5"/>
+
+        <text x="380" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">ALBEDO (czysty)</text>
+        <rect x="280" y="45" width="200" height="160" fill="#e8a33d" stroke="#2a2f38" stroke-width="1.5"/>
+
+        <text x="630" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">NORMAL (czysty)</text>
+        <rect x="530" y="45" width="200" height="160" fill="url(#normalGrad)" stroke="#2a2f38" stroke-width="1.5"/>
+      </svg>
+      <div class="diagram-caption">Ten sam kadr, ten sam moment renderu — tylko jeden z trzech buforów jest zaszumiony.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Filtrowanie</div>
+    <h2>Filtr, który wie, gdzie są krawędzie</h2>
+    <p>Zwykłe rozmycie (jak uśrednianie z Rozdziału 8, tylko po sąsiednich pikselach, nie próbkach) wygładzi szum, ale też zetrze prawdziwe krawędzie. Denoiser waży sąsiadów nie tylko odległością, ale podobieństwem normalnej i głębi z buforów pomocniczych — piksele po drugiej stronie krawędzi geometrii dostają wagę bliską zeru, nawet jeśli są blisko w przestrzeni obrazu.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Edge-aware.filter</span><span>weight by normal similarity</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <rect x="60" y="40" width="320" height="180" fill="#20242c"/>
+        <polygon points="380,40 380,220 200,220" fill="#262b33"/>
+        <line x1="380" y1="40" x2="200" y2="220" stroke="#4fc3c0" stroke-width="2"/>
+        <text x="180" y="60" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">powierzchnia A</text>
+        <text x="280" y="200" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">powierzchnia B</text>
+
+        <circle cx="290" cy="130" r="55" fill="none" stroke="#e8a33d" stroke-width="1.5" stroke-dasharray="4 4"/>
+        <circle cx="240" cy="105" r="4" fill="#e8a33d"/>
+        <circle cx="260" cy="150" r="4" fill="#e8a33d"/>
+        <circle cx="225" cy="140" r="4" fill="#e8a33d"/>
+        <circle cx="330" cy="115" r="4" fill="#3a4048"/>
+        <circle cx="320" cy="155" r="4" fill="#3a4048"/>
+        <text x="290" y="205" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">jasne = wysoka waga, ciemne = odrzucone</text>
+
+        <text x="580" y="60" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">wynik: krawędź zostaje ostra,</text>
+        <text x="580" y="80" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">szum wewnątrz każdej powierzchni znika</text>
+      </svg>
+      <div class="diagram-caption">Filtr „widzi” granicę między A i B dzięki normalnym z bufora — nie miesza ich kolorów.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Czas</div>
+    <h2>Akumulacja czasowa</h2>
+    <p>W animacji i czasie rzeczywistym można pójść dalej: skoro kamera i scena zmieniają się płynnie, wynik z poprzedniej klatki (odpowiednio przesunięty pod ruch, reprojekcja) to darmowa dodatkowa próbka. TAA i denoisery czasowe (jak te w Unrealu czy DLSS-podobnych systemach) uśredniają nie tylko próbki w jednej klatce, ale też wzdłuż osi czasu — dokładnie ta sama logika uśredniania z Rozdziału 8 i 15, tylko rozciągnięta na wiele klatek.</p>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>OptiX AI Denoiser, Intel Open Image Denoise, „AI Denoiser” w Arnoldzie czy Blenderze to sieci neuronowe wytrenowane właśnie na tej relacji: szumiący beauty + czyste albedo/normal/depth na wejściu, czysty obraz na wyjściu. To dlatego włączenie denoisera bez podania buforów pomocniczych daje gorszy wynik niż z nimi — sieć dosłownie ma mniej informacji, z czego skorzystać.</p>
+    <p>Denoising to kompromis, nie magia: agresywne ustawienia mogą zmiękczyć drobne, prawdziwe detale (futro, ostre kaustyki z Rozdziału 16) tak samo jak szum. Dlatego produkcyjne pipeline’y wciąż renderują z rozsądną liczbą próbek i używają denoisera jako ostatniego wygładzenia, nie zamiennika próbkowania.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Bufory pomocnicze (AOV)</dt><dd>Albedo, normalna, głębia — renderowane osobno, dużo mniej zaszumione niż beauty.</dd>
+      <dt>Denoiser</dt><dd>Filtr (klasyczny albo sieć neuronowa) wygładzający szum Monte Carlo.</dd>
+      <dt>Filtr edge-aware</dt><dd>Filtr ważący sąsiadów podobieństwem normalnej/głębi, nie tylko odległością w pikselach.</dd>
+      <dt>Akumulacja czasowa</dt><dd>Uśrednianie wielu klatek, z reprojekcją pod ruch kamery i scenę.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>To zamyka Część VI. Cały łańcuch od promienia do gotowego, wygładzonego piksela jest już kompletny — od Rozdziału 1 po ten. Kolejne rozdziały mogą pójść w stronę specjalizacji: włosy i sierść, chmury objętościowe, albo praktyczny projekt: zbudowanie własnego, minimalnego raytracera krok po kroku.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="rozdzial-18-wolumetria.html">← Poprzedni</a>
+    <a href="rozdzial-20-wlosy-i-krzywe.html">Następny →</a>
+</div>
+</div>
+</body>
+</html>

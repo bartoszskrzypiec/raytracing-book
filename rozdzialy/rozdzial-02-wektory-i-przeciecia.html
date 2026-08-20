@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Rozdział 2 — Wektory, promienie i pierwsze przecięcie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.formula{font-size:15.5px;white-space:nowrap;line-height:1.65;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>ORIGIN · O</span><span>DIR · D (unit)</span><span>T · ≥ 0</span><span>TEST · sphere</span>
+  </div>
+
+  <div class="eyebrow">Rozdział 2 / Podstawy</div>
+  <h1>Wektory, promienie i pierwsze przecięcie</h1>
+  <p class="subtitle">W Rozdziale 1 poznałeś intuicję. Teraz przechodzimy do liczb: jak zapisać promień jako wzór matematyczny i jak sprawdzić, czy trafia w sferę — pierwszy kształt, który zaprogramujesz.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Punkt (position) i wektor (direction) to różne rzeczy, mimo że oba to trójka liczb (x, y, z).</li>
+      <li>Promień to prosty wzór: <strong>P(t) = O + t·D</strong> — punkt startowy plus kierunek przeskalowany o parametr t.</li>
+      <li>Sprawdzenie, czy promień trafia w sferę, sprowadza się do równania kwadratowego ze szkoły średniej — tylko podstawionego pod inne litery.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Reprezentacja</div>
+    <h2>Punkt czy wektor?</h2>
+    <p>W większości silników i DCC-ek position i direction wyglądają identycznie — trójka <em>(x, y, z)</em>. Matematycznie zachowują się jednak inaczej, i ta różnica będzie miała znaczenie już za chwilę.</p>
+    <ul class="compact">
+      <li><span class="term-cyan">Punkt</span> — opisuje miejsce w przestrzeni: pozycję kamery, środek sfery, punkt trafienia.</li>
+      <li><span class="term-amber">Wektor</span> — opisuje przesunięcie albo kierunek: kierunek promienia, normalną powierzchni, kierunek światła.</li>
+    </ul>
+    <p>Kluczowa różnica: gdy przesuwasz (translate) scenę, punkty się przesuwają, a wektory kierunkowe — nie. Kierunek „w prawo” pozostaje „w prawo”, niezależnie od tego, gdzie stoisz. To dlatego w reprezentacji jednorodnej punkty i wektory bywa się oznacza inną „czwartą współrzędną” — ale na razie wystarczy sama intuicja.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Toolkit</div>
+    <h2>Operacje, które będziesz używać bez przerwy</h2>
+    <p>Cały ray tracing stoi na czterech operacjach na wektorach. Żadna z nich nie jest skomplikowana — chodzi tylko o to, żeby ich geometryczny sens wszedł w krew, bo pojawiają się dosłownie w każdym wzorze w tej książce.</p>
+    <ul class="compact">
+      <li><strong>Odejmowanie punktów → wektor.</strong> A − B to wektor prowadzący z punktu B do punktu A.</li>
+      <li><strong>Długość (norma).</strong> |V| = √(x² + y² + z²) — jak daleko sięga wektor.</li>
+      <li><strong>Normalizacja.</strong> u = V / |V| — ten sam kierunek, długość równa 1 (tzw. wektor jednostkowy, albo wersor). Prawie każdy wzór w ray tracingu zakłada, że kierunki są znormalizowane.</li>
+      <li><strong>Iloczyn skalarny (dot product).</strong> A·B = Ax·Bx + Ay·By + Az·Bz = |A||B|·cosθ. To najważniejsza operacja w tej książce — mówi „jak bardzo zgodne kierunkowo są dwa wektory”. Używamy jej już za chwilę, do rozwiązania równania sfery, a w Rozdziale 5 do liczenia oświetlenia Lamberta.</li>
+    </ul>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Vector.toolkit</span><span>Ops · 3</span></div>
+      <svg viewBox="0 0 760 340" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="a1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+          <marker id="a2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4fc3c0"/></marker>
+          <marker id="a3" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8b909b"/></marker>
+        </defs>
+
+        <line x1="257" y1="20" x2="257" y2="280" stroke="#2a2f38"/>
+        <line x1="502" y1="20" x2="502" y2="280" stroke="#2a2f38"/>
+
+        <text x="135" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" letter-spacing="1" fill="#8b909b">PUNKT − PUNKT</text>
+        <text x="380" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" letter-spacing="1" fill="#8b909b">NORMALIZACJA</text>
+        <text x="625" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" letter-spacing="1" fill="#8b909b">ILOCZYN SKALARNY</text>
+
+        <!-- col 1: subtraction -->
+        <circle cx="70" cy="220" r="4.5" fill="#4fc3c0"/>
+        <text x="55" y="238" font-family="IBM Plex Mono" font-size="12" fill="#4fc3c0">B</text>
+        <circle cx="190" cy="110" r="4.5" fill="#4fc3c0"/>
+        <text x="198" y="105" font-family="IBM Plex Mono" font-size="12" fill="#4fc3c0">A</text>
+        <line x1="70" y1="220" x2="190" y2="110" stroke="#e8a33d" stroke-width="2.5" marker-end="url(#a1)"/>
+        <text x="150" y="185" font-family="IBM Plex Mono" font-size="11.5" fill="#e8a33d">A − B</text>
+        <text x="135" y="262" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">wektor = cel − start</text>
+
+        <!-- col 2: normalization -->
+        <circle cx="380" cy="230" r="3.5" fill="#ecebe4"/>
+        <line x1="380" y1="230" x2="330" y2="120" stroke="#8b909b" stroke-width="2" stroke-dasharray="5 4"/>
+        <text x="322" y="112" font-family="IBM Plex Mono" font-size="12" fill="#8b909b">V</text>
+        <line x1="380" y1="230" x2="357" y2="180" stroke="#e8a33d" stroke-width="2.5" marker-end="url(#a1)"/>
+        <text x="345" y="172" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">u</text>
+        <text x="380" y="262" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">u = V / |V|,  |u| = 1</text>
+
+        <!-- col 3: dot product -->
+        <circle cx="625" cy="220" r="3.5" fill="#ecebe4"/>
+        <line x1="625" y1="220" x2="695" y2="180" stroke="#e8a33d" stroke-width="2.5" marker-end="url(#a1)"/>
+        <text x="700" y="175" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">A</text>
+        <line x1="625" y1="220" x2="645" y2="145" stroke="#4fc3c0" stroke-width="2.5" marker-end="url(#a2)"/>
+        <text x="640" y="135" font-family="IBM Plex Mono" font-size="12" fill="#4fc3c0">B</text>
+        <path d="M 655,205 A 34,34 0 0,0 662,178" fill="none" stroke="#9c82d8" stroke-width="1.5"/>
+        <text x="672" y="200" font-family="IBM Plex Mono" font-size="11.5" fill="#9c82d8">θ</text>
+        <text x="625" y="262" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">A·B = cosθ (dla wersorów)</text>
+
+        <g font-family="IBM Plex Mono" font-size="11">
+          <circle cx="270" cy="304" r="4" fill="#e8a33d"/><text x="280" y="308" fill="#8b909b">&gt;0 zgodne</text>
+          <circle cx="400" cy="304" r="4" fill="#8b909b"/><text x="410" y="308" fill="#8b909b">=0 prostopadłe</text>
+          <circle cx="540" cy="304" r="4" fill="#9c82d8"/><text x="550" y="308" fill="#8b909b">&lt;0 przeciwne</text>
+        </g>
+      </svg>
+      <div class="diagram-caption">Trzy operacje, które wracają w każdym kolejnym rozdziale tej książki.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Definicja promienia</div>
+    <h2>Promień jako wzór</h2>
+    <p>Mając wektory, możemy zapisać promień. Promień to punkt startowy <span class="term-amber">O</span> (origin — najczęściej pozycja kamery albo poprzedni punkt trafienia) i znormalizowany kierunek <span class="term-amber">D</span>. Każdy punkt na promieniu opisuje jeden wzór:</p>
+
+    <div class="formula">P(t) = O + t · D<span class="sub">t — skalar: „jak daleko wzdłuż D od punktu O”</span></div>
+
+    <p>t = 0 to sam punkt O. t = 1 to punkt w odległości |D| (czyli 1, jeśli D jest znormalizowany). Każde kolejne t oddala nas dalej w tym samym kierunku. W ray tracingu liczą się tylko t &gt; 0 — promień „istnieje” fizycznie tylko przed kamerą, nie za nią.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Ray.parametrize</span><span>P(t) = O + t·D</span></div>
+      <svg viewBox="0 0 760 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="b1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+        </defs>
+
+        <rect x="20" y="83" width="34" height="26" rx="3" fill="#8b909b"/>
+        <polygon points="54,87 86,71 86,121 54,105" fill="#8b909b"/>
+        <text x="35" y="145" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">CAM</text>
+
+        <line x1="20" y1="95" x2="86" y2="95" stroke="#8b909b" stroke-width="1.5" stroke-dasharray="3 4"/>
+        <text x="10" y="60" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">t &lt; 0 (odrzucone)</text>
+
+        <line x1="110" y1="95" x2="700" y2="95" stroke="#e8a33d" stroke-width="2.5" marker-end="url(#b1)"/>
+        <text x="180" y="80" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">D (znormalizowany)</text>
+
+        <g font-family="IBM Plex Mono" font-size="11" fill="#ecebe4">
+          <line x1="110" y1="85" x2="110" y2="105" stroke="#ecebe4"/>
+          <text x="110" y="122" text-anchor="middle" fill="#e8a33d">O · t=0</text>
+
+          <line x1="240" y1="88" x2="240" y2="102" stroke="#8b909b"/>
+          <text x="240" y="122" text-anchor="middle" fill="#8b909b">t=1</text>
+
+          <line x1="370" y1="88" x2="370" y2="102" stroke="#8b909b"/>
+          <text x="370" y="122" text-anchor="middle" fill="#8b909b">t=2</text>
+
+          <line x1="500" y1="88" x2="500" y2="102" stroke="#8b909b"/>
+          <text x="500" y="122" text-anchor="middle" fill="#8b909b">t=3</text>
+        </g>
+      </svg>
+      <div class="diagram-caption">Ten sam wzór — im większe t, tym dalej wzdłuż D od kamery.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Ray–sphere intersection</div>
+    <h2>Pierwsze przecięcie: promień i sfera</h2>
+    <p>Sfera jest najprostszym kształtem do przecięcia, dlatego prawie każda książka o ray tracingu — ta też — zaczyna właśnie od niej. Sferę o środku C i radiusie r definiuje jeden warunek: każdy punkt P na jej powierzchni spełnia</p>
+
+    <div class="formula">|P − C|² = r²</div>
+
+    <p>Podstawiamy nasz wzór promienia w miejsce P i wprowadzamy pomocniczy wektor L = O − C (od środka sfery do kamery). Po rozwinięciu dostajemy klasyczne równanie kwadratowe:</p>
+
+    <div class="formula">a·t² + b·t + c = 0<span class="sub">a = D·D  (= 1, gdy D jest znormalizowany) &nbsp;·&nbsp; b = 2·(D·L) &nbsp;·&nbsp; c = L·L − r²</span></div>
+
+    <p>To dosłownie wzór ze szkoły średniej — litery a, b, c mają teraz geometryczne znaczenie. Rozwiązujemy go przez wyróżnik:</p>
+
+    <div class="formula">Δ = b² − 4ac</div>
+
+    <ul class="compact">
+      <li><span class="term-violet">Δ &lt; 0</span> → promień mija sferę, brak przecięcia.</li>
+      <li><span class="term-cyan">Δ = 0</span> → promień jest tangentny, dotyka sfery w jednym punkcie.</li>
+      <li><span class="term-amber">Δ &gt; 0</span> → dwa przecięcia: t₀ (bliższe) i t₁ (dalsze). Bierzemy najmniejsze dodatnie t jako pierwszy widoczny punkt trafienia.</li>
+    </ul>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Discriminant.cases</span><span>Δ = b²−4ac</span></div>
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+        <line x1="257" y1="20" x2="257" y2="260" stroke="#2a2f38"/>
+        <line x1="502" y1="20" x2="502" y2="260" stroke="#2a2f38"/>
+
+        <text x="135" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" letter-spacing="0.5" fill="#8b909b">MISS · Δ&lt;0</text>
+        <text x="380" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" letter-spacing="0.5" fill="#8b909b">TANGENTNY · Δ=0</text>
+        <text x="625" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" letter-spacing="0.5" fill="#8b909b">HIT · Δ&gt;0</text>
+
+        <!-- miss -->
+        <circle cx="135" cy="190" r="45" fill="#20242c" stroke="#2a2f38" stroke-width="1.5"/>
+        <line x1="40" y1="120" x2="240" y2="90" stroke="#8b909b" stroke-width="2" stroke-dasharray="6 5"/>
+
+        <!-- tangent -->
+        <circle cx="380" cy="190" r="45" fill="#20242c" stroke="#2a2f38" stroke-width="1.5"/>
+        <line x1="285" y1="145" x2="475" y2="145" stroke="#4fc3c0" stroke-width="2.2"/>
+        <circle cx="380" cy="145" r="4.5" fill="#4fc3c0"/>
+        <text x="380" y="130" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">t (jedyne)</text>
+
+        <!-- hit -->
+        <circle cx="625" cy="190" r="45" fill="#20242c" stroke="#2a2f38" stroke-width="1.5"/>
+        <line x1="530" y1="150" x2="720" y2="150" stroke="#e8a33d" stroke-width="2.2"/>
+        <circle cx="604" cy="150" r="5" fill="#e8a33d"/>
+        <circle cx="646" cy="150" r="4" fill="none" stroke="#8b909b" stroke-width="1.5"/>
+        <text x="600" y="133" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">t₀</text>
+        <text x="650" y="133" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">t₁</text>
+
+        <text x="135" y="280" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">brak trafienia</text>
+        <text x="380" y="280" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">krawędź sylwetki</text>
+        <text x="625" y="280" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">t₀ = to, co widzimy</text>
+      </svg>
+      <div class="diagram-caption">Ten sam ray tracer, trzy różne wyniki jednego testu — czysto na podstawie znaku Δ.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Zapowiedź</div>
+    <h2>Co z innymi kształtami?</h2>
+    <p>Sfera jest wygodna, bo jej równanie jest proste — ale świat nie składa się z samych kul. W kolejnych rozdziałach sprawdzimy przecięcia z płaszczyznami i trójkątami (czyli z każdą siatką, którą wyeksportujesz z Blendera albo Maya), korzystając z tych samych narzędzi: wektorów, iloczynu skalarnego i tego samego wzoru P(t) = O + t·D.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Punkt</dt><dd>Pozycja w przestrzeni (kamera, środek sfery, punkt trafienia).</dd>
+      <dt>Wektor</dt><dd>Kierunek albo przesunięcie; niezmienny względem translacji.</dd>
+      <dt>Normalizacja / wersor</dt><dd>Skalowanie wektora do długości 1, zachowując kierunek.</dd>
+      <dt>Iloczyn skalarny (dot product)</dt><dd>Miara zgodności kierunkowej dwóch wektorów; dla wersorów równa cosθ.</dd>
+      <dt>Parametr t</dt><dd>Odległość wzdłuż promienia od punktu O w kierunku D.</dd>
+      <dt>Wyróżnik (discriminant, Δ)</dt><dd>Decyduje, czy promień mija, dotyka, czy przecina sferę w dwóch punktach.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>W następnym rozdziale zajmiemy się tym, jak w ogóle wygenerować promień dla danego piksela obrazu — jak jego pozycja na ekranie zamienia się w konkretny wektor D, uwzględniając pole widzenia (FOV), proporcje obrazu i pozycję kamery. Dopiero potem wrócimy do kolejnych kształtów: płaszczyzn i trójkątów.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="rozdzial-01-wprowadzenie-do-renderowania.html">← Poprzedni</a>
+    <a href="rozdzial-03-model-kamery.html">Następny →</a>
+</div>
+</div>
+</body>
+</html>

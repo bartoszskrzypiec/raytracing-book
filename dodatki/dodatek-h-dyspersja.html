@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek H — Głębiej: dyspersja i aberracja chromatyczna</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>n(λ) · wavelength-dependent</span><span>RAYS · R/G/B separate</span><span>MODEL · Cauchy</span><span>EXT OF · R.7</span>
+  </div>
+
+  <div class="eyebrow">Dodatek H / Głębiej: Załamanie</div>
+  <h1>Dyspersja i aberracja chromatyczna</h1>
+  <p class="subtitle">Rozdział 7 potraktował współczynnik załamania jak jedną liczbę na materiał. W rzeczywistości n zależy od długości fali — i to dosłownie ta zależność, nie żadna sztuczka, tworzy tęczę w pryzmacie.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>IOR realnie jest funkcją długości fali, n(λ) — różne kolory załamują się pod nieco innym kątem w tym samym materiale.</li>
+      <li>W ray tracerze symulujesz to, śledząc kilka promieni (typowo R, G, B) z tego samego punktu, każdy z własnym n z Rozdziału 7.</li>
+      <li>Liczba Abbego materiału mówi, jak silna będzie dyspersja — wyższa dyspersja, bardziej widoczna tęczowa poświata na krawędziach szkła.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Fizyka</div>
+    <h2>IOR zależny od długości fali</h2>
+    <p>Prawo Snella z Rozdziału 7, n1·sinθ1 = n2·sinθ2, jest poprawne dla każdej pojedynczej długości fali — ale samo n2 (szkła, wody, diamentu) różni się nieco między czerwonym i niebieskim końcem widma. Niebieskie światło zwykle załamuje się nieco silniej niż czerwone w tym samym materiale. Kiedy białe światło (mieszanka wszystkich długości fal) wchodzi w pryzmat, każdy kolor załamuje się pod innym kątem — i wychodzi jako rozdzielona tęcza.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Prism.dispersion</span><span>white in, rainbow out</span></div>
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="pr1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#ecebe4"/></marker>
+        </defs>
+        <polygon points="350,110 300,230 430,230" fill="#4fc3c0" fill-opacity="0.12" stroke="#4fc3c0" stroke-width="1.5"/>
+
+        <line x1="120" y1="160" x2="335" y2="155" stroke="#ecebe4" stroke-width="2.2" marker-end="url(#pr1)"/>
+        <text x="150" y="145" font-family="IBM Plex Mono" font-size="10.5" fill="#ecebe4">białe światło</text>
+        <line x1="335" y1="155" x2="390" y2="195" stroke="#ecebe4" stroke-width="1.6" stroke-dasharray="4 4"/>
+
+        <line x1="390" y1="195" x2="470" y2="130" stroke="#e14b4b" stroke-width="2"/>
+        <line x1="390" y1="195" x2="480" y2="150" stroke="#e88b2f" stroke-width="2"/>
+        <line x1="390" y1="195" x2="485" y2="170" stroke="#e0d02f" stroke-width="2"/>
+        <line x1="390" y1="195" x2="488" y2="192" stroke="#4bb85c" stroke-width="2"/>
+        <line x1="390" y1="195" x2="486" y2="215" stroke="#4a86e8" stroke-width="2"/>
+        <line x1="390" y1="195" x2="478" y2="236" stroke="#8b5ce8" stroke-width="2"/>
+        <text x="560" y="180" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">każdy kolor, inny kąt</text>
+      </svg>
+      <div class="diagram-caption">To samo szkło, to samo prawo Snella — n po prostu jest lekko inne dla każdej długości fali.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Symulacja</div>
+    <h2>Trzy promienie zamiast jednego</h2>
+    <p>Praktyczna implementacja nie liczy continuum długości fal — śledzi kilka reprezentatywnych promieni (najczęściej po jednym dla czerwonego, zielonego i niebieskiego kanału, czasem więcej dla wyższej jakości), każdy z własną, nieco inną wartością n z krzywej dyspersji materiału, i łączy wyniki w finalny kolor RGB.</p>
+
+    <div class="formula">n(λ) ≈ A + B/λ²<span class="sub">równanie Cauchy'ego — prosty, klasyczny model empiryczny; A, B dopasowane do konkretnego szkła</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>RGB.refraction</span><span>same Snell, 3 values of n</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="rg1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#ecebe4"/></marker>
+        </defs>
+        <rect x="150" y="40" width="460" height="70" fill="#1b1e24"/>
+        <rect x="150" y="110" width="460" height="110" fill="#20242c"/>
+        <line x1="150" y1="110" x2="610" y2="110" stroke="#8b909b" stroke-width="1.5"/>
+        <line x1="380" y1="40" x2="380" y2="220" stroke="#3a4048" stroke-width="1.2" stroke-dasharray="3 4"/>
+
+        <line x1="300" y1="60" x2="380" y2="110" stroke="#ecebe4" stroke-width="2.2" marker-end="url(#rg1)"/>
+        <text x="270" y="55" font-family="IBM Plex Mono" font-size="10.5" fill="#ecebe4">białe światło</text>
+
+        <line x1="380" y1="110" x2="395" y2="210" stroke="#e14b4b" stroke-width="2"/>
+        <line x1="380" y1="110" x2="390" y2="210" stroke="#4bb85c" stroke-width="2"/>
+        <line x1="380" y1="110" x2="383" y2="210" stroke="#4a86e8" stroke-width="2"/>
+        <text x="440" y="150" font-family="IBM Plex Mono" font-size="10" fill="#e14b4b">n_czerwony (najmniejsze)</text>
+        <text x="440" y="168" font-family="IBM Plex Mono" font-size="10" fill="#4bb85c">n_zielony</text>
+        <text x="440" y="186" font-family="IBM Plex Mono" font-size="10" fill="#4a86e8">n_niebieski (największe)</text>
+      </svg>
+      <div class="diagram-caption">Różnica kątów jest tu wyolbrzymiona — w realnym szkle to często ułamek stopnia, ale suma po wielu powierzchniach ją uwidacznia.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>„Dispersion” / „Abbe Number” w shaderach szkła (Arnold standard_surface, Blenderowy Glass BSDF) włącza właśnie to — domyślnie wyłączone (koszt: 3× więcej promieni załamania na trafienie), włączane celowo dla diamentów, kryszałowych szkieł i „hero” ujęć, gdzie tęczowa poświata jest częścią efektu. Aberracja chromatyczna w postprodukcji (efekt „starego obiektywu”) to ten sam fizyczny mechanizm, tylko symulowany na soczewce kamery, nie na obiekcie w scenie.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Dyspersja</dt><dd>Zależność współczynnika załamania od długości fali światła.</dd>
+      <dt>n(λ)</dt><dd>Współczynnik załamania jako funkcja długości fali.</dd>
+      <dt>Równanie Cauchy'ego</dt><dd>n(λ) ≈ A + B/λ² — prosty model empiryczny dyspersji.</dd>
+      <dt>Liczba Abbego</dt><dd>Praktyczny parametr opisujący siłę dyspersji materiału.</dd>
+      <dt>Aberracja chromatyczna</dt><dd>Rozszczepienie kolorów przez dyspersję, widoczne jako kolorowe obwódki.</dd>
+    </dl>
+  </div>
+
+  <div class="closing">
+    <p>To ósmy dodatek do tej książki — od kolorów i macierzy, przez tekstury, po tęczę w szkle. Każdy z nich wziął jedno zdanie z głównych 22 rozdziałów i rozwinął je we własny, kompletny mechanizm.</p>
+    <div class="sign">Koniec dodatków (na razie)</div>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-07-odbicia-i-zalamania.html">↑ Rozdział 7: Odbicia i załamania</a>
+</div>
+</div>
+</body>
+</html>

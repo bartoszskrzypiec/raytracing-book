@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek V — Monte Carlo: estymatory i metoda odwrotnej CDF</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>E[F] · nieobciążony</span><span>Var[F] · źródło szumu</span><span>ZBIEŻNOŚĆ · 1/√N</span><span>EXT OF · Dodatek B</span>
+  </div>
+
+  <div class="eyebrow">Dodatek V / Fundamenty Monte Carlo</div>
+  <h1>Estymatory i metoda odwrotnej CDF</h1>
+  <p class="subtitle">Dodatek B pokazał, jak próbkować „lepiej” niż jednorodnie. Ten dodatek robi krok wcześniej: co to znaczy, że estymator jest poprawny, i jak w ogóle wylosować próbkę z zadanego, niejednorodnego rozkładu — nie tylko wiedzieć, że warto.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Estymator to liczba policzona z losowych próbek, której <em>wartość oczekiwana</em> równa się prawdziwej wartości całki — pojedynczy wynik może się mylić, średnia z wielu nie.</li>
+      <li>Wariancja estymatora — nie sama losowość — jest źródłem szumu; błąd Monte Carlo spada jak 1/√N, niezależnie od wymiaru całki.</li>
+      <li>Metoda odwrotnej CDF: żeby wylosować próbkę z rozkładu p(x), odwróć jego skumulowaną gęstość (CDF) i podstaw jednorodną liczbę losową.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Estymator</div>
+    <h2>Co znaczy „poprawny” estymator</h2>
+    <p>Chcesz policzyć całkę I = ∫ₐᵇ f(x) dx, ale nie umiesz jej rozwiązać analitycznie (dokładnie sytuacja z Rozdziału 15). Estymator Monte Carlo losuje X jednorodnie z [a,b] i liczy F = (b−a)·f(X). To jest <em>losowa</em> liczba — różna przy każdym losowaniu — ale jej wartość oczekiwana jest dokładnie równa I:</p>
+
+    <div class="formula">E[F] = E[(b−a)·f(X)] = (b−a) · ∫ₐᵇ f(x) · (1/(b−a)) dx = ∫ₐᵇ f(x) dx = I<span class="sub">1/(b−a) to gęstość jednorodnego rozkładu na [a,b]; stąd czynniki się kasują i zostaje dokładnie szukana całka</span></div>
+
+    <div class="worked">
+      <div class="wlabel">Zbieżność w praktyce — I = ∫₀¹ x² dx = 1/3</div>
+      <div class="step">N=10 próbek: estymata = 0,1967 (błąd 0,137)</div>
+      <div class="step">N=100: estymata = 0,3814 (błąd 0,048)</div>
+      <div class="step">N=1 000: estymata = 0,3160 (błąd 0,017)</div>
+      <div class="step">N=10 000: estymata = 0,3293 (błąd 0,004)</div>
+      <div class="step">N=100 000: estymata = 0,3345 (błąd 0,001)</div>
+      <div class="result">Każde ×10 próbek zmniejsza błąd o czynnik ≈√10 ≈ 3,16 — to jest właśnie tempo 1/√N.</div>
+    </div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Estimator.scatter</span><span>5 runs at N=20 vs true value</span></div>
+      <svg viewBox="0 0 500 220" xmlns="http://www.w3.org/2000/svg">
+        <line x1="60" y1="180" x2="440" y2="180" stroke="#8b909b" stroke-width="1.3"/>
+        <line x1="250" y1="40" x2="250" y2="200" stroke="#e8a33d" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <text x="250" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#e8a33d">I = 1/3 (prawda)</text>
+        <circle cx="205" cy="180" r="5" fill="#4fc3c0"/>
+        <circle cx="228" cy="180" r="5" fill="#4fc3c0"/>
+        <circle cx="238" cy="180" r="5" fill="#4fc3c0"/>
+        <circle cx="288" cy="180" r="5" fill="#4fc3c0"/>
+        <circle cx="248" cy="180" r="5" fill="#4fc3c0"/>
+        <text x="250" y="205" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">pięć niezależnych estymat, N=20 każda</text>
+      </svg>
+      <div class="diagram-caption">Żadna pojedyncza estymata nie trafia w 1/3 idealnie — ale rozrzucają się <em>wokół</em> niej, nie w jedną stronę.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Odwrotna CDF</div>
+    <h2>Jak wylosować próbkę z konkretnego rozkładu</h2>
+    <p>Generator liczb pseudolosowych (część planowanego dodatku o PRNG) daje ξ jednorodne na [0,1). Chcesz jednak X rozłożone według konkretnej gęstości p(x) — np. cosinusowo dla diffuse w Rozdziale 15. Metoda odwrotnej CDF: policz skumulowaną gęstość P(x) = ∫p(t)dt, odwróć ją, podstaw ξ:</p>
+
+    <div class="formula">P(x) = ∫₋∞ˣ p(t) dt (CDF)<br>X = P⁻¹(ξ)<span class="sub">jeśli ξ jest jednorodne na [0,1), to X ma dokładnie rozkład p(x) — bez żadnego przybliżenia</span></div>
+
+    <div class="worked">
+      <div class="wlabel">Przykład — próbkowanie p(x) = 2x na [0,1]</div>
+      <div class="step">Sprawdzenie normalizacji: ∫₀¹ 2x dx = [x²]₀¹ = <span class="v">1</span> ✓ (to jest poprawna gęstość)</div>
+      <div class="step">CDF: P(x) = ∫₀ˣ 2t dt = <span class="v">x²</span></div>
+      <div class="step">Odwrócenie: ξ = x² → <span class="v">x = √ξ</span></div>
+      <div class="step">Dla ξ = 0,36: x = √0,36 = <span class="v">0,6</span></div>
+      <div class="result">Wynik: X = 0,6 jest próbką z rozkładu p(x)=2x, wylosowaną z jednorodnego ξ=0,36.</div>
+      <div class="check">Sprawdzenie zbieżności: 200 000 próbek wylosowanych tą metodą dało średnią 0,6671 — teoretyczna wartość oczekiwana dla p(x)=2x to E[X]=∫x·2x dx=2/3≈0,6667. Zgodność do trzeciego miejsca.</div>
+    </div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Inversion.method</span><span>PDF → CDF → sample</span></div>
+      <svg viewBox="0 0 500 300" xmlns="http://www.w3.org/2000/svg">
+        <text x="130" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">PDF: p(x)=2x</text>
+        <line x1="60" y1="220" x2="220" y2="220" stroke="#8b909b" stroke-width="1.3"/>
+        <line x1="60" y1="220" x2="60" y2="60" stroke="#8b909b" stroke-width="1.3"/>
+        <line x1="60" y1="220" x2="220" y2="60" stroke="#4fc3c0" stroke-width="2.2"/>
+        <text x="60" y="238" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">0</text>
+        <text x="220" y="238" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">1</text>
+
+        <text x="370" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">CDF: P(x)=x² (z inwersją)</text>
+        <line x1="300" y1="220" x2="460" y2="220" stroke="#8b909b" stroke-width="1.3"/>
+        <line x1="300" y1="220" x2="300" y2="60" stroke="#8b909b" stroke-width="1.3"/>
+        <path d="M 300,220 Q 340,215 380,180 T 460,60" fill="none" stroke="#e8a33d" stroke-width="2.2"/>
+        <line x1="300" y1="162" x2="396" y2="162" stroke="#9c82d8" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <text x="290" y="166" text-anchor="end" font-family="IBM Plex Mono" font-size="10" fill="#9c82d8">ξ=0,36</text>
+        <line x1="396" y1="162" x2="396" y2="220" stroke="#9c82d8" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <text x="396" y="238" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#9c82d8">x=0,6</text>
+      </svg>
+      <div class="diagram-caption">Wejdź z ξ na osi Y, przejdź do krzywej CDF, zejdź na osi X — to jest cała metoda.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Formuła cosθ = √ξ, φ = 2πξ₂, którą widziałeś (albo zobaczysz) jako „cosine-weighted hemisphere sampling” w kodzie każdego path tracera, powstaje dokładnie tą metodą — tylko odwracana jest CDF gęstości p(θ,φ) ∝ cosθ na hemisferze, z uwzględnieniem jakobianu współrzędnych sferycznych. Ten jakobian, i jak go liczyć dla różnych zamian zmiennych, to temat kolejnego dodatku.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Estymator</dt><dd>Losowa wielkość, której wartość oczekiwana równa się szukanej całce.</dd>
+      <dt>Nieobciążoność</dt><dd>Własność E[F]=I — estymator nie systematycznie zawyża/zaniża.</dd>
+      <dt>Wariancja</dt><dd>Rozrzut wartości estymatora między próbkami; źródło widocznego szumu.</dd>
+      <dt>CDF (skumulowana gęstość)</dt><dd>P(x) = ∫p(t)dt — całka gęstości od −∞ do x.</dd>
+      <dt>Metoda odwrotnej CDF</dt><dd>X = P⁻¹(ξ) — sposób losowania próbek z zadanego rozkładu.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Kolejny dodatek pokazuje, co się dzieje z gęstością prawdopodobieństwa, gdy przechodzisz między różnymi przestrzeniami — powierzchnia światła kontra kąt bryłowy widziany z punktu trafienia. To brakujący element w próbkowaniu świateł z Rozdziałów 6, 15 i 16.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="dodatek-b-importance-sampling.html">↑ Dodatek B: Importance sampling, MIS (z dowodem)</a>
+</div>
+</div>
+</body>
+</html>

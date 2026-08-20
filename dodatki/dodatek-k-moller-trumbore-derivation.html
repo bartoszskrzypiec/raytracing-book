@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek K — Skąd się bierze algorytm Möllera–Trumbore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>METHOD · Cramer's rule</span><span>KEY · triple product</span><span>SYSTEM · 3 eq., 3 unknowns</span><span>EXT OF · R.4</span>
+  </div>
+
+  <div class="eyebrow">Dodatek K / Głębiej: Rozdział 4</div>
+  <h1>Skąd się bierze algorytm Möllera–Trumbore</h1>
+  <p class="subtitle">Rozdział 4 dał Ci gotowy przepis: edge1, edge2, h, det, s, q, t, u, v — i działało. Ten dodatek pokazuje, że nic z tego nie jest magią ani szczęśliwym zgadywaniem — to wzór Cramera na banalny układ trzech równań, tylko zapisany przez iloczyny wektorowe, żeby uniknąć jawnego liczenia wyznaczników 3×3.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>„Promień trafia w trójkąt” to układ 3 równań liniowych z 3 niewiadomymi: t, u, v.</li>
+      <li>Rozwiązanie przez wzór Cramera wymaga jednej sztuczki: iloczynu potrójnego trzech wektorów i jego cyklicznej symetrii, a·(b×c) = b·(c×a) = c·(a×b).</li>
+      <li>h, det, s, q z Rozdziału 4 to dosłownie cztery konkretne wyznaczniki tego układu — ten dodatek pokazuje, który jest który.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Warunek</div>
+    <h2>Punkt wspólny: promień = punkt na trójkącie</h2>
+    <p>Promień z Rozdziału 2 to P(t) = O + t·D. Punkt na trójkącie z Rozdziału 4, zapisany przez wierzchołek A i wektory krawędzi, to P = A + u·edge1 + v·edge2 (to dosłownie te same u, v co wagi barycentryczne — tylko wyrażone przez edge’e, nie przez A, B, C wprost). Trafienie to sytuacja, w której obie strony opisują ten sam punkt:</p>
+
+    <div class="formula">O + t·D = A + u·edge1 + v·edge2</div>
+
+    <p>Przegrupuj tak, żeby wszystkie niewiadome (t, u, v) były po jednej stronie, a znane wektory po drugiej. Oznacz s = O − A:</p>
+
+    <div class="formula">−t·D + u·edge1 + v·edge2 = s</div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Vector.setup</span><span>3 unknowns hidden in plain sight</span></div>
+      <svg viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="mk1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+          <marker id="mk2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9c82d8"/></marker>
+          <marker id="mk3" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4fc3c0"/></marker>
+        </defs>
+        <polygon points="150,260 430,260 150,120" fill="#20242c" stroke="#2a2f38" stroke-width="1.5"/>
+        <circle cx="150" cy="260" r="5" fill="#ecebe4"/><text x="132" y="280" font-family="IBM Plex Mono" font-size="12" fill="#ecebe4">A</text>
+        <circle cx="430" cy="260" r="5" fill="#ecebe4"/><text x="438" y="280" font-family="IBM Plex Mono" font-size="12" fill="#ecebe4">B</text>
+        <circle cx="150" cy="120" r="5" fill="#ecebe4"/><text x="130" y="112" font-family="IBM Plex Mono" font-size="12" fill="#ecebe4">C</text>
+
+        <line x1="150" y1="260" x2="415" y2="260" stroke="#e8a33d" stroke-width="2.2" marker-end="url(#mk1)"/>
+        <text x="280" y="278" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">edge1</text>
+        <line x1="150" y1="260" x2="150" y2="135" stroke="#9c82d8" stroke-width="2.2" marker-end="url(#mk2)"/>
+        <text x="120" y="195" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">edge2</text>
+
+        <circle cx="520" cy="90" r="4.5" fill="#ecebe4"/><text x="530" y="86" font-family="IBM Plex Mono" font-size="12" fill="#ecebe4">O</text>
+        <line x1="150" y1="260" x2="512" y2="98" stroke="#4fc3c0" stroke-width="1.8" stroke-dasharray="5 4"/>
+        <text x="360" y="165" font-family="IBM Plex Mono" font-size="12" fill="#4fc3c0">s = O − A</text>
+
+        <line x1="520" y1="90" x2="290" y2="205" stroke="#e8a33d" stroke-width="2.2" marker-end="url(#mk3)"/>
+        <text x="470" y="150" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">D</text>
+      </svg>
+      <div class="diagram-caption">Trzy znane wektory (s, edge1, edge2) i jeden nieznany kierunek D — t, u, v mówią, jak je poskładać, żeby się zgodziły.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Układ</div>
+    <h2>Układ trzech równań, trzech niewiadomych</h2>
+    <p>Powyższe równanie wektorowe to w rzeczywistości trzy zwykłe równania skalarne — jedno na współrzędną x, jedno na y, jedno na z. Zapisane jako macierz razy wektor niewiadomych:</p>
+
+    <div class="formula">[ −D | edge1 | edge2 ] · [t, u, v]ᵗ = s<span class="sub">macierz 3×3, której kolumnami są wektory −D, edge1, edge2; standardowy układ liniowy, żadnej specjalnej struktury geometrycznej</span></div>
+
+    <p>To jest dokładnie taki układ, jaki rozwiązywałeś na studiach metodą eliminacji Gaussa albo wzorem Cramera. Möller i Trumbore po prostu zauważyli, że dla układów 3×3 wzór Cramera można zapisać wyłącznie przez iloczyny wektorowe i skalarne — bez jawnego wypisywania wyznacznika 3×3 ze wzoru rozwinięcia Laplace’a.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Cramer</div>
+    <h2>Wzór Cramera i iloczyn potrójny</h2>
+    <p>Dla układu M·x = s, gdzie M ma kolumny (c₁, c₂, c₃), wzór Cramera mówi: każda niewiadoma xᵢ to wyznacznik macierzy M z i-tą kolumną zastąpioną przez s, podzielony przez wyznacznik M:</p>
+
+    <div class="formula">xᵢ = det(Mᵢ) / det(M)</div>
+
+    <p>Kluczowa sztuczka: wyznacznik macierzy 3×3 zbudowanej z trzech wektorów jako kolumn to <strong>iloczyn potrójny</strong> (triple product) tych wektorów — a iloczyn potrójny ma cykliczną symetrię, którą można przestawiać bez zmiany wartości:</p>
+
+    <div class="formula">det([a|b|c]) = a·(b×c) = b·(c×a) = c·(a×b)<span class="sub">te trzy wyrażenia są sobie równe — możesz wybrać tę wersję, która wygodniej się liczy</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Cyclic.triple.product</span><span>a·(b×c)=b·(c×a)=c·(a×b)</span></div>
+      <svg viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="cy1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8b909b"/></marker>
+        </defs>
+        <circle cx="350" cy="70" r="6" fill="#e8a33d"/><text x="350" y="52" text-anchor="middle" font-family="IBM Plex Mono" font-size="14" fill="#e8a33d">a</text>
+        <circle cx="200" cy="220" r="6" fill="#4fc3c0"/><text x="200" y="245" text-anchor="middle" font-family="IBM Plex Mono" font-size="14" fill="#4fc3c0">b</text>
+        <circle cx="500" cy="220" r="6" fill="#9c82d8"/><text x="500" y="245" text-anchor="middle" font-family="IBM Plex Mono" font-size="14" fill="#9c82d8">c</text>
+
+        <path d="M 330,85 A 140,140 0 0,1 210,205" fill="none" stroke="#8b909b" stroke-width="1.5" marker-end="url(#cy1)"/>
+        <path d="M 218,225 A 140,140 0 0,1 482,225" fill="none" stroke="#8b909b" stroke-width="1.5" marker-end="url(#cy1)"/>
+        <path d="M 490,205 A 140,140 0 0,1 370,85" fill="none" stroke="#8b909b" stroke-width="1.5" marker-end="url(#cy1)"/>
+
+        <text x="350" y="140" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">a·(b×c) = b·(c×a) = c·(a×b)</text>
+      </svg>
+      <div class="diagram-caption">Ta sama wartość, trzy sposoby zapisu — przesuwasz „kropkę” cyklicznie po trzech wektorach.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Podstawienie</div>
+    <h2>Skąd się biorą h, det, s, q</h2>
+    <p>Zastosuj wzór Cramera do naszego układu, kolumna po kolumnie, i za każdym razem użyj cyklicznej symetrii, żeby zapisać wynik przez to, co już masz policzone:</p>
+
+    <div class="formula">det(M) = det([−D | edge1 | edge2]) = −D·(edge1×edge2) = edge1·(D×edge2) = edge1·h<span class="sub">gdzie h = D×edge2 — to dosłownie krok 2 z diagramu pipeline’u w Rozdziale 4</span></div>
+
+    <div class="formula">det(Mᵤ) = det([−D | s | edge2]) = −D·(s×edge2) = s·(D×edge2) = s·h<br>→ u = (s·h) / det</div>
+
+    <div class="formula">det(Mᵥ) = det([−D | edge1 | s]) = −D·(edge1×s) = D·(s×edge1) = D·q<br>→ v = (D·q) / det,  gdzie q = s×edge1</div>
+
+    <div class="formula">det(M_t) = det([s | edge1 | edge2]) = s·(edge1×edge2) = edge2·(s×edge1) = edge2·q<br>→ t = (edge2·q) / det</div>
+
+    <p>To wszystko. Każda linia algorytmu z Rozdziału 4 — h, det, s, q, u, v, t — to jeden konkretny wyznacznik z Cramera, przepisany przez cykliczną symetrię triple product tak, żeby dało się go policzyć dwoma iloczynami wektorowymi i kilkoma iloczynami skalarnymi, bez rozpisywania macierzy 3×3 wprost.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Weryfikacja</div>
+    <h2>Ten sam przykład, dwiema metodami</h2>
+    <p>Weź trójkąt i promień z Rozdziału 4: A=(0,0,0), B=(4,0,0), C=(0,3,0), O=(1,1,5), D=(0,0,−1). Policz t, u, v obiema metodami i porównaj.</p>
+
+    <div class="worked">
+      <div class="wlabel">Metoda 1 — przepis z Rozdziału 4 (h, q)</div>
+      <div class="step">h = D×edge2 = (3,0,0). det = edge1·h = <span class="v">12</span>.</div>
+      <div class="step">s = (1,1,5). u = (s·h)/det = 3/12 = <span class="v">0,25</span>.</div>
+      <div class="step">q = s×edge1 = (0,20,−4). v = (D·q)/det = 4/12 = <span class="v">0,333</span>.</div>
+      <div class="step">t = (edge2·q)/det = 60/12 = <span class="v">5,0</span>.</div>
+    </div>
+
+    <div class="worked">
+      <div class="wlabel">Metoda 2 — jawne wyznaczniki 3×3 (Cramer)</div>
+      <div class="step">det(M) = −D·(edge1×edge2) = (0,0,1)·(0,0,12) = <span class="v">12</span></div>
+      <div class="step">det(Mᵤ) = −D·(s×edge2) = (0,0,1)·(−15,0,3) = <span class="v">3</span> → u = 3/12 = <span class="v">0,25</span></div>
+      <div class="step">det(Mᵥ) = −D·(edge1×s) = (0,0,1)·(0,−20,4) = <span class="v">4</span> → v = 4/12 = <span class="v">0,333</span></div>
+      <div class="step">det(M_t) = s·(edge1×edge2) = (1,1,5)·(0,0,12) = <span class="v">60</span> → t = 60/12 = <span class="v">5,0</span></div>
+      <div class="result">Identyczne wyniki: t=5,0, u=0,25, v=0,333 — dwiema, na pierwszy rzut oka różnymi, drogami.</div>
+      <div class="check">To nie przypadek — to ta sama cykliczna symetria triple product, użyta w każdej linii wyżej.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Ta sama technika — zapisz „czy promień trafia w kształt X” jako układ liniowy, rozwiąż Cramerem, uprość przez cykliczną symetrię triple product — działa dla każdego prymitywu opisanego liniowo: czworokątów (quads), dysków, nawet niektórych powierzchni parametrycznych. Jeśli kiedykolwiek będziesz pisać własny test przecięcia dla nietypowego kształtu, to jest dokładnie ta metoda, od której warto zacząć.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Wzór Cramera</dt><dd>xᵢ = det(Mᵢ)/det(M) — rozwiązanie układu liniowego przez wyznaczniki.</dd>
+      <dt>Iloczyn potrójny (triple product)</dt><dd>a·(b×c) — skalar równy wyznacznikowi macierzy z kolumnami a, b, c.</dd>
+      <dt>Symetria cykliczna</dt><dd>a·(b×c) = b·(c×a) = c·(a×b) — przesuwanie „kropki” po trójce wektorów.</dd>
+      <dt>Układ liniowy 3×3</dt><dd>Trzy równania skalarne (x,y,z) z trzema niewiadomymi (t,u,v).</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Ta sama technika (Cramer + triple product) wraca, gdy w Rozdziale 13/Dodatku C liczysz przecięcia ray-AABB metodą slab test — tam też rozwiązujesz układ liniowy, tylko rozdzielony na trzy niezależne osie zamiast jednego układu 3×3.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-04-plaszczyzny-i-trojkaty.html">↑ Rozdział 4: Płaszczyzny i trójkąty</a>
+</div>
+</div>
+</body>
+</html>

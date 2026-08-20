@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Rozdział 15 — Path tracing i metody Monte Carlo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>L_o = L_e + ∫Ω</span><span>METHOD · Monte Carlo</span><span>TERMINATE · Russian roulette</span><span>GI · ON</span>
+  </div>
+
+  <div class="eyebrow">Rozdział 15 / Globalne oświetlenie</div>
+  <h1>Path tracing i metody Monte Carlo</h1>
+  <p class="subtitle">Rozdziały 1–11 rekurencyjnie śledziły jeden idealny promień odbicia i załamania na trafienie — dokładnie to, co opisał Whitted. Ten rozdział dodaje ostatni, brakujący kawałek: światło odbite od innych powierzchni, nie tylko wzdłuż jednego, idealnego kierunku.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Równanie renderowania (Kajiya, 1986) opisuje dokładnie, ile światła wychodzi z punktu — sumę światła bezpośredniego i odbitego od każdej innej powierzchni, rekurencyjnie.</li>
+      <li>Nie da się tego policzyć analitycznie dla realnej scenie — dlatego stosuje się Monte Carlo: losowe próbkowanie kierunków, uśrednianie wyników.</li>
+      <li>To dosłownie ten sam supersampling z Rozdziału 8 — tylko próbkujemy nie pozycję w pikselu, a całą ścieżkę światła przez scenę.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Równanie</div>
+    <h2>Równanie renderowania</h2>
+    <p>James Kajiya sformalizował w 1986 roku jedno równanie, które opisuje absolutnie każdy efekt świetlny z tej książki:</p>
+
+    <div class="formula">L_o(p,ω_o) = L_e(p,ω_o) + ∫_Ω f(p,ω_i,ω_o) · L_i(p,ω_i) · (N·ω_i) dω_i<span class="sub">L_o — światło wychodzące; L_e — światło emitowane (źródła); f — BRDF z Rozdziałów 10–11; L_i — światło przychodzące z kierunku ω_i; Ω — cała hemisfera nad punktem</span></div>
+
+    <p>To równanie jest rekurencyjne: L_i w punkcie p, z kierunku ω_i, to po prostu L_o jakiejś <em>innej</em> powierzchni — tej, w którą trafia promień wysłany z p w kierunku ω_i. Diffuse i shadow rays z Rozdziału 6 to ta całka policzona tylko dla świateł punktowych (delta, bez integracji). Odbicia i załamania z Rozdziału 7 to ta całka policzona tylko wzdłuż jednego, idealnie zwierciadlanego kierunku. Czego wciąż brakuje: światła odbitego od <em>innych rozproszonych powierzchni</em> — czerwona ściana barwiąca sufit różowym blaskiem, klasyczne bounce light, które każdy widział na żywym renderze.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Rendering.equation</span><span>recursive hemisphere</span></div>
+      <svg viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="re1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9c82d8"/></marker>
+        </defs>
+        <line x1="80" y1="240" x2="320" y2="240" stroke="#8b909b" stroke-width="2"/>
+        <path d="M 120,240 Q 120,140 200,130 Q 280,140 280,240 Z" fill="#9c82d8" fill-opacity="0.14" stroke="#9c82d8" stroke-width="1.3"/>
+        <text x="200" y="118" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#9c82d8">hemisfera Ω</text>
+        <line x1="140" y1="165" x2="200" y2="240" stroke="#9c82d8" stroke-width="1.8" marker-end="url(#re1)"/>
+        <line x1="200" y1="130" x2="200" y2="240" stroke="#9c82d8" stroke-width="1.8" marker-end="url(#re1)"/>
+        <line x1="262" y1="150" x2="200" y2="240" stroke="#9c82d8" stroke-width="1.8" marker-end="url(#re1)"/>
+        <circle cx="200" cy="240" r="4.5" fill="#ecebe4"/>
+        <text x="208" y="256" font-family="IBM Plex Mono" font-size="12" fill="#ecebe4">P</text>
+
+        <line x1="262" y1="150" x2="500" y2="150" stroke="#8b909b" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <text x="330" y="140" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">L_i(P,ω) = L_o(Q,…)</text>
+
+        <line x1="440" y1="160" x2="640" y2="160" stroke="#8b909b" stroke-width="2"/>
+        <path d="M 470,160 Q 470,105 520,100 Q 570,105 570,160 Z" fill="#9c82d8" fill-opacity="0.14" stroke="#9c82d8" stroke-width="1.2"/>
+        <line x1="490" y1="120" x2="520" y2="160" stroke="#9c82d8" stroke-width="1.4"/>
+        <line x1="550" y1="118" x2="520" y2="160" stroke="#9c82d8" stroke-width="1.4"/>
+        <circle cx="520" cy="160" r="3.5" fill="#ecebe4"/>
+        <text x="528" y="176" font-family="IBM Plex Mono" font-size="12" fill="#ecebe4">Q</text>
+        <text x="600" y="200" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">…i tak dalej, rekurencyjnie</text>
+      </svg>
+      <div class="diagram-caption">Każdy kierunek w hemisferze P prowadzi do jakiejś powierzchni Q, która ma własną hemisferę do policzenia.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Monte Carlo</div>
+    <h2>Nie da się tego policzyć dokładnie</h2>
+    <p>Całka po hemisferze nie ma zamkniętej formy dla realnej scenie. Metoda Monte Carlo szacuje każdą całkę, losowo próbkując punkty i uśredniając wynik. Zastosowana do jednego kierunku ω_i naraz:</p>
+
+    <div class="formula">L_o ≈ f(p,ω_i,ω_o) · L_i(p,ω_i) · (N·ω_i) / pdf(ω_i)<span class="sub">jedna losowa próbka kierunku, odpowiednio zważona przez gęstość prawdopodobieństwa (pdf), z której ją wylosowano — importance sampling: próbkuj częściej kierunki, które i tak wnoszą więcej (np. proporcjonalnie do BRDF)</span></div>
+
+    <p>Uśrednienie wielu takich pojedynczych „ścieżek” na piksel zbiega do prawidłowej odpowiedzi — to dosłownie ten sam supersampling z Rozdziału 8, tylko teraz próbkujemy nie pozycję w pikselu, a całą ścieżkę światła przez scenę.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Path.averaging</span><span>1 vs 1000+ paths</span></div>
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+        <line x1="380" y1="20" x2="380" y2="280" stroke="#2a2f38"/>
+        <text x="190" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">1 ŚCIEŻKA (SZUM)</text>
+        <text x="570" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">TYSIĄCE ŚCIEŻEK (ŚREDNIA)</text>
+
+        <polygon points="60,240 60,260 78,250" fill="#8b909b"/>
+        <path d="M78,250 L162,178 L122,110 L212,80" fill="none" stroke="#e8a33d" stroke-width="1.8"/>
+        <circle cx="162" cy="178" r="3.5" fill="#ecebe4"/>
+        <circle cx="122" cy="110" r="3.5" fill="#ecebe4"/>
+        <circle cx="212" cy="80" r="6" fill="#f0c880"/>
+        <circle cx="90" cy="200" r="1.4" fill="#4fc3c0" fill-opacity="0.5"/>
+        <circle cx="250" cy="140" r="1.4" fill="#4fc3c0" fill-opacity="0.5"/>
+        <circle cx="140" cy="240" r="1.4" fill="#4fc3c0" fill-opacity="0.5"/>
+        <circle cx="270" cy="200" r="1.4" fill="#4fc3c0" fill-opacity="0.5"/>
+
+        <polygon points="460,240 460,260 478,250" fill="#8b909b"/>
+        <path d="M 480,250 L 558,178 L 519,110 L 627,77" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-opacity="0.22"/>
+        <path d="M 480,250 L 564,154 L 537,119 L 623,71" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-opacity="0.22"/>
+        <path d="M 480,250 L 567,156 L 537,97 L 621,74" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-opacity="0.22"/>
+        <path d="M 480,250 L 574,142 L 522,108 L 621,80" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-opacity="0.22"/>
+        <path d="M 480,250 L 557,149 L 530,110 L 614,78" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-opacity="0.22"/>
+        <path d="M 480,250 L 567,152 L 540,84 L 629,64" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-opacity="0.22"/>
+        <path d="M 480,250 L 566,148 L 529,114 L 614,72" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-opacity="0.22"/>
+        <path d="M 480,250 L 568,152 L 519,108 L 618,69" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-opacity="0.22"/>
+        <path d="M 480,250 L 573,144 L 540,116 L 615,79" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-opacity="0.22"/>
+        <circle cx="622" cy="74" r="6" fill="#f0c880"/>
+      </svg>
+      <div class="diagram-caption">Jedna ścieżka to szum. Tysiące, uśrednione piksel po pikselu, dają gładki, prawidłowy obraz.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Algorytm</div>
+    <h2>Path tracing w praktyce</h2>
+    <p>Konkretny algorytm (unidirectional path tracing, najprostszy i najczęstszy wariant): z kamery wysyłasz promień; w punkcie trafienia liczysz światło bezpośrednie promieniem cienia (Rozdział 6); potem — zamiast zawsze kontynuować rekurencję jak w Rozdziale 7 — losujesz, czy ścieżka przetrwa (ruletka rosyjska), żeby pozostać statystycznie nieobciążonym bez sztywnego limitu głębokości; jeśli przetrwa, próbkujesz nowy kierunek według BRDF (Rozdziały 10–11) i powtarzasz całość z nowego punktu trafienia, jak gdyby to była nowa kamera.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Path.tracer.loop</span><span>per-sample algorithm</span></div>
+      <svg viewBox="0 0 760 240" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="pt1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+        </defs>
+        <g font-family="IBM Plex Sans" font-size="11" fill="#ecebe4">
+          <rect x="10" y="90" width="130" height="60" rx="8" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="75" y="115" text-anchor="middle">Promień z</text><text x="75" y="130" text-anchor="middle">kamery (R.3)</text>
+
+          <rect x="165" y="90" width="130" height="60" rx="8" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="230" y="115" text-anchor="middle">Trafienie</text><text x="230" y="130" text-anchor="middle">BVH (R.13)</text>
+
+          <rect x="320" y="90" width="130" height="60" rx="8" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="385" y="115" text-anchor="middle">Światło</text><text x="385" y="130" text-anchor="middle">bezpośrednie (R.6)</text>
+
+          <rect x="475" y="90" width="130" height="60" rx="8" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="540" y="115" text-anchor="middle">Ruletka</text><text x="540" y="130" text-anchor="middle">rosyjska</text>
+
+          <rect x="620" y="90" width="130" height="60" rx="8" fill="#20242c" stroke="#e8a33d"/>
+          <text x="685" y="115" text-anchor="middle" font-weight="600">Próbkuj BRDF</text><text x="685" y="130" text-anchor="middle">(R.10–11)</text>
+        </g>
+        <line x1="140" y1="120" x2="163" y2="120" stroke="#e8a33d" stroke-width="2" marker-end="url(#pt1)"/>
+        <line x1="295" y1="120" x2="318" y2="120" stroke="#e8a33d" stroke-width="2" marker-end="url(#pt1)"/>
+        <line x1="450" y1="120" x2="473" y2="120" stroke="#e8a33d" stroke-width="2" marker-end="url(#pt1)"/>
+        <line x1="605" y1="120" x2="618" y2="120" stroke="#e8a33d" stroke-width="2" marker-end="url(#pt1)"/>
+        <path d="M 685,152 C 685,205 230,205 230,152" fill="none" stroke="#9c82d8" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#pt1)"/>
+        <text x="460" y="195" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#9c82d8">nowy „promień pierwotny” z punktu trafienia</text>
+      </svg>
+      <div class="diagram-caption">Ta sama pętla, którą Whitted opisał w 1980 — tylko kierunek odbicia jest teraz losowy, nie idealnie zwierciadlany.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Przełącznik „GI” / „Global Illumination” i „Light Bounces” / „Max Bounces” w Arnoldzie, RenderManie, Cyclesie, V-Rayu czy trybie Path Tracer w Unrealu to dosłownie ten rozdział: GI włącza człon odbity równania renderowania, bounces ogranicza (statystycznie, przez ruletkę) długość ścieżki.</p>
+    <p>Szum kontra czas renderu, z którym walczysz w każdym projekcie, to nieunikniona konsekwencja Monte Carlo — nie ma darmowego obiadu, są tylko lepsze sposoby próbkowania (next-event estimation, bidirectional path tracing, ReSTIR) i denoisery, które wygładzają wynik przy tej samej liczbie próbek.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Równanie renderowania</dt><dd>L_o = L_e + ∫_Ω f·L_i·(N·ω_i) dω_i.</dd>
+      <dt>Radiancja (L)</dt><dd>Miara ilości światła; L_o wychodząca, L_i przychodząca, L_e emitowana.</dd>
+      <dt>Metoda Monte Carlo</dt><dd>Szacowanie całki przez losowe próbkowanie i uśrednianie.</dd>
+      <dt>Importance sampling</dt><dd>Próbkowanie częściej tam, gdzie wkład do wyniku jest większy.</dd>
+      <dt>Ruletka rosyjska</dt><dd>Losowe, nieobciążone zatrzymywanie ścieżki, zamiast sztywnego limitu głębokości.</dd>
+      <dt>Path tracing</dt><dd>Algorytm Monte Carlo śledzący losowe ścieżki światła przez scenę.</dd>
+      <dt>Global Illumination (GI)</dt><dd>Światło odbite od innych powierzchni, nie tylko bezpośrednie.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Podstawowy path tracing zbiega się poprawnie, ale czasem boleśnie wolno — małe światła, ostre kaustyki. W następnym rozdziale: bidirectional path tracing i photon mapping, techniki budowane na dokładnie tym samym równaniu renderowania, dla scen, gdzie samo losowe próbkowanie z kamery nie wystarcza.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="rozdzial-14-optymalizacja.html">← Poprzedni</a>
+    <a href="rozdzial-16-bdpt-photon-mapping.html">Następny →</a>
+</div>
+</div>
+</body>
+</html>

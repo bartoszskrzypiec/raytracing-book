@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Rozdział 10 — Materiały: dielektryki, metale i BRDF</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.formula{font-size:15px;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>BRDF · f(L,V)</span><span>ENERGY · ≤ 1</span><span>METALLIC · 0 / 1</span><span>MODEL · Cook-Torrance</span>
+  </div>
+
+  <div class="eyebrow">Rozdział 10 / Realizm i jakość obrazu</div>
+  <h1>Materiały: dielektryki, metale i BRDF</h1>
+  <p class="subtitle">Blinn-Phong z Rozdziału 5 dawał przekonujący błysk, ale bez fizycznego uzasadnienia. Ten rozdział pyta: co materiał <em>właściwie</em> robi ze światłem — i dlaczego slider „Metallic” w każdym silniku PBR to nie estetyczny wybór, tylko przełącznik między dwoma różnymi zjawiskami fizycznymi.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Każdy materiał to funkcja BRDF: „ile światła z kierunku L wraca w kierunku V”, w danym punkcie powierzchni.</li>
+      <li>Dielektryki (plastik, drewno, skóra) mają diffuse + biały specular. Metale mają tylko specular — i ten specular jest kolorowy.</li>
+      <li>Fizycznie spójna BRDF musi być energooszczędna i wzajemna — Blinn-Phong nie spełnia pierwszego warunku.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: BRDF</div>
+    <h2>Co właściwie jest BRDF</h2>
+    <p>BRDF (bidirectional reflectance distribution function) to funkcja opisująca, ile światła przychodzącego z kierunku L wychodzi z powrotem w kierunku V, w konkretnym punkcie powierzchni. Diffuse z Rozdziału 5 i specular z Rozdziału 5 to po prostu dwie różne BRDF, dodane do siebie.</p>
+    <p>Żeby BRDF miała sens fizyczny, musi spełniać dwa warunki:</p>
+
+    <div class="formula">∫ f(L,V)·(N·L) dL ≤ 1<span class="sub">energooszczędność: suma odbitej energii po całej hemisferze kierunków L nie może przekroczyć energii, która padła — Blinn-Phong tego nie gwarantuje</span></div>
+    <div class="formula">f(L,V) = f(V,L)<span class="sub">wzajemność (zasada Helmholtza): zamiana miejscami światła i widza nie zmienia wartości BRDF</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>BRDF.lobes</span><span>diffuse vs specular</span></div>
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="bl1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+        </defs>
+        <line x1="380" y1="20" x2="380" y2="280" stroke="#2a2f38"/>
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">LOB DIFFUSE (SZEROKI)</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">LOB SPECULAR (WĄSKI)</text>
+
+        <line x1="60" y1="220" x2="320" y2="220" stroke="#8b909b" stroke-width="2"/>
+        <path d="M 100,220 Q 100,140 190,132 Q 280,140 280,220 Z" fill="#4fc3c0" fill-opacity="0.32" stroke="#4fc3c0" stroke-width="1.5"/>
+        <line x1="110" y1="120" x2="190" y2="220" stroke="#e8a33d" stroke-width="2.3" marker-end="url(#bl1)"/>
+        <text x="112" y="108" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">L</text>
+        <circle cx="190" cy="220" r="4" fill="#ecebe4"/>
+
+        <line x1="440" y1="220" x2="700" y2="220" stroke="#8b909b" stroke-width="2"/>
+        <line x1="490" y1="120" x2="570" y2="220" stroke="#e8a33d" stroke-width="2.3" marker-end="url(#bl1)"/>
+        <text x="492" y="108" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">L</text>
+        <line x1="570" y1="220" x2="645" y2="126" stroke="#9c82d8" stroke-width="1" stroke-dasharray="3 3"/>
+        <path d="M 570,220 Q 621.6,184.25 645,126 Q 593.4,161.75 570,220 Z" fill="#9c82d8" fill-opacity="0.4" stroke="#9c82d8" stroke-width="1.5"/>
+        <text x="652" y="120" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">R</text>
+        <circle cx="570" cy="220" r="4" fill="#ecebe4"/>
+      </svg>
+      <div class="diagram-caption">Kształt lobu to sama BRDF — diffuse rozprasza energię wszędzie, specular skupia ją wokół kierunku odbicia R.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Dielektryki i metale</div>
+    <h2>Dwie różne odpowiedzi na światło</h2>
+    <p><span class="term-cyan">Dielektryki</span> (niemetale: plastik, drewno, skóra, kamień) częściowo odbijają światło od razu na powierzchni — to ten sam, niski Fresnel z Rozdziału 7 (R0 ≈ 2–5%), praktycznie bezbarwny. Resztę światła przepuszczają do wnętrza, gdzie się rozprasza między mikroskopijnymi cząstkami pigmentu i wraca w losowym miejscu jako <strong>diffuse</strong> — a to właśnie selektywna absorpcja pigmentu daje kolor. Kluczowy, często przegapiany wniosek: błysk specular na czerwonej plastikowej kuli jest biały, nie czerwony.</p>
+    <p><span class="term-amber">Metale</span> (przewodniki: złoto, miedź, aluminium) mają swobodne elektrony na powierzchni, które natychmiast pochłaniają i emitują światło z powrotem — bez wnikania do wnętrza. Metal nie ma diffuse w ogóle. Cały kolor pochodzi z samego odbicia specular, a to odbicie jest kolorowe, bo odpowiedź elektronów zależy od długości fali — dlatego złoto jest żółte, a miedź czerwonawa.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Dielectric.vs.metal</span><span>subsurface vs surface-only</span></div>
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="dm1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+          <marker id="dm2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#ecebe4"/></marker>
+        </defs>
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">DIELEKTRYK</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">METAL</text>
+        <line x1="380" y1="20" x2="380" y2="280" stroke="#2a2f38"/>
+
+        <!-- dielectric -->
+        <rect x="40" y="150" width="300" height="120" fill="#2a2116"/>
+        <line x1="40" y1="150" x2="340" y2="150" stroke="#8b909b" stroke-width="1.5"/>
+        <line x1="110" y1="80" x2="190" y2="150" stroke="#e8a33d" stroke-width="2.3" marker-end="url(#dm1)"/>
+        <line x1="190" y1="150" x2="228" y2="94" stroke="#ecebe4" stroke-width="1.6" marker-end="url(#dm2)"/>
+        <text x="234" y="90" font-family="IBM Plex Mono" font-size="10.5" fill="#ecebe4">specular (biały)</text>
+        <path d="M190,150 L210,188 L178,218 L216,245" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-dasharray="3 3" opacity="0.7"/>
+        <line x1="170" y1="150" x2="163" y2="115" stroke="#e8a33d" stroke-width="2" marker-end="url(#dm1)"/>
+        <line x1="232" y1="150" x2="242" y2="112" stroke="#e8a33d" stroke-width="2" marker-end="url(#dm1)"/>
+        <text x="150" y="278" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">rozpraszanie + diffuse</text>
+
+        <!-- metal -->
+        <rect x="420" y="150" width="300" height="120" fill="#1c1e23"/>
+        <line x1="420" y1="150" x2="720" y2="150" stroke="#8b909b" stroke-width="1.5"/>
+        <line x1="490" y1="80" x2="570" y2="150" stroke="#e8a33d" stroke-width="2.3" marker-end="url(#dm1)"/>
+        <line x1="570" y1="150" x2="650" y2="88" stroke="#e8a33d" stroke-width="3.2" marker-end="url(#dm1)"/>
+        <text x="600" y="270" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">✕ brak wnikania — 100% na powierzchni</text>
+      </svg>
+      <div class="diagram-caption">Dielektryk: bezbarwny specular + kolorowy diffuse z wnętrza. Metal: cały kolor w jednym, kolorowym odbiciu.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Mikrofasetki</div>
+    <h2>Od Blinn-Phong do mikrofasetek</h2>
+    <p>Żadna realna powierzchnia nie jest idealnie gładka w mikroskali — składa się z mnóstwa mikroskopijnych „fasetek”, każda jak miniaturowe zwierciadło, ale zwrócona w nieco innym kierunku. Roughness to po prostu to, jak bardzo rozrzucone są te kierunki: nisko = fasetki prawie równoległe do normalnej makro, więc odbicia się nakładają w wąski, jasny błysk; wysoko = fasetki wskazują wszędzie, więc błysk rozmywa się i ciemnieje.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Microfacets.zoom</span><span>normals per facet</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <text x="200" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">GŁADKA · NISKI ROUGHNESS</text>
+        <text x="600" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">CHROPOWATA · WYSOKI ROUGHNESS</text>
+        <line x1="380" y1="20" x2="380" y2="240" stroke="#2a2f38"/>
+
+        <polyline points="60.0,180.8 88.0,177.2 116.0,178.7 144.0,178.3 172.0,181.4 200.0,181.1 228.0,182.4 256.0,177.5 284.0,179.5 312.0,177.2 340.0,178.3" fill="none" stroke="#8b909b" stroke-width="2"/>
+        <line x1="88.0" y1="177.2" x2="87.1" y2="155.2" stroke="#e8a33d" stroke-width="1.8"/>
+        <line x1="116.0" y1="178.7" x2="116.5" y2="156.7" stroke="#e8a33d" stroke-width="1.8"/>
+        <line x1="144.0" y1="178.3" x2="145.1" y2="156.4" stroke="#e8a33d" stroke-width="1.8"/>
+        <line x1="172.0" y1="181.4" x2="173.1" y2="159.4" stroke="#e8a33d" stroke-width="1.8"/>
+        <line x1="200.0" y1="181.1" x2="200.4" y2="159.1" stroke="#e8a33d" stroke-width="1.8"/>
+        <line x1="228.0" y1="182.4" x2="226.6" y2="160.4" stroke="#e8a33d" stroke-width="1.8"/>
+        <line x1="256.0" y1="177.5" x2="254.9" y2="155.5" stroke="#e8a33d" stroke-width="1.8"/>
+        <line x1="284.0" y1="179.5" x2="283.9" y2="157.5" stroke="#e8a33d" stroke-width="1.8"/>
+        <line x1="312.0" y1="177.2" x2="311.5" y2="155.2" stroke="#e8a33d" stroke-width="1.8"/>
+
+        <polyline points="460.0,180.3 488.0,149.7 516.0,160.7 544.0,189.6 572.0,182.9 600.0,162.1 628.0,185.7 656.0,199.8 684.0,148.4 712.0,199.6 740.0,192.7" fill="none" stroke="#8b909b" stroke-width="2"/>
+        <line x1="488.0" y1="149.7" x2="480.7" y2="128.9" stroke="#e8a33d" stroke-width="1.8"/>
+        <line x1="516.0" y1="160.7" x2="528.8" y2="142.8" stroke="#e8a33d" stroke-width="1.8"/>
+        <line x1="544.0" y1="189.6" x2="552.1" y2="169.1" stroke="#e8a33d" stroke-width="1.8"/>
+        <line x1="572.0" y1="182.9" x2="562.3" y2="163.1" stroke="#e8a33d" stroke-width="1.8"/>
+        <line x1="600.0" y1="162.1" x2="601.1" y2="140.1" stroke="#e8a33d" stroke-width="1.8"/>
+        <line x1="628.0" y1="185.7" x2="640.3" y2="167.5" stroke="#e8a33d" stroke-width="1.8"/>
+        <line x1="656.0" y1="199.8" x2="643.8" y2="181.5" stroke="#e8a33d" stroke-width="1.8"/>
+        <line x1="684.0" y1="148.4" x2="683.9" y2="126.4" stroke="#e8a33d" stroke-width="1.8"/>
+        <line x1="712.0" y1="199.6" x2="725.6" y2="182.3" stroke="#e8a33d" stroke-width="1.8"/>
+      </svg>
+      <div class="diagram-caption">Każda krótka linia to normalna jednej mikrofasetki — po lewej prawie równoległe, po prawej wskazują wszędzie.</div>
+    </div>
+
+    <p>Model Cook-Torrance'a (1982) łączy trzy składniki, korzystając z wektorów, które już masz: rozkład orientacji fasetek D (względem H z Rozdziału 5), samo-zasłanianie fasetek G, i Fresnel F (Schlick z Rozdziału 7):</p>
+
+    <div class="formula">specular = (D · G · F) / (4 · (N·L) · (N·V))<span class="sub">to dosłownie wszystkie wektory i wzory z Rozdziałów 5 i 7, złożone w jedną, fizycznie spójną BRDF; pełny rozkład D (GGX) czeka w Rozdziale 11</span></div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Slider „Metallic” w Substance Painter, Unrealu, Unity czy Blenderowym Principled BSDF dosłownie przełącza między dwoma modelami z tego rozdziału: 0 = dielektryk (diffuse + biały F0 ≈ 0,04), 1 = metal (zero diffuse, kolorowy F0 = albedo). To nie metafora — to ten sam przełącznik.</p>
+    <p>Wartości Metallic pomiędzy 0 i 1 nie odpowiadają żadnemu realnemu materiałowi — prawdziwa powierzchnia jest albo dielektrykiem, albo metalem. Wartości pośrednie bywają używane do stylizacji albo maskowania przejść na krawędziach tekstury, ale to wygoda warsztatowa, nie fizyka.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>BRDF</dt><dd>Funkcja opisująca, ile światła z L wraca w kierunku V w danym punkcie.</dd>
+      <dt>Energooszczędność</dt><dd>BRDF nie może odbić więcej energii, niż padło.</dd>
+      <dt>Wzajemność (Helmholtz)</dt><dd>f(L,V) = f(V,L).</dd>
+      <dt>Dielektryk</dt><dd>Niemetal: diffuse z pigmentu + bezbarwny specular.</dd>
+      <dt>Metal (przewodnik)</dt><dd>Zero diffuse; cały kolor w kolorowym specular.</dd>
+      <dt>Mikrofasetka</dt><dd>Mikroskopijny, płaski fragment powierzchni ze swoją normalną.</dd>
+      <dt>Model Cook-Torrance'a</dt><dd>Specular = D·G·F / (4·(N·L)·(N·V)).</dd>
+      <dt>Metallic/Roughness workflow</dt><dd>Standard PBR: dwa slidery zamiast osobnych map dla każdego parametru.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Wiemy już, co matematycznie znaczy „materiał”: BRDF złożona z rozkładu mikrofasetek, ich samo-zasłaniania i Fresnela. W następnym rozdziale rozpakujemy to w pełni — rozkład GGX i to, jak nowoczesny PBR łączy to wszystko w jeden, energooszczędny standard.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="rozdzial-09-tekstury-i-uv.html">← Poprzedni</a>
+    <a href="rozdzial-11-pbr-ggx.html">Następny →</a>
+</div>
+</div>
+</body>
+</html>

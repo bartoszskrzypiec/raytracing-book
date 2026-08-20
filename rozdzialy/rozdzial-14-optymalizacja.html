@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Rozdział 14 — Optymalizacja i równoległość</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.formula{font-size:15px;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>CPU · TILES</span><span>GPU · SIMT</span><span>WARP · 32 lanes</span><span>DIVERGENCE · watch</span>
+  </div>
+
+  <div class="eyebrow">Rozdział 14 / Wydajność</div>
+  <h1>Optymalizacja i równoległość</h1>
+  <p class="subtitle">BVH z Rozdziału 13 zmniejsza liczbę testów na promień. Ten rozdział pyta o coś innego: jak policzyć miliony niezależnych promieni na raz, nie jeden po drugim.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Każdy promień jest niezależny od innych — to modelowy przykład problemu „embarrassingly parallel”.</li>
+      <li>CPU: dzielimy obraz na kafle, każdy wątek renderuje inny kafel niezależnie.</li>
+      <li>GPU: tysiące rdzeni liczą tysiące promieni naraz, ale rozbieżność (divergence) w kodzie warunkowym kosztuje tam inaczej niż na CPU.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: CPU</div>
+    <h2>Promienie są niezależne — to dobra wiadomość</h2>
+    <p>Policzenie koloru piksela (x,y) nie zależy od koloru piksela (x+1,y). Ta niezależność, rzadka w informatyce, nazywana bywa „embarrassingly parallel” — i to właśnie dzięki niej ray tracing skaluje się tak dobrze na wiele rdzeni. Najprostsza strategia na CPU: podziel obraz na kafle (np. 32×32 piksele), przydziel kafle do puli wątków, każdy wątek liczy swój kafel od początku do końca, niezależnie od innych.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>CPU.tiling</span><span>4 worker threads</span></div>
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+        <rect x="60" y="50" width="80" height="55" fill="#e8a33d" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="140" y="50" width="80" height="55" fill="#4fc3c0" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="220" y="50" width="80" height="55" fill="#9c82d8" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="300" y="50" width="80" height="55" fill="#6e93be" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="380" y="50" width="80" height="55" fill="#e8a33d" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="460" y="50" width="80" height="55" fill="#4fc3c0" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="540" y="50" width="80" height="55" fill="#9c82d8" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="620" y="50" width="80" height="55" fill="#6e93be" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="60" y="105" width="80" height="55" fill="#e8a33d" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="140" y="105" width="80" height="55" fill="#4fc3c0" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="220" y="105" width="80" height="55" fill="#9c82d8" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="300" y="105" width="80" height="55" fill="#6e93be" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="380" y="105" width="80" height="55" fill="#e8a33d" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="460" y="105" width="80" height="55" fill="#4fc3c0" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="540" y="105" width="80" height="55" fill="#9c82d8" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="620" y="105" width="80" height="55" fill="#6e93be" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="60" y="160" width="80" height="55" fill="#e8a33d" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="140" y="160" width="80" height="55" fill="#4fc3c0" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="220" y="160" width="80" height="55" fill="#9c82d8" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="300" y="160" width="80" height="55" fill="#6e93be" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="380" y="160" width="80" height="55" fill="#e8a33d" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="460" y="160" width="80" height="55" fill="#4fc3c0" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="540" y="160" width="80" height="55" fill="#9c82d8" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="620" y="160" width="80" height="55" fill="#6e93be" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="60" y="215" width="80" height="55" fill="#e8a33d" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="140" y="215" width="80" height="55" fill="#4fc3c0" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="220" y="215" width="80" height="55" fill="#9c82d8" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="300" y="215" width="80" height="55" fill="#6e93be" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="380" y="215" width="80" height="55" fill="#e8a33d" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="460" y="215" width="80" height="55" fill="#4fc3c0" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="540" y="215" width="80" height="55" fill="#9c82d8" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <rect x="620" y="215" width="80" height="55" fill="#6e93be" fill-opacity="0.28" stroke="#14161a" stroke-width="1.5"/>
+        <text x="100" y="82" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#ecebe4">T1</text>
+        <text x="180" y="82" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#ecebe4">T2</text>
+        <text x="260" y="82" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#ecebe4">T3</text>
+        <text x="340" y="82" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#ecebe4">T4</text>
+      </svg>
+      <div class="diagram-caption">Cztery kolory, cztery wątki — każdy kafel policzony niezależnie, w dowolnej kolejności.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: GPU</div>
+    <h2>SIMT i rozbieżność (divergence)</h2>
+    <p>GPU wykonuje grupy wątków (warp/wavefront, zwykle 32) tą samą instrukcją naraz, na różnych danych (SIMT). Świetnie, gdy wszystkie promienie w warpie robią to samo. Katastrofalnie, gdy się rozjeżdżają: jeśli część promieni trafia w szkło (Rozdział 7), a część w diffuse (Rozdział 5), GPU musi wykonać <em>oba</em> fragmenty kodu dla <em>całego</em> warpu — wątki, które nie potrzebują danej ścieżki, po prostu czekają. To centralny problem GPU ray tracingu, którego rasteryzacja (jeden shader na cały trójkąt) w większości unika.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Warp.divergence</span><span>2 passes instead of 1</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <text x="380" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">WARP: 8 PROMIENI, DWA MATERIAŁY</text>
+        <g font-family="IBM Plex Mono" font-size="10">
+          <circle cx="80" cy="70" r="10" fill="#e8a33d"/><circle cx="160" cy="70" r="10" fill="#e8a33d"/><circle cx="240" cy="70" r="10" fill="#4fc3c0"/><circle cx="320" cy="70" r="10" fill="#4fc3c0"/>
+          <circle cx="400" cy="70" r="10" fill="#e8a33d"/><circle cx="480" cy="70" r="10" fill="#4fc3c0"/><circle cx="560" cy="70" r="10" fill="#e8a33d"/><circle cx="640" cy="70" r="10" fill="#4fc3c0"/>
+        </g>
+
+        <text x="60" y="130" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">PASS 1 · diffuse</text>
+        <circle cx="80" cy="150" r="9" fill="#e8a33d"/><circle cx="160" cy="150" r="9" fill="#e8a33d"/><circle cx="240" cy="150" r="9" fill="#20242c" stroke="#3a4048"/><circle cx="320" cy="150" r="9" fill="#20242c" stroke="#3a4048"/>
+        <circle cx="400" cy="150" r="9" fill="#e8a33d"/><circle cx="480" cy="150" r="9" fill="#20242c" stroke="#3a4048"/><circle cx="560" cy="150" r="9" fill="#e8a33d"/><circle cx="640" cy="150" r="9" fill="#20242c" stroke="#3a4048"/>
+
+        <text x="60" y="190" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">PASS 2 · szkło</text>
+        <circle cx="80" cy="210" r="9" fill="#20242c" stroke="#3a4048"/><circle cx="160" cy="210" r="9" fill="#20242c" stroke="#3a4048"/><circle cx="240" cy="210" r="9" fill="#4fc3c0"/><circle cx="320" cy="210" r="9" fill="#4fc3c0"/>
+        <circle cx="400" cy="210" r="9" fill="#20242c" stroke="#3a4048"/><circle cx="480" cy="210" r="9" fill="#4fc3c0"/><circle cx="560" cy="210" r="9" fill="#20242c" stroke="#3a4048"/><circle cx="640" cy="210" r="9" fill="#4fc3c0"/>
+
+        <text x="700" y="150" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">aktywne</text>
+        <text x="700" y="210" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">czeka</text>
+      </svg>
+      <div class="diagram-caption">Ten sam warp musi przejść przez dwie sekwencyjne fazy — czas dwóch przebiegów za cenę jednego wywołania.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Techniki</div>
+    <h2>Sortowanie promieni i wavefront path tracing</h2>
+    <p>Nowoczesne GPU renderery (OptiX, silniki „wavefront”/„streaming”) nie prowadzą jednego promienia przez cały pipeline w jednym wątku. Zamiast tego przetwarzają całe partie promieni etapami: wszystkie testy przecięcia naraz, potem sortowanie promieni po typie materiału, potem shading — jeden kernel na materiał, tylko dla promieni, które go potrzebują. To ten sam pipeline z Rozdziału 1, tylko rozbity na kolejkę zamiast rekurencji.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Wavefront.pipeline</span><span>batch stages</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="wf1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+        </defs>
+        <g font-family="IBM Plex Sans" font-size="11.5" fill="#ecebe4">
+          <rect x="10" y="110" width="130" height="60" rx="8" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="75" y="135" text-anchor="middle">Generuj</text><text x="75" y="150" text-anchor="middle">promienie</text>
+
+          <rect x="165" y="110" width="130" height="60" rx="8" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="230" y="135" text-anchor="middle">Przecięcie</text><text x="230" y="150" text-anchor="middle">(BVH, R.13)</text>
+
+          <rect x="320" y="110" width="130" height="60" rx="8" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="385" y="135" text-anchor="middle">Sortuj po</text><text x="385" y="150" text-anchor="middle">materiale</text>
+
+          <rect x="475" y="110" width="130" height="60" rx="8" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="540" y="135" text-anchor="middle">Shading</text><text x="540" y="150" text-anchor="middle">(per-material)</text>
+
+          <rect x="620" y="110" width="130" height="60" rx="8" fill="#20242c" stroke="#e8a33d"/>
+          <text x="685" y="135" text-anchor="middle" font-weight="600">Nowe promienie</text><text x="685" y="150" text-anchor="middle">wtórne</text>
+        </g>
+        <line x1="140" y1="140" x2="163" y2="140" stroke="#e8a33d" stroke-width="2" marker-end="url(#wf1)"/>
+        <line x1="295" y1="140" x2="318" y2="140" stroke="#e8a33d" stroke-width="2" marker-end="url(#wf1)"/>
+        <line x1="450" y1="140" x2="473" y2="140" stroke="#e8a33d" stroke-width="2" marker-end="url(#wf1)"/>
+        <line x1="605" y1="140" x2="618" y2="140" stroke="#e8a33d" stroke-width="2" marker-end="url(#wf1)"/>
+        <path d="M 685,172 C 685,225 230,225 230,172" fill="none" stroke="#9c82d8" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#wf1)"/>
+        <text x="460" y="215" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#9c82d8">pętla, aż brak aktywnych promieni</text>
+      </svg>
+      <div class="diagram-caption">Sortowanie po materiale przed shadingiem to właśnie technika ograniczająca rozbieżność z poprzedniego diagramu.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>To dlatego renderery GPU (Redshift, Cycles GPU, Arnold GPU, V-Ray GPU) czasem renderują pewne typy materiałów — SSS, włosy, wolumetria — wolniej względem CPU niż prosty diffuse: te ścieżki kodu są z natury bardziej rozbieżne.</p>
+    <p>Ustawienia „liczba wątków” / „CPU threads” w Twoim DCC to dosłownie rozmiar puli wątków z tego rozdziału. Więcej wątków pomaga tylko do liczby rdzeni fizycznych — powyżej tego, wątki zaczynają sobie nawzajem zabierać czas procesora.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Równoległość (parallelism)</dt><dd>Wykonywanie niezależnych obliczeń jednocześnie.</dd>
+      <dt>Kafelkowanie (tiling)</dt><dd>Podział obrazu na niezależne bloki pikseli do rozdania wątkom.</dd>
+      <dt>SIMT</dt><dd>Single Instruction, Multiple Threads — model wykonania GPU.</dd>
+      <dt>Warp / wavefront</dt><dd>Grupa wątków GPU wykonujących tę samą instrukcję naraz.</dd>
+      <dt>Rozbieżność (divergence)</dt><dd>Sytuacja, gdy wątki w warpie potrzebują różnych ścieżek kodu.</dd>
+      <dt>Wavefront path tracing</dt><dd>Przetwarzanie promieni w partiach, etap po etapie, z sortowaniem po materiale.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Wydajność mamy już pod kontrolą. W następnym rozdziale wracamy do samego światła: path tracing i metody Monte Carlo — jak policzyć równanie renderowania, które opisuje absolutnie każdy efekt świetlny z tej książki jednym wzorem.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="rozdzial-13-bvh.html">← Poprzedni</a>
+    <a href="rozdzial-15-path-tracing.html">Następny →</a>
+</div>
+</div>
+</body>
+</html>

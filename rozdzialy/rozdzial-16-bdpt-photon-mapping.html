@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Rozdział 16 — Bidirectional path tracing i photon mapping</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.formula{font-size:15px;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>PROBLEM · caustics</span><span>BDPT · 2-sided</span><span>PHOTON MAP · k-d tree</span><span>MIS · weighted</span>
+  </div>
+
+  <div class="eyebrow">Rozdział 16 / Globalne oświetlenie</div>
+  <h1>Bidirectional path tracing i photon mapping</h1>
+  <p class="subtitle">Path tracing z Rozdziału 15 jest statystycznie poprawny — ale są sceny, w których zbiega się boleśnie wolno. Ten rozdział pyta: co, gdy losowe próbkowanie z kamery praktycznie nigdy nie znajduje drogi do światła?</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Kaustyki i małe światła to „igła w stogu siana” dla path tracingu z Rozdziału 15 — losowy kierunek z kamery prawie nigdy nie trafi w wąską ścieżkę przez szkło do światła.</li>
+      <li>Bidirectional path tracing (BDPT) buduje ścieżki z obu stron naraz — od kamery i od światła — i łączy je pośrodku.</li>
+      <li>Photon mapping odwraca kolejność jeszcze bardziej: najpierw rozsyła „fotony” ze świateł w scenę, potem zbiera je z okolicy punktów trafienia z kamery.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Problem</div>
+    <h2>Igła w stogu siana</h2>
+    <p>Path tracing z Rozdziału 15 próbkuje kierunek według BRDF w każdym punkcie trafienia i liczy na to, że ścieżka trafi na światło. To działa świetnie dla dużych, rozproszonych świateł. Zawodzi dla kaustyk — światła skoncentrowanego przez szkło albo wodę w wąski snop — bo trafienie w to konkretne, wąskie okno kierunków przez czysty przypadek jest astronomicznie nieprawdopodobne.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Needle.in.haystack</span><span>caustic through glass</span></div>
+      <svg viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="nh1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9c82d8"/></marker>
+        </defs>
+        <line x1="40" y1="260" x2="720" y2="260" stroke="#8b909b" stroke-width="2"/>
+        <circle cx="400" cy="45" r="9" fill="#f0c880"/>
+        <ellipse cx="400" cy="100" rx="30" ry="45" fill="#4fc3c0" fill-opacity="0.15" stroke="#4fc3c0" stroke-width="1.3"/>
+        <text x="400" y="180" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#4fc3c0">szkło</text>
+        <circle cx="400" cy="260" r="14" fill="#e8a33d" fill-opacity="0.5"/>
+        <text x="400" y="290" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">kaustyka</text>
+
+        <circle cx="430" cy="260" r="4" fill="#ecebe4"/>
+        <text x="438" y="278" font-family="IBM Plex Mono" font-size="11" fill="#ecebe4">P</text>
+        <line x1="430" y1="260" x2="350" y2="140" stroke="#8b909b" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <line x1="430" y1="260" x2="300" y2="180" stroke="#8b909b" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <line x1="430" y1="260" x2="500" y2="150" stroke="#8b909b" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <line x1="430" y1="260" x2="550" y2="190" stroke="#8b909b" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <line x1="430" y1="260" x2="470" y2="120" stroke="#8b909b" stroke-width="1.3" stroke-dasharray="4 4"/>
+
+        <line x1="430" y1="260" x2="405" y2="140" stroke="#9c82d8" stroke-width="2.2" marker-end="url(#nh1)"/>
+        <line x1="405" y1="140" x2="400" y2="55" stroke="#9c82d8" stroke-width="2.2" marker-end="url(#nh1)"/>
+        <text x="470" y="200" font-family="IBM Plex Mono" font-size="10.5" fill="#9c82d8">1 na milion prób</text>
+      </svg>
+      <div class="diagram-caption">Pięć zwykłych próbek trafia w pustkę. Tylko jedna, bardzo konkretna, przechodzi przez szkło do światła.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: BDPT</div>
+    <h2>Bidirectional path tracing: budowanie z dwóch stron</h2>
+    <p>Skoro trudno znaleźć drogę do światła <em>z</em> kamery, spróbuj też w drugą stronę: wystrzel ścieżkę <em>ze</em> światła, tak jak wystrzeliwałeś ją z kamery w Rozdziale 15 — te same odbicia, ta sama BRDF, tylko odwrócony start. Potem połącz oba końce w jedną kompletną ścieżkę światła, ważąc różne strategie łączenia tak, żeby wynik pozostał statystycznie poprawny (multiple importance sampling, MIS).</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>BDPT.connection</span><span>camera path + light path</span></div>
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="60,240 60,260 78,250" fill="#8b909b"/>
+        <path d="M78,250 L220,190 L320,140" fill="none" stroke="#e8a33d" stroke-width="2.2"/>
+        <circle cx="220" cy="190" r="4" fill="#ecebe4"/>
+        <text x="140" y="235" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">ścieżka z kamery</text>
+
+        <circle cx="700" cy="50" r="9" fill="#f0c880"/>
+        <path d="M700,60 L560,110 L460,150" fill="none" stroke="#4fc3c0" stroke-width="2.2"/>
+        <circle cx="560" cy="110" r="4" fill="#ecebe4"/>
+        <text x="620" y="90" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">ścieżka od światła</text>
+
+        <line x1="320" y1="140" x2="460" y2="150" stroke="#9c82d8" stroke-width="2" stroke-dasharray="6 4"/>
+        <circle cx="320" cy="140" r="4.5" fill="#ecebe4"/>
+        <circle cx="460" cy="150" r="4.5" fill="#ecebe4"/>
+        <text x="390" y="130" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#9c82d8">połączenie</text>
+      </svg>
+      <div class="diagram-caption">Dwie krótkie, łatwe do wylosowania ścieżki, połączone jednym odcinkiem — łatwiej niż jedna długa, trudna do trafienia.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Photon mapping</div>
+    <h2>Photon mapping: najpierw rozsiej, potem zbieraj</h2>
+    <p>Photon mapping idzie o krok dalej: w pierwszym przebiegu wystrzeliwuje mnóstwo „fotonów” ze świateł w scenę i zapisuje, gdzie wylądowały (w strukturze przestrzennej, zwykle k-d tree) — kaustyki tworzą się same, po prostu tam, gdzie geometria naturalnie skupia dużo fotonów. W drugim przebiegu, z kamery, w każdym punkcie trafienia zbierasz (gather) foton z najbliższego sąsiedztwa, żeby oszacować lokalną gęstość światła.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Photon.scatter.gather</span><span>2-pass algorithm</span></div>
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+        <line x1="40" y1="270" x2="720" y2="270" stroke="#8b909b" stroke-width="2"/>
+        <circle cx="150" cy="50" r="9" fill="#f0c880"/>
+        <ellipse cx="150" cy="140" rx="26" ry="40" fill="#4fc3c0" fill-opacity="0.15" stroke="#4fc3c0" stroke-width="1.3"/>
+
+        <circle cx="424.9" cy="241.5" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="422.0" cy="268.6" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="435.4" cy="257.5" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="396.9" cy="245.1" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="435.5" cy="261.2" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="384.9" cy="249.9" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="464.5" cy="254.4" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="435.4" cy="266.2" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="385.8" cy="249.1" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="426.5" cy="258.0" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="446.7" cy="259.0" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="408.1" cy="248.6" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="422.6" cy="253.8" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="427.1" cy="262.2" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="394.0" cy="256.0" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="450.5" cy="258.8" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="449.3" cy="248.2" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="418.5" cy="230.5" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="436.6" cy="256.2" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="447.6" cy="258.3" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="411.7" cy="248.9" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="390.7" cy="255.9" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="425.7" cy="248.7" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="446.9" cy="227.5" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="420.3" cy="225.8" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="407.6" cy="248.6" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="391.0" cy="252.8" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="458.7" cy="269.7" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="442.7" cy="241.4" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="439.1" cy="253.9" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="417.1" cy="245.8" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="442.2" cy="231.5" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="446.6" cy="242.3" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+        <circle cx="404.2" cy="257.2" r="1.8" fill="#e8a33d" fill-opacity="0.75"/>
+
+        <circle cx="420" cy="250" r="42" fill="none" stroke="#9c82d8" stroke-width="1.5" stroke-dasharray="5 4"/>
+        <text x="420" y="220" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#9c82d8">gather radius</text>
+        <text x="150" y="200" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#4fc3c0">szkło</text>
+      </svg>
+      <div class="diagram-caption">Fotony gęstnieją tam, gdzie szkło je skupia — kaustyka „wyłania się” sama, bez próbkowania z kamery.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>To dlatego renderery produkcyjne (Arnold, RenderMan, V-Ray) mają osobne ustawienia „Caustics” — czysty path tracing z Rozdziału 15 zostawiony sam sobie potrzebowałby milionów próbek, żeby wygładzić kaustykę na dnie basenu; dedykowany photon mapping albo BDPT robi to w rozsądnym czasie.</p>
+    <p>Koszt: obie techniki są bardziej złożone implementacyjnie i pamięciowo niż prosty path tracing — photon mapping przechowuje całą mapę fotonów, BDPT liczy znacznie więcej strategii łączenia na próbkę. W praktyce większość scen renderuje się dobrze samym path tracingiem; te techniki włącza się tam, gdzie to naprawdę potrzebne.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Kaustyka</dt><dd>Skoncentrowane światło przechodzące przez szkło/wodę, tworzące jasny wzór.</dd>
+      <dt>Bidirectional path tracing (BDPT)</dt><dd>Budowanie ścieżek z kamery i ze światła, łączonych pośrodku.</dd>
+      <dt>Multiple importance sampling (MIS)</dt><dd>Ważenie kilku strategii próbkowania, żeby żadna nie dominowała błędnie.</dd>
+      <dt>Photon mapping</dt><dd>Dwuprzebiegowy algorytm: rozsiew fotonów ze świateł, zbieranie z kamery.</dd>
+      <dt>Gather (zbieranie)</dt><dd>Szacowanie gęstości światła z fotonów w promieniu wokół punktu.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Techniki transportu światła mamy już kompletne. W następnym rozdziale wracamy na ziemię — struktury sceny, transformacje i instancing, czyli jak w ogóle wczytać i zorganizować milion obiektów, które te wszystkie promienie testują.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="rozdzial-15-path-tracing.html">← Poprzedni</a>
+    <a href="rozdzial-17-sceny-i-instancing.html">Następny →</a>
+</div>
+</div>
+</body>
+</html>

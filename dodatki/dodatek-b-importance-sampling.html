@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek B — Głębiej: importance sampling i redukcja wariancji</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>VARIANCE · reduce</span><span>NEE · every bounce</span><span>MIS · balance/power</span><span>EXT OF · R.15–16</span>
+  </div>
+
+  <div class="eyebrow">Dodatek B / Głębiej: Próbkowanie</div>
+  <h1>Importance sampling i redukcja wariancji</h1>
+  <p class="subtitle">Rozdział 15 dał Ci poprawny, ale naiwny estymator Monte Carlo. Te trzy techniki — importance sampling, next event estimation i multiple importance sampling — to różnica między szumiącym renderem po minucie i czystym po minucie. Żadna z nich nie zmienia wyniku; każda zmienia, jak szybko do niego dojdziesz.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Wariancja między próbkami — nie sama losowość — jest źródłem szumu; próbkowanie proporcjonalne do wkładu (importance sampling) ją redukuje.</li>
+      <li>Next event estimation: w każdym punkcie odbicia wyślij też promień cienia bezpośrednio do światła, nie tylko licz na przypadkowe trafienie.</li>
+      <li>Multiple importance sampling: użyj obu strategii naraz z wagami sumującymi się do 1 — dowód poniżej pokazuje, że to zawsze daje nieobciążony wynik, a symulacja liczbowa pokazuje, że unika katastrofalnej wariancji, na którą trafia każda pojedyncza strategia w niewłaściwym dla niej scenariuszu.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Wariancja</div>
+    <h2>Czemu niektóre próbki „liczą się” bardziej</h2>
+    <p>Estymator z Rozdziału 15, L ≈ f·L_i·(N·L)/pdf, jest statystycznie poprawny przy próbkowaniu <em>jednorodnym</em> po hemisferze. Problem: jeśli f·L_i·cosθ jest silnie skoncentrowane (mały, jasny reflektor; wąski, wysoki-shininess lob specular z Rozdziału 11), większość jednorodnych próbek wypada tam, gdzie wkład jest bliski zeru, a od czasu do czasu jedna wypada w sam szczyt i wnosi ogromną wartość. Ta nierówność między próbkami — wariancja — to właśnie szum, który widzisz na ekranie.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Uniform.vs.importance</span><span>same hemisphere</span></div>
+      <svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg">
+        <line x1="380" y1="20" x2="380" y2="260" stroke="#2a2f38"/>
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">JEDNORODNE</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">IMPORTANCE SAMPLING</text>
+
+        <line x1="105" y1="220" x2="275" y2="220" stroke="#8b909b" stroke-width="2"/>
+        <path d="M 105,220 Q 105,140 190,132 Q 275,140 275,220 Z" fill="#9c82d8" fill-opacity="0.1" stroke="#9c82d8" stroke-width="1.2"/>
+        <circle cx="272.3" cy="199.9" r="3.5" fill="#8b909b"/><circle cx="264.9" cy="181.9" r="3.5" fill="#8b909b"/><circle cx="253.3" cy="166.1" r="3.5" fill="#8b909b"/><circle cx="238.0" cy="153.3" r="3.5" fill="#8b909b"/><circle cx="219.9" cy="144.4" r="3.5" fill="#8b909b"/><circle cx="200.2" cy="139.8" r="3.5" fill="#8b909b"/><circle cx="179.8" cy="139.8" r="3.5" fill="#8b909b"/><circle cx="160.1" cy="144.4" r="3.5" fill="#8b909b"/><circle cx="142.0" cy="153.3" r="3.5" fill="#8b909b"/><circle cx="126.7" cy="166.1" r="3.5" fill="#8b909b"/><circle cx="115.1" cy="181.9" r="3.5" fill="#8b909b"/><circle cx="107.7" cy="199.9" r="3.5" fill="#8b909b"/>
+        <circle cx="190" cy="220" r="4" fill="#ecebe4"/>
+
+        <line x1="485" y1="220" x2="655" y2="220" stroke="#8b909b" stroke-width="2"/>
+        <path d="M 485,220 Q 485,140 570,132 Q 655,140 655,220 Z" fill="#9c82d8" fill-opacity="0.1" stroke="#9c82d8" stroke-width="1.2"/>
+        <circle cx="545.7" cy="161.0" r="3.5" fill="#e8a33d"/><circle cx="521.7" cy="156.8" r="3.5" fill="#e8a33d"/><circle cx="508.4" cy="167.4" r="3.5" fill="#e8a33d"/><circle cx="533.6" cy="168.3" r="3.5" fill="#e8a33d"/><circle cx="551.4" cy="161.2" r="3.5" fill="#e8a33d"/><circle cx="537.0" cy="159.4" r="3.5" fill="#e8a33d"/><circle cx="531.4" cy="154.4" r="3.5" fill="#e8a33d"/><circle cx="547.1" cy="160.1" r="3.5" fill="#e8a33d"/><circle cx="528.7" cy="161.1" r="3.5" fill="#e8a33d"/><circle cx="517.2" cy="158.7" r="3.5" fill="#e8a33d"/><circle cx="551.6" cy="154.0" r="3.5" fill="#e8a33d"/><circle cx="540.8" cy="149.6" r="3.5" fill="#e8a33d"/>
+        <circle cx="570" cy="220" r="4" fill="#ecebe4"/>
+      </svg>
+      <div class="diagram-caption">Ta sama liczba próbek — po lewej rozrzucone równo, po prawej skupione tam, gdzie i tak wnoszą najwięcej.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: NEE</div>
+    <h2>Next event estimation: nie czekaj na przypadek</h2>
+    <p>Czysty path tracing z Rozdziału 15 liczy na to, że losowa ścieżka <em>przypadkiem</em> trafi w światło — dla małych, jasnych świateł to ten sam problem „igły w stogu siana” z Rozdziału 16. Next event estimation naprawia to najprostszym możliwym sposobem: w <em>każdym</em> punkcie odbicia, obok kontynuowania ścieżki próbką BRDF, wysyłasz też promień cienia (Rozdział 6) prosto do wylosowanego światła i dodajesz jego wkład bezpośrednio.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>NEE.every.bounce</span><span>shadow ray + brdf sample</span></div>
+      <svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="ne1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+          <marker id="ne2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9c82d8"/></marker>
+        </defs>
+        <polygon points="40,235 40,255 58,245" fill="#8b909b"/>
+        <circle cx="650" cy="50" r="10" fill="#f0c880"/>
+
+        <path d="M58,245 L200,190 L340,150" fill="none" stroke="#e8a33d" stroke-width="2.2" marker-end="url(#ne1)"/>
+        <circle cx="200" cy="190" r="4.5" fill="#ecebe4"/>
+        <circle cx="340" cy="150" r="4.5" fill="#ecebe4"/>
+
+        <line x1="200" y1="190" x2="620" y2="65" stroke="#9c82d8" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#ne2)"/>
+        <line x1="340" y1="150" x2="635" y2="58" stroke="#9c82d8" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#ne2)"/>
+
+        <text x="220" y="215" font-family="IBM Plex Mono" font-size="10" fill="#e8a33d">próbka BRDF</text>
+        <text x="420" y="110" font-family="IBM Plex Mono" font-size="10" fill="#9c82d8">NEE: shadow ray do światła</text>
+      </svg>
+      <div class="diagram-caption">Dwie techniki w każdym punkcie: kontynuacja ścieżki i bezpośrednia „próba” trafienia w światło.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: MIS — dowód</div>
+    <h2>Multiple importance sampling: dowód, nie tylko przepis</h2>
+    <p>NEE świetnie radzi sobie z małymi, jasnymi światłami, ale słabo z bardzo błyszczącymi powierzchniami widzianymi pod dużym, rozmytym światłem — próbkowanie BRDF trafia tam lepiej. Żadna strategia nie jest zawsze najlepsza. MIS łączy próbki z obu strategii wagami — ale <em>dlaczego</em> to wciąż daje poprawny wynik, a nie tylko „rozsądny kompromis”? Dowód jest krótki i wart przejścia krok po kroku.</p>
+
+    <div class="formula">F = Σᵢ wᵢ(xᵢ)·f(xᵢ)/pᵢ(xᵢ),  xᵢ ~ pᵢ<br>pod warunkiem: Σᵢ wᵢ(x) = 1 dla każdego x, gdzie choć jedno pᵢ(x)&gt;0<span class="sub">jedna próbka z każdej z n strategii; warunek na wagi jest jedynym wymogiem — nic więcej nie jest potrzebne do nieobciążoności</span></div>
+
+    <div class="worked">
+      <div class="wlabel">Dowód nieobciążoności — 5 linii</div>
+      <div class="step">E[F] = Σᵢ E[wᵢ(Xᵢ)·f(Xᵢ)/pᵢ(Xᵢ)], gdzie Xᵢ~pᵢ</div>
+      <div class="step">= Σᵢ ∫ wᵢ(x)·f(x)/pᵢ(x) · pᵢ(x) dx <span class="v">(definicja wartości oczekiwanej po pᵢ)</span></div>
+      <div class="step">= Σᵢ ∫ wᵢ(x)·f(x) dx <span class="v">(pᵢ(x) się kasuje)</span></div>
+      <div class="step">= ∫ f(x) · [Σᵢ wᵢ(x)] dx <span class="v">(zamiana kolejności sumy i całki)</span></div>
+      <div class="step">= ∫ f(x) · 1 dx = I <span class="v">(warunek na wagi)</span></div>
+      <div class="result">E[F] = I — nieobciążone dla KAŻDEGO wyboru wag spełniającego Σwᵢ(x)=1, nie tylko dla heurystyki potęgowej.</div>
+      <div class="check">To znaczy, że wybór między heurystyką balansową (β=1) i potęgową (β=2, Rozdział wcześniejszy) nigdy nie wpływa na obciążenie — wpływa tylko na wariancję. To dwa różne pytania, często mylone.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: MIS — symulacja</div>
+    <h2>Dlaczego to działa: dwa scenariusze, trzy strategie</h2>
+    <p>Dowód mówi „nieobciążone”, nie „lepsze”. Żeby zobaczyć realną korzyść, trzeba dwóch scenariuszy, w których każda pojedyncza strategia jest dobra w jednym, a katastrofalna w drugim — dokładnie sytuacja małego jasnego światła kontra dużego, rozmytego, z Rozdziału 16.</p>
+
+    <div class="worked">
+      <div class="wlabel">Ustawienie: dwie strategie, p1(x)=5x⁴ i p2(x)=1 (jednorodna), na [0,1]</div>
+      <div class="step">Scenariusz A: f(x)=x⁸ (silnie skupione przy x=1 — jak małe, jasne światło). Prawdziwa całka I=1/9≈0,1111.</div>
+      <div class="step">Scenariusz B: f(x)=1 (płaskie — jak duże, rozmyte światło widziane pod szerokim kątem). Prawdziwa całka I=1,0.</div>
+      <div class="step">p1 jest „dobre” dla A (podobny kształt do f), p2 jest „dobre” dla B (idealnie płaskie, jak f w tym scenariuszu).</div>
+    </div>
+
+    <div class="worked">
+      <div class="wlabel">Wynik symulacji — 20 000 powtórzeń, wariancja estymatora</div>
+      <div class="step">Scenariusz A (f=x⁸): p1-only var=<span class="v">0,00152</span> · p2-only var=<span class="v">0,02370</span> (15,6× gorzej niż p1) · MIS var=<span class="v">0,00361</span></div>
+      <div class="step">Scenariusz B (f=1): p1-only var=<span class="v">354,24</span> (katastrofa) · p2-only var=<span class="v">≈0</span> (idealne trafienie) · MIS var=<span class="v">0,14725</span></div>
+      <div class="result">MIS nigdy nie jest najlepsze — ale nigdy nie jest katastrofalne. To jest cała korzyść.</div>
+      <div class="check">p1 samo w scenariuszu B jest 2400× gorsze niż MIS. Gdybyś nie wiedział z góry, w którym scenariuszu jesteś — a w realnej scenie nigdy nie wiesz — MIS jest jedynym bezpiecznym wyborem.</div>
+    </div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Variance.comparison</span><span>log scale — real simulation</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <line x1="380" y1="20" x2="380" y2="240" stroke="#2a2f38"/>
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">SCENARIUSZ A: f=x⁸</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">SCENARIUSZ B: f=1</text>
+
+        <line x1="100" y1="220" x2="330" y2="220" stroke="#8b909b" stroke-width="1.3"/>
+        <rect x="120" y="215.1" width="30" height="4.9" fill="#4fc3c0"/>
+        <text x="135" y="205" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#4fc3c0">p1: 0,0015</text>
+        <rect x="185" y="183.3" width="30" height="36.7" fill="#e8a33d"/>
+        <text x="200" y="175" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#e8a33d">p2: 0,0237</text>
+        <rect x="250" y="205.1" width="30" height="14.9" fill="#9c82d8"/>
+        <text x="265" y="197" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#9c82d8">MIS: 0,0036</text>
+
+        <line x1="480" y1="220" x2="710" y2="220" stroke="#8b909b" stroke-width="1.3"/>
+        <rect x="500" y="72" width="30" height="148" fill="#4fc3c0"/>
+        <text x="515" y="64" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#4fc3c0">p1: 354,2</text>
+        <rect x="565" y="218" width="30" height="2" fill="#e8a33d"/>
+        <text x="580" y="210" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#e8a33d">p2: ≈0</text>
+        <rect x="630" y="162.2" width="30" height="57.8" fill="#9c82d8"/>
+        <text x="645" y="154" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#9c82d8">MIS: 0,147</text>
+      </svg>
+      <div class="diagram-caption">Skala logarytmiczna (bo różnice są rzędu tysięcy) — fioletowy słupek MIS nigdy nie jest ekstremalny.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>To nie jest zaawansowany przełącznik — to domyślne zachowanie Arnolda, RenderMana, Cyclesa, V-Raya i Redshifta. Ustawienia „Light Samples” / „Diffuse Samples” / „Specular Samples” w tych silnikach dosłownie kontrolują, ile próbek NEE i BRDF dostaje każda strategia, zanim MIS je połączy.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Wariancja</dt><dd>Rozrzut wartości między próbkami; źródło widocznego szumu.</dd>
+      <dt>Importance sampling</dt><dd>Próbkowanie proporcjonalne do wielkości wkładu do wyniku.</dd>
+      <dt>Next event estimation (NEE)</dt><dd>Bezpośredni promień cienia do światła w każdym punkcie odbicia.</dd>
+      <dt>Multiple importance sampling (MIS)</dt><dd>Ważone połączenie kilku strategii próbkowania w jednym punkcie.</dd>
+      <dt>Heurystyka potęgowa / balansowa</dt><dd>Dwa konkretne, poprawne wybory wag MIS — różnią się wariancją, nie obciążeniem.</dd>
+      <dt>Warunek unormowania wag</dt><dd>Σᵢwᵢ(x)=1 — jedyny wymóg, żeby estymator MIS był nieobciążony.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Dodatek C rozwija Rozdział 13: jak faktycznie zbudować dobre BVH — Surface Area Heuristic i alternatywy dla GPU i geometrii animowanej.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-15-path-tracing.html">↑ Rozdział 15: Path tracing i Monte Carlo</a>
+</div>
+</div>
+</body>
+</html>

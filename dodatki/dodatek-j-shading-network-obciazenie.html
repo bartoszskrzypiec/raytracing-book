@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek J — Głębiej: złożoność sieci shaderów a obciążenie renderowania</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>GRAPH · re-eval per hit</span><span>COST · texture ≠ math</span><span>LAYERS · multiplicative</span><span>EXT OF · R.9,11,14</span>
+  </div>
+
+  <div class="eyebrow">Dodatek J / Głębiej: Wydajność</div>
+  <h1>Złożoność sieci shaderów a obciążenie renderowania</h1>
+  <p class="subtitle">Dodatek I rozłożył koszt geometrii. Ten robi to samo dla drugiej strony równania: sieci node’ów, którą budujesz w Substance, Blenderze czy Unrealu, i którą renderer musi policzyć w każdym pojedynczym punkcie trafienia.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Graf materiału liczy się od zera w każdym punkcie trafienia — nic z niego nie „zostaje w pamięci” między różnymi promieniami.</li>
+      <li>Odczyt tekstury to koszt pamięci (potencjalny cache miss); matematyka proceduralna to koszt obliczeń (ALU) — to nie ten sam rodzaj kosztu, mimo że w edytorze grafu wyglądają jak równoważne node’y.</li>
+      <li>Warstwy materiału (Dodatek A) mnożą koszt BRDF, nie dodają go — trójwarstwowy materiał to z grubsza trzy pełne obliczenia D·G·F, nie jedno plus dwa małe dodatki.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Re-ewaluacja</div>
+    <h2>Graf liczy się od nowa w każdym trafieniu</h2>
+    <p>Węzeł w grafie materiału nie ma pamięci między wywołaniami. Każdy z milionów punktów trafienia w scenie (z każdą próbką AA z Rozdziału 8, każdym odbiciem z Rozdziału 7, każdą ścieżką GI z Rozdziału 15) ma inne UV, inną normalną, inny kąt widzenia — więc cały graf, od odczytów tekstur po finalne złożenie BRDF, liczy się od zera, dla każdego z nich.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Shading.graph.DAG</span><span>re-evaluated per hit</span></div>
+      <svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="sg1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8b909b"/></marker>
+        </defs>
+        <g font-family="IBM Plex Sans" font-size="11" fill="#ecebe4">
+          <rect x="60" y="40" width="150" height="46" rx="7" fill="#20242c" stroke="#4fc3c0" stroke-opacity="0.7"/>
+          <text x="135" y="67" text-anchor="middle">Tekstura: Albedo</text>
+
+          <rect x="60" y="120" width="150" height="46" rx="7" fill="#20242c" stroke="#4fc3c0" stroke-opacity="0.7"/>
+          <text x="135" y="147" text-anchor="middle">Tekstura: Roughness</text>
+
+          <rect x="60" y="200" width="150" height="46" rx="7" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="135" y="227" text-anchor="middle">Szum proceduralny</text>
+
+          <rect x="330" y="105" width="120" height="60" rx="7" fill="#20242c" stroke="#9c82d8" stroke-opacity="0.8"/>
+          <text x="390" y="140" text-anchor="middle">Mix</text>
+
+          <rect x="560" y="118" width="150" height="46" rx="7" fill="#20242c" stroke="#e8a33d"/>
+          <text x="635" y="145" text-anchor="middle" font-weight="600">BRDF (R.10–11)</text>
+        </g>
+        <line x1="210" y1="63" x2="328" y2="120" stroke="#8b909b" stroke-width="1.5" marker-end="url(#sg1)"/>
+        <line x1="210" y1="143" x2="328" y2="140" stroke="#8b909b" stroke-width="1.5" marker-end="url(#sg1)"/>
+        <line x1="210" y1="223" x2="558" y2="150" stroke="#8b909b" stroke-width="1.5" marker-end="url(#sg1)"/>
+        <line x1="450" y1="135" x2="558" y2="135" stroke="#8b909b" stroke-width="1.5" marker-end="url(#sg1)"/>
+        <text x="390" y="260" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">ten sam graf — od nowa, dla każdego z milionów trafień</text>
+      </svg>
+      <div class="diagram-caption">Żaden węzeł nie „pamięta” wyniku z poprzedniego punktu — każde trafienie zaczyna graf od liści.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Tekstura kontra matematyka</div>
+    <h2>Dwa różne rodzaje kosztu</h2>
+    <p>Odczyt tekstury (Rozdział 9) to dostęp do pamięci — potencjalny cache miss, tym bardziej prawdopodobny, gdy materiał ma wiele unikalnych map 4K/8K naraz. Matematyka proceduralna (szum, funkcje, mix) to czysty koszt obliczeń — deterministyczny, bez odwołań do pamięci, ale rosnący z liczbą oktaw czy iteracji. Graf z dwudziestoma odczytami tekstur może być w praktyce wolniejszy albo szybszy niż graf z pięcioma odczytami i ciężką matematyką proceduralną — zależy od zachowania cache’u, nie od liczby node’ów widocznych w edytorze.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Warstwy</div>
+    <h2>Warstwy materiału mnożą koszt, nie dodają</h2>
+    <p>Clearcoat z Dodatku A to nie mały dopłat do kosztu — to druga, kompletna ewaluacja D·G·F (Rozdział 11), z własnym Fresnelem. Materiał z bazą, mid-coatem i clearcoatem liczy z grubsza trzy pełne BRDF, nie jeden plus dwa drobne dodatki.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Layered.material.cost</span><span>3× full BRDF, not 1×+ε</span></div>
+      <svg viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
+        <rect x="150" y="30" width="300" height="55" rx="7" fill="#20242c" stroke="#e8a33d" stroke-width="1.6"/>
+        <text x="300" y="63" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">warstwa: clearcoat — D·G·F</text>
+
+        <rect x="150" y="95" width="300" height="55" rx="7" fill="#20242c" stroke="#4fc3c0" stroke-width="1.6"/>
+        <text x="300" y="128" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#4fc3c0">warstwa: mid-coat — D·G·F</text>
+
+        <rect x="150" y="160" width="300" height="55" rx="7" fill="#20242c" stroke="#9c82d8" stroke-width="1.6"/>
+        <text x="300" y="193" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">warstwa: baza — D·G·F</text>
+
+        <path d="M 470,35 L 490,35 L 490,210 L 470,210" fill="none" stroke="#8b909b" stroke-width="1.3"/>
+        <text x="500" y="128" font-family="IBM Plex Mono" font-size="12" fill="#8b909b">≈3× koszt jednej BRDF</text>
+      </svg>
+      <div class="diagram-caption">Każda warstwa to własny komplet D, G i F — koszt się mnoży wraz z liczbą warstw.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: GPU</div>
+    <h2>Rozbieżność w grafach materiałów</h2>
+    <p>Rozdział 14 pokazał, że warp GPU trafiający w różne materiały (diffuse kontra szkło) musi wykonać oba fragmenty kodu sekwencyjnie. Ten sam problem pojawia się <em>wewnątrz</em> jednego, złożonego grafu: jeśli maska w node’ie Mix wybiera różne gałęzie dla różnych promieni w tym samym warpie — jedne trafiają w gałąź „metal”, inne w gałąź „lakier” tego samego materiału — GPU i tak serializuje obie ścieżki. Rozbudowany graf z wieloma warunkowymi gałęziami jest nieproporcjonalnie droższy na GPU niż na CPU, z dokładnie tego samego powodu co w Rozdziale 14.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Warp.divergence.material.graph</span><span>same problem, inside one graph</span></div>
+      <svg viewBox="0 0 760 220" xmlns="http://www.w3.org/2000/svg">
+        <text x="380" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">WARP: 8 PROMIENI, JEDEN GRAF, DWIE GAŁĘZIE MIX</text>
+        <g font-family="IBM Plex Mono" font-size="10">
+          <circle cx="80" cy="70" r="10" fill="#e8a33d"/><circle cx="160" cy="70" r="10" fill="#e8a33d"/><circle cx="240" cy="70" r="10" fill="#4fc3c0"/><circle cx="320" cy="70" r="10" fill="#4fc3c0"/>
+          <circle cx="400" cy="70" r="10" fill="#e8a33d"/><circle cx="480" cy="70" r="10" fill="#4fc3c0"/><circle cx="560" cy="70" r="10" fill="#e8a33d"/><circle cx="640" cy="70" r="10" fill="#4fc3c0"/>
+        </g>
+        <text x="60" y="130" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">PASS 1 · gałąź „metal”</text>
+        <circle cx="80" cy="150" r="9" fill="#e8a33d"/><circle cx="160" cy="150" r="9" fill="#e8a33d"/><circle cx="240" cy="150" r="9" fill="#20242c" stroke="#3a4048"/><circle cx="320" cy="150" r="9" fill="#20242c" stroke="#3a4048"/>
+        <circle cx="400" cy="150" r="9" fill="#e8a33d"/><circle cx="480" cy="150" r="9" fill="#20242c" stroke="#3a4048"/><circle cx="560" cy="150" r="9" fill="#e8a33d"/><circle cx="640" cy="150" r="9" fill="#20242c" stroke="#3a4048"/>
+
+        <text x="60" y="190" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">PASS 2 · gałąź „lakier”</text>
+        <circle cx="80" cy="210" r="9" fill="#20242c" stroke="#3a4048"/><circle cx="160" cy="210" r="9" fill="#20242c" stroke="#3a4048"/><circle cx="240" cy="210" r="9" fill="#4fc3c0"/><circle cx="320" cy="210" r="9" fill="#4fc3c0"/>
+        <circle cx="400" cy="210" r="9" fill="#20242c" stroke="#3a4048"/><circle cx="480" cy="210" r="9" fill="#4fc3c0"/><circle cx="560" cy="210" r="9" fill="#20242c" stroke="#3a4048"/><circle cx="640" cy="210" r="9" fill="#4fc3c0"/>
+      </svg>
+      <div class="diagram-caption">To dosłownie diagram z Rozdziału 14 — tylko podział na gałęzie nie wynika z różnych materiałów, a z jednej maski wewnątrz jednego grafu.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Renderery radzą sobie z tym dwiema strategiami: kompilacja wyspecjalizowanego kodu na materiał (Arnold-style — dłuższe przygotowanie, szybsze liczenie) albo jeden uniwersalny „ubershader” z wieloma gałęziami warunkowymi (prostszy pipeline, więcej kosztu rozbieżności w runtime). Praktyczna heurystyka złożoności grafu: licz odczyty tekstur i liczbę warstw BRDF, nie liczbę node’ów widocznych w edytorze — dwa node’y matematyczne kosztują dużo mniej niż jeden odczyt tekstury 8K, a jedna dodatkowa warstwa clearcoat kosztuje więcej niż dziesięć node’ów Mix.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Re-ewaluacja per-hit</dt><dd>Graf materiału liczy się od zera dla każdego punktu trafienia.</dd>
+      <dt>Koszt pamięci kontra ALU</dt><dd>Odczyt tekstury (pamięć) i matematyka proceduralna (obliczenia) to różne rodzaje kosztu.</dd>
+      <dt>Koszt multiplikatywny warstw</dt><dd>Każda warstwa materiału to osobna, pełna ewaluacja BRDF.</dd>
+      <dt>Rozbieżność wewnątrz grafu</dt><dd>Różne gałęzie jednego materiału powodują ten sam koszt co różne materiały w warpie.</dd>
+      <dt>Ubershader</dt><dd>Jeden uniwersalny shader z gałęziami warunkowymi dla wszystkich wariantów materiału.</dd>
+    </dl>
+  </div>
+
+  <div class="closing">
+    <p>Dodatki I i J domykają parę: geometria, którą promień trafia, i sieć, którą musi policzyć po trafieniu. Razem to właściwie kompletny obraz tego, gdzie naprawdę idzie czas renderu.</p>
+    <div class="sign">Koniec dodatków (na razie)</div>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-09-tekstury-i-uv.html">↑ Rozdział 9: Tekstury i UV</a>
+</div>
+</div>
+</body>
+</html>

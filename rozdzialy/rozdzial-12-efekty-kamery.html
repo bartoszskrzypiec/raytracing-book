@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Rozdział 12 — Efekty kamery: głębia ostrości i motion blur</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.formula{font-size:15px;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>APERTURE · f/#</span><span>FOCUS DIST · d</span><span>SHUTTER · [t0,t1]</span><span>SAMPLES · lens+time</span>
+  </div>
+
+  <div class="eyebrow">Rozdział 12 / Realizm i jakość obrazu</div>
+  <h1>Efekty kamery: głębia ostrości i motion blur</h1>
+  <p class="subtitle">Kamera z Rozdziału 3 była matematyczną dziurką od klucza — ostrą wszędzie, zamrożoną w jednej chwili. Prawdziwe obiektywy i migawki nie działają tak, a naprawa obu wymaga tylko jednej sztuczki, którą już znasz z Rozdziału 8.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Głębia ostrości: próbkujemy losowe punkty na dysku apertury, celując wciąż w ten sam punkt na płaszczyźnie ostrości — obiekty poza nią rozmywają się naturalnie.</li>
+      <li>Motion blur: próbkujemy losowy moment w oknie czasowym otwarcia migawki i poruszamy scenę odpowiednio do tego momentu.</li>
+      <li>Oba efekty to supersampling z Rozdziału 8 — tylko próbkujemy nie pozycję w pikselu, a pozycję na aperturze albo moment w czasie.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Problem</div>
+    <h2>Kamera z dziurki od klucza: idealna, ale nierealna</h2>
+    <p>Model z Rozdziału 3 zbiera światło w jednym punkcie — matematycznej dziurce od klucza. Taki punkt daje nieskończoną głębię ostrości: wszystko, blisko i daleko, jest równie ostre. Prawdziwy obiektyw ma aperturę — otwór o pewnej wielkości — więc światło z jednego punktu scentruje się w jeden punkt na sensorze tylko wtedy, gdy ten punkt leży w konkretnej odległości: płaszczyźnie ostrości. Wszystko poza nią rozmywa się w krąg rozmycia.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Lens.focus</span><span>sharp vs blurred</span></div>
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+        <line x1="380" y1="20" x2="380" y2="280" stroke="#2a2f38"/>
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#8b909b">W OGNISKU</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#8b909b">POZA OGNISKIEM</text>
+
+        <circle cx="60" cy="150" r="4.5" fill="#ecebe4"/>
+        <text x="45" y="172" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">obiekt</text>
+        <line x1="200" y1="100" x2="200" y2="200" stroke="#4fc3c0" stroke-width="2"/>
+        <text x="200" y="90" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#4fc3c0">obiektyw</text>
+        <line x1="320" y1="100" x2="320" y2="200" stroke="#8b909b" stroke-width="2"/>
+        <text x="320" y="90" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">sensor</text>
+        <path d="M60,150 L200,110 L320,150" fill="none" stroke="#e8a33d" stroke-width="1.6"/>
+        <path d="M60,150 L200,150 L320,150" fill="none" stroke="#e8a33d" stroke-width="1.6"/>
+        <path d="M60,150 L200,190 L320,150" fill="none" stroke="#e8a33d" stroke-width="1.6"/>
+        <circle cx="320" cy="150" r="5" fill="#e8a33d"/>
+
+        <circle cx="500" cy="150" r="4.5" fill="#ecebe4"/>
+        <text x="485" y="172" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">obiekt</text>
+        <line x1="580" y1="100" x2="580" y2="200" stroke="#4fc3c0" stroke-width="2"/>
+        <text x="580" y="90" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#4fc3c0">obiektyw</text>
+        <line x1="700" y1="100" x2="700" y2="200" stroke="#8b909b" stroke-width="2"/>
+        <text x="700" y="90" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">sensor</text>
+        <path d="M500,150 L580,110 L700,50" fill="none" stroke="#e8a33d" stroke-width="1.6"/>
+        <path d="M500,150 L580,150 L700,150" fill="none" stroke="#e8a33d" stroke-width="1.6"/>
+        <path d="M500,150 L580,190 L700,250" fill="none" stroke="#e8a33d" stroke-width="1.6"/>
+        <ellipse cx="700" cy="150" rx="6" ry="100" fill="none" stroke="#9c82d8" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <text x="712" y="150" font-family="IBM Plex Mono" font-size="10" fill="#9c82d8">krąg rozmycia</text>
+      </svg>
+      <div class="diagram-caption">Ten sam obiektyw i sensor — inna odległość obiektu decyduje, czy promienie zbiegają się w punkt, czy w krąg.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Symulacja</div>
+    <h2>Dysk apertury i losowe próbki</h2>
+    <p>Naprawa jest zaskakująco prosta: zamiast wystrzeliwać promień zawsze z jednego punktu O (eye), losujemy inny punkt startowy na dysku apertury o promieniu lens_radius, ale celujemy wciąż w <em>ten sam</em> punkt na płaszczyźnie ostrości, w odległości focus_dist od kamery.</p>
+
+    <div class="formula">lens_point = eye + lens_radius · random_w_dysku()<br>focus_point = eye + focus_dist · D<br>new_D = normalize(focus_point − lens_point)<span class="sub">random_w_dysku() liczony w bazie right/up z Rozdziału 3; im większy lens_radius (mniejsze f-stop), tym silniejsze rozmycie</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Aperture.samples</span><span>same focal point</span></div>
+      <svg viewBox="0 0 650 300" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="150" cy="150" r="55" fill="#20242c" stroke="#2a2f38" stroke-width="1.5"/>
+        <text x="150" y="230" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">dysk apertury</text>
+        <line x1="550" y1="60" x2="550" y2="240" stroke="#9c82d8" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <text x="550" y="252" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#9c82d8">płaszczyzna ostrości</text>
+        <circle cx="550" cy="150" r="5" fill="#ecebe4"/>
+
+        <line x1="113.1" y1="170.9" x2="550" y2="150" stroke="#e8a33d" stroke-width="1" stroke-opacity="0.55"/>
+        <line x1="164.8" y1="147.7" x2="550" y2="150" stroke="#e8a33d" stroke-width="1" stroke-opacity="0.55"/>
+        <line x1="118.8" y1="182.2" x2="550" y2="150" stroke="#e8a33d" stroke-width="1" stroke-opacity="0.55"/>
+        <line x1="183.9" y1="151.4" x2="550" y2="150" stroke="#e8a33d" stroke-width="1" stroke-opacity="0.55"/>
+        <line x1="150.6" y1="121.0" x2="550" y2="150" stroke="#e8a33d" stroke-width="1" stroke-opacity="0.55"/>
+        <line x1="159.4" y1="102.6" x2="550" y2="150" stroke="#e8a33d" stroke-width="1" stroke-opacity="0.55"/>
+        <circle cx="113.1" cy="170.9" r="4" fill="#e8a33d"/>
+        <circle cx="164.8" cy="147.7" r="4" fill="#e8a33d"/>
+        <circle cx="118.8" cy="182.2" r="4" fill="#e8a33d"/>
+        <circle cx="183.9" cy="151.4" r="4" fill="#e8a33d"/>
+        <circle cx="150.6" cy="121.0" r="4" fill="#e8a33d"/>
+        <circle cx="159.4" cy="102.6" r="4" fill="#e8a33d"/>
+      </svg>
+      <div class="diagram-caption">Sześć różnych punktów startu, jeden wspólny cel — punkt w ognisku zawsze wypada ostro, wszystko inne rozjeżdża się w szum, który po uśrednieniu (Rozdział 8) staje się gładkim rozmyciem.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Czas</div>
+    <h2>Motion blur: próbkowanie w czasie</h2>
+    <p>Migawka prawdziwego aparatu jest otwarta przez pewien czas, nie przez zero sekund. Wszystko, co się w tym czasie poruszy, rozmazuje się na kadrze. Symulacja: dla każdej próbki piksela losujemy też moment t w oknie migawki, i sprawdzamy scenę tak, jakby wyglądała właśnie w tym momencie — czyli interpolujemy pozycję poruszających się obiektów (albo samej kamery) między ich pozycją na początku i na końcu klatki.</p>
+
+    <div class="formula">t = shutter_open + ξ · (shutter_close − shutter_open)<br>pos(t) = lerp(pos_start, pos_end, (t − shutter_open) / (shutter_close − shutter_open))<span class="sub">ξ — losowa liczba z [0,1); ta sama próbka losowa, którą jitterujesz pozycję w pikselu (Rozdział 8) i na aperturze (wyżej), tylko teraz w osi czasu</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Motion.streak</span><span>8 time samples</span></div>
+      <svg viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+        <line x1="70" y1="150" x2="530" y2="150" stroke="#2a2f38" stroke-width="1.5" stroke-dasharray="4 4"/>
+        <circle cx="100" cy="150" r="30" fill="#e8a33d" fill-opacity="0.16"/>
+        <circle cx="160" cy="150" r="30" fill="#e8a33d" fill-opacity="0.16"/>
+        <circle cx="220" cy="150" r="30" fill="#e8a33d" fill-opacity="0.16"/>
+        <circle cx="280" cy="150" r="30" fill="#e8a33d" fill-opacity="0.16"/>
+        <circle cx="340" cy="150" r="30" fill="#e8a33d" fill-opacity="0.16"/>
+        <circle cx="400" cy="150" r="30" fill="#e8a33d" fill-opacity="0.16"/>
+        <circle cx="460" cy="150" r="30" fill="#e8a33d" fill-opacity="0.16"/>
+        <circle cx="500" cy="150" r="30" fill="#e8a33d" fill-opacity="0.16"/>
+        <text x="100" y="60" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">t = shutter_open</text>
+        <text x="500" y="60" text-anchor="end" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">t = shutter_close</text>
+      </svg>
+      <div class="diagram-caption">Osiem chwil, każda w połowie przezroczysta — dokładnie ten sam trik uśredniania co przy antyaliasingu, tylko wzdłuż osi czasu.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>„f-stop” i „Focus Distance” w kamerze Arnolda, RenderMana czy Unreal Cine Camera to dosłownie lens_radius i focus_dist z tego rozdziału. „Shutter Speed” albo „Shutter Angle” to szerokość okna [shutter_open, shutter_close] — szerszy kąt migawki (bliżej 360°) daje więcej rozmycia, tak jak w prawdziwej kamerze filmowej.</p>
+    <p>Oba efekty dodają się do budżetu próbek z Rozdziału 8: rozmywasz teraz nie tylko krawędzie, ale i całą aperturę, i cały czas trwania klatki, w tej samej liczbie promieni na piksel. Zbyt mało próbek przy dużym rozmyciu ostrości albo ruchu wygląda nie jak gładkie rozmycie, a jak osobny, ziarnisty szum.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Głębia ostrości (DOF)</dt><dd>Zakres odległości, w którym obraz jest akceptowalnie ostry.</dd>
+      <dt>Płaszczyzna ostrości / focus distance</dt><dd>Odległość, na której promienie z apertury zbiegają się idealnie.</dd>
+      <dt>Krąg rozmycia (circle of confusion)</dt><dd>Obszar, w jaki rozmywa się punkt poza płaszczyzną ostrości.</dd>
+      <dt>Apertura / f-stop</dt><dd>Wielkość otworu obiektywu; większa apertura = silniejsze rozmycie tła.</dd>
+      <dt>Motion blur</dt><dd>Rozmycie wynikające z ruchu w czasie otwarcia migawki.</dd>
+      <dt>Kąt migawki (shutter angle)</dt><dd>Ułamek czasu klatki, w którym migawka jest otwarta.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Obraz mamy już realistyczny pod każdym względem optycznym. W następnym rozdziale zajmiemy się czystą wydajnością: struktury akceleracyjne (BVH) — jak sprawdzać promień przeciw milionom trójkątów bez testowania każdego z nich po kolei.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="rozdzial-11-pbr-ggx.html">← Poprzedni</a>
+    <a href="rozdzial-13-bvh.html">Następny →</a>
+</div>
+</div>
+</body>
+</html>

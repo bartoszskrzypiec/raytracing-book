@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Rozdział 3 — Model kamery: od piksela do promienia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.formula{font-size:15px;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>FOV · 50°</span><span>ASPECT · W:H</span><span>RES · W×H px</span><span>BASIS · u, v, w</span>
+  </div>
+
+  <div class="eyebrow">Rozdział 3 / Podstawy</div>
+  <h1>Model kamery: od piksela do promienia</h1>
+  <p class="subtitle">Wiesz już, jak zapisać promień i jak sprawdzić, czy trafia w sferę. Zostało jedno pytanie: skąd bierze się D? Zamieniamy pozycję kamery, pole widzenia i współrzędne piksela w konkretny wektor kierunku.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Kamera potrzebuje trzech wzajemnie prostopadłych wektorów jednostkowych — <em>forward</em>, <em>right</em> i <em>up</em> — liczonych raz, na starcie renderu.</li>
+      <li>Pole widzenia (FOV) i proporcje obrazu wyznaczają rozmiar wirtualnego „okna” (viewportu), przez które kamera patrzy w scenę.</li>
+      <li>Każdy piksel to jeden punkt na tym oknie. Łączymy go z pozycją kamery — i to jest nasz promień D.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Układ kamery</div>
+    <h2>Baza kamery: forward, right, up</h2>
+    <p>Kamera w ray tracerze to coś więcej niż punkt w przestrzeni — to punkt plus orientacja. Potrzebujemy trzech wzajemnie prostopadłych wektorów jednostkowych, które razem tworzą lokalny układ współrzędnych kamery:</p>
+    <ul class="compact">
+      <li><span class="term-amber">forward</span> — kierunek, w który kamera patrzy (target − eye, znormalizowany).</li>
+      <li><span class="term-cyan">right</span> — kierunek „w prawo” względem kamery.</li>
+      <li><span class="term-violet">up</span> — kierunek „w górę” względem kamery.</li>
+    </ul>
+    <p>Skąd wziąć right i up, mając tylko forward i globalny „up świata” (najczęściej (0, 1, 0))? Tu wchodzi nowa operacja: <strong>iloczyn wektorowy (cross product)</strong>. W przeciwieństwie do iloczynu skalarnego z Rozdziału 2, który zwracał liczbę, A × B zwraca <em>wektor</em> — prostopadły jednocześnie do A i do B, zgodnie z regułą prawej ręki.</p>
+
+    <div class="formula">right = normalize(forward × up_world)<br>up = right × forward<span class="sub">cross product: wektor prostopadły do obu wejściowych; drugie użycie gwarantuje, że up jest już idealnie prostopadły do forward</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Camera.basis</span><span>u, v, w</span></div>
+      <svg viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="k1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+          <marker id="k2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4fc3c0"/></marker>
+          <marker id="k3" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9c82d8"/></marker>
+        </defs>
+
+        <rect x="90" y="217" width="34" height="26" rx="3" fill="#8b909b"/>
+        <polygon points="124,221 156,205 156,255 124,239" fill="#8b909b"/>
+
+        <path d="M 156,214 L 172,214 L 172,230" fill="none" stroke="#3a4048" stroke-width="1.5"/>
+
+        <line x1="156" y1="230" x2="560" y2="205" stroke="#e8a33d" stroke-width="2.5" marker-end="url(#k1)"/>
+        <text x="440" y="192" font-family="IBM Plex Mono" font-size="13" fill="#e8a33d">forward (w)</text>
+
+        <line x1="156" y1="230" x2="330" y2="300" stroke="#4fc3c0" stroke-width="2.5" marker-end="url(#k2)"/>
+        <text x="300" y="312" font-family="IBM Plex Mono" font-size="13" fill="#4fc3c0">right (u)</text>
+
+        <line x1="156" y1="230" x2="156" y2="90" stroke="#9c82d8" stroke-width="2.5" marker-end="url(#k3)"/>
+        <text x="156" y="78" text-anchor="middle" font-family="IBM Plex Mono" font-size="13" fill="#9c82d8">up (v)</text>
+
+        <text x="35" y="285" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">eye (O)</text>
+      </svg>
+      <div class="diagram-caption">Trzy wzajemnie prostopadłe wektory jednostkowe — lokalny układ współrzędnych kamery.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: FOV i proporcje</div>
+    <h2>Viewport i pole widzenia</h2>
+    <p>Pole widzenia (field of view, FOV) określa, jak „szeroko” kamera widzi scenę — ten sam parametr, który ustawiasz w atrybutach kamery w Mayi czy Blenderze. Umieszczamy wirtualny prostokąt (viewport) w pewnej odległości przed kamerą, wzdłuż forward — i to jego wymiary, nie parametry samej kamery, bezpośrednio wyznaczają kierunki promieni.</p>
+
+    <div class="formula">viewport_height = 2 · tan(FOV / 2)<br>viewport_width = aspect · viewport_height<span class="sub">przy odległości 1 wzdłuż forward; aspect = W / H (szerokość / wysokość obrazu w pikselach)</span></div>
+
+    <p>Większy FOV → większy viewport → promienie rozchodzą się szerzej — typowy „szeroki kąt”. Aspect ratio dba o to, żeby kwadratowe piksele nie rozciągały obrazu — inaczej kula wyjdzie jak jajko.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Fov.aspect</span><span>2 views</span></div>
+      <svg viewBox="0 0 760 340" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="m1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+          <marker id="m2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9c82d8"/></marker>
+        </defs>
+
+        <line x1="380" y1="20" x2="380" y2="300" stroke="#2a2f38"/>
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" letter-spacing="0.5" fill="#8b909b">WIDOK Z BOKU · FOV</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" letter-spacing="0.5" fill="#8b909b">WIDOK Z PRZODU · ASPECT</text>
+
+        <!-- left: FOV side view -->
+        <polygon points="40,160 40,180 60,170" fill="#8b909b"/>
+        <line x1="60" y1="170" x2="230" y2="170" stroke="#8b909b" stroke-width="1.2" stroke-dasharray="3 4"/>
+        <line x1="60" y1="170" x2="230" y2="110" stroke="#e8a33d" stroke-width="2"/>
+        <line x1="60" y1="170" x2="230" y2="230" stroke="#e8a33d" stroke-width="2"/>
+        <path d="M 86.4,160.7 A 28,28 0 0,1 86.4,179.3" fill="none" stroke="#e8a33d" stroke-width="1.5"/>
+        <text x="100" y="176" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">FOV</text>
+        <line x1="230" y1="110" x2="230" y2="230" stroke="#4fc3c0" stroke-width="2.5"/>
+        <line x1="222" y1="110" x2="238" y2="110" stroke="#4fc3c0" stroke-width="1.5"/>
+        <line x1="222" y1="230" x2="238" y2="230" stroke="#4fc3c0" stroke-width="1.5"/>
+        <line x1="252" y1="112" x2="252" y2="228" stroke="#9c82d8" stroke-width="1.2" marker-start="url(#m2)" marker-end="url(#m2)"/>
+        <text x="262" y="174" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">h</text>
+
+        <!-- right: aspect front view -->
+        <rect x="460" y="110" width="220" height="140" fill="#20242c" stroke="#4fc3c0" stroke-width="2"/>
+        <line x1="460" y1="95" x2="680" y2="95" stroke="#e8a33d" stroke-width="1.5" marker-start="url(#m1)" marker-end="url(#m1)"/>
+        <text x="570" y="88" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">w</text>
+        <line x1="445" y1="110" x2="445" y2="250" stroke="#9c82d8" stroke-width="1.5" marker-start="url(#m2)" marker-end="url(#m2)"/>
+        <text x="428" y="184" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">h</text>
+        <circle cx="570" cy="180" r="3" fill="#8b909b"/>
+      </svg>
+      <div class="diagram-caption">h = viewport_height, w = viewport_width. Ten sam kąt FOV z boku daje konkretny prostokąt z przodu.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Pixel → Ray</div>
+    <h2>Od piksela do promienia</h2>
+    <p>Mając bazę kamery i wymiary viewportu, każdy piksel (i, j) obrazu o rozdzielczości W×H zamieniamy na promień w czterech krokach. Najpierw normalizujemy współrzędne piksela do rozmiaru viewportu (czasem nazywane NDC — normalized device coordinates):</p>
+
+    <div class="formula">s = (2(i + 0.5)/W − 1) · viewport_width / 2<br>t = (1 − 2(j + 0.5)/H) · viewport_height / 2<span class="sub">i, j — indeks piksela; +0.5 bierze środek piksela, nie jego róg; minus przy t, bo j rośnie w dół obrazu, a up w górę</span></div>
+
+    <p>Następnie łączymy to z bazą kamery, żeby dostać punkt na viewporcie w przestrzeni świata, i wyciągamy z niego kierunek:</p>
+
+    <div class="formula">P = eye + forward + s · right + t · up<br>D = normalize(P − eye)<span class="sub">P — punkt na viewporcie dla danego piksela; D — gotowy, znormalizowany kierunek promienia</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Pixel.to.ray</span><span>3 samples</span></div>
+      <svg viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="n1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+        </defs>
+
+        <rect x="30" y="147" width="34" height="26" rx="3" fill="#8b909b"/>
+        <polygon points="64,151 96,135 96,185 64,169" fill="#8b909b"/>
+        <text x="45" y="200" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">eye</text>
+
+        <rect x="260" y="90" width="220" height="170" fill="#20242c" stroke="#4fc3c0" stroke-width="1.5"/>
+        <g stroke="#4fc3c0" stroke-opacity="0.28">
+          <line x1="304" y1="90" x2="304" y2="260"/>
+          <line x1="348" y1="90" x2="348" y2="260"/>
+          <line x1="392" y1="90" x2="392" y2="260"/>
+          <line x1="436" y1="90" x2="436" y2="260"/>
+          <line x1="260" y1="132.5" x2="480" y2="132.5"/>
+          <line x1="260" y1="175" x2="480" y2="175"/>
+          <line x1="260" y1="217.5" x2="480" y2="217.5"/>
+        </g>
+
+        <line x1="96" y1="160" x2="328" y2="99" stroke="#e8a33d" stroke-width="2" marker-end="url(#n1)"/>
+        <circle cx="282" cy="111" r="4" fill="#e8a33d"/>
+        <text x="282" y="100" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">piksel (0,0)</text>
+
+        <line x1="96" y1="160" x2="397" y2="177" stroke="#e8a33d" stroke-width="2" marker-end="url(#n1)"/>
+        <circle cx="370" cy="175" r="4" fill="#e8a33d"/>
+        <text x="370" y="200" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">środkowy</text>
+
+        <line x1="96" y1="160" x2="494" y2="247" stroke="#e8a33d" stroke-width="2" marker-end="url(#n1)"/>
+        <circle cx="458" cy="239" r="4" fill="#e8a33d"/>
+        <text x="440" y="278" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">piksel (W−1,H−1)</text>
+      </svg>
+      <div class="diagram-caption">Każdy piksel to inny punkt na tej samej płaszczyźnie viewportu — i inny promień D.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Jeśli w Blenderze czy Mayi zmieniasz „focal length” i „sensor size” kamery, a nie FOV bezpośrednio — to i tak przelicza się na dokładnie ten sam kąt:</p>
+    <div class="formula" style="margin:14px 0 0;">FOV = 2 · atan( sensor / (2 · focal) )</div>
+    <p style="margin-top:14px;">Dłuższy focal length = mniejszy FOV = bardziej „teleobiektywowy” kadr. To dlatego zbliżenia teleobiektywem spłaszczają perspektywę, a szerokie kąty ją mocno wyginają — to wciąż ten sam wzór z tego rozdziału, tylko schowany za innymi nazwami sliderów.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Forward (look/view vector)</dt><dd>Kierunek, w który patrzy kamera.</dd>
+      <dt>Right, up</dt><dd>Wektory dopełniające bazę kamery, prostopadłe do forward i do siebie.</dd>
+      <dt>Iloczyn wektorowy (cross product)</dt><dd>Operacja A × B zwracająca wektor prostopadły do obu wejściowych.</dd>
+      <dt>Ortonormalna baza</dt><dd>Trzy wektory jednostkowe, wzajemnie prostopadłe — tu: forward, right, up.</dd>
+      <dt>Pole widzenia (FOV)</dt><dd>Kąt, jak szeroko kamera widzi scenę; wyznacza rozmiar viewportu.</dd>
+      <dt>Proporcje obrazu (aspect ratio)</dt><dd>W / H — zapobiega rozciąganiu obrazu przy niekwadratowych rozdzielczościach.</dd>
+      <dt>Viewport / NDC</dt><dd>Wirtualna płaszczyzna przed kamerą, na którą mapowane są piksele obrazu.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Mamy już wszystko, czego potrzeba, żeby wygenerować promień dla każdego piksela. W następnym rozdziale wracamy do kształtów, tak jak obiecane w Rozdziale 2: przecięcia z płaszczyznami i trójkątami — a więc z każdą siatką, którą wyeksportujesz z dowolnego DCC.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="rozdzial-02-wektory-i-przeciecia.html">← Poprzedni</a>
+    <a href="rozdzial-04-plaszczyzny-i-trojkaty.html">Następny →</a>
+</div>
+</div>
+</body>
+</html>

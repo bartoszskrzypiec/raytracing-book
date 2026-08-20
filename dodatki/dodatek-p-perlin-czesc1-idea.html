@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek P — Perlin Noise, część 1: idea szumu gradientowego</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>AUTOR · Ken Perlin, 1985</span><span>NAGRODA · Oscar techniczny, 1997</span><span>IDEA · gradienty, nie wartości</span><span>EXT OF · R.9</span>
+  </div>
+
+  <div class="eyebrow">Wykład: Perlin Noise — część 1 z 4</div>
+  <h1>Idea szumu gradientowego</h1>
+  <p class="subtitle">Rozdział 9 pokazał szum Perlina jako <code>feTurbulence</code> — czarną skrzynkę, która dawała ładny, organiczny wzór. Ten wykład otwiera tę skrzynkę: skąd bierze się gładkość, dlaczego akurat gradienty, i jak policzyć to na kartce.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Ken Perlin wymyślił ten szum w 1985 roku dla filmu TRON — potrzebował tekstur, które wyglądają organicznie, nie „komputerowo”. Dostał za to Oscara technicznego w 1997.</li>
+      <li>Kluczowa sztuczka: w węzłach siatki nie losujesz wartości — losujesz <em>kierunek</em> (wektor gradientu). To gwarantuje gładkość, którą prosty szum losowy (Dodatki L–N) nigdy nie da.</li>
+      <li>Szum Perlina to funkcja ciągła — możesz ją odpytać w każdym punkcie przestrzeni, nie tylko w węzłach siatki, i dostajesz gładko zmieniającą się wartość.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Motywacja</div>
+    <h2>Czemu nie wystarczy zwykły szum losowy</h2>
+    <p>Weź czystą, przypadkową wartość w każdym punkcie siatki (<strong>value noise</strong>) i interpoluj między nimi liniowo. Wynik jest ciągły, ale wygląda źle — widać krawędzie komórek siatki jako subtelne „załamania”, bo liniowa interpolacja między przypadkowymi wartościami nie ma gładkiego przejścia w pochodnej. Perlin zauważył, że problem nie jest w interpolacji — jest w tym, <em>co</em> interpolujesz.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Value.noise.vs.gradient.noise</span><span>schematically</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="valueNoiseF"><feTurbulence type="fractalNoise" baseFrequency="0.06 0.06" numOctaves="1" seed="2"/></filter>
+          <filter id="gradNoiseF"><feTurbulence type="fractalNoise" baseFrequency="0.02 0.02" numOctaves="2" seed="5"/></filter>
+        </defs>
+        <text x="190" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">VALUE NOISE (interpolacja wartości)</text>
+        <rect x="60" y="45" width="260" height="180" filter="url(#valueNoiseF)" stroke="#2a2f38" stroke-width="1.5"/>
+        <text x="190" y="245" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">widoczna „siatkowość”</text>
+
+        <text x="570" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">GRADIENT NOISE (Perlin)</text>
+        <rect x="440" y="45" width="260" height="180" filter="url(#gradNoiseF)" stroke="#2a2f38" stroke-width="1.5"/>
+        <text x="570" y="245" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">gładkie, organiczne przejścia</text>
+      </svg>
+      <div class="diagram-caption">Oba obrazy to prawdziwy feTurbulence — różnica w charakterze wynika z tego, co faktycznie leży w węzłach siatki.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Idea</div>
+    <h2>Gradienty w węzłach, nie wartości</h2>
+    <p>Perlin noise przypisuje każdemu węzłowi siatki nie liczbę, a <strong>wektor gradientu</strong> — losowy kierunek, jednostkowej długości. Dla punktu zapytania P wewnątrz komórki, dla każdego z sąsiadujących węzłów liczysz wektor odległości od tego węzła do P, a potem iloczyn skalarny (Rozdział 2!) tego wektora z gradientem węzła. To „ile P zgadza się z kierunkiem, który ten węzeł preferuje” — a to naturalnie daje zero w samym węźle (bo wektor odległości do siebie samego ma długość zero) i gładko rośnie/opada, gdy odchodzisz od węzła w stronę, z którą gradient się zgadza albo nie.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Grid.gradients.setup</span><span>query point inside a cell</span></div>
+      <svg viewBox="0 0 500 400" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="pg1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+        </defs>
+        <g stroke="#2a2f38" stroke-width="1">
+          <line x1="80" y1="80" x2="80" y2="320"/><line x1="240" y1="80" x2="240" y2="320"/><line x1="400" y1="80" x2="400" y2="320"/>
+          <line x1="80" y1="80" x2="400" y2="80"/><line x1="80" y1="240" x2="400" y2="240"/><line x1="80" y1="320" x2="400" y2="320"/>
+        </g>
+        <rect x="80" y="80" width="160" height="160" fill="#9c82d8" fill-opacity="0.08" stroke="#9c82d8" stroke-width="1.5"/>
+
+        <circle cx="80" cy="80" r="4" fill="#ecebe4"/>
+        <line x1="80" y1="80" x2="112" y2="48" stroke="#e8a33d" stroke-width="2" marker-end="url(#pg1)"/>
+        <circle cx="240" cy="80" r="4" fill="#ecebe4"/>
+        <line x1="240" y1="80" x2="208" y2="48" stroke="#e8a33d" stroke-width="2" marker-end="url(#pg1)"/>
+        <circle cx="80" cy="240" r="4" fill="#ecebe4"/>
+        <line x1="80" y1="240" x2="112" y2="272" stroke="#e8a33d" stroke-width="2" marker-end="url(#pg1)"/>
+        <circle cx="240" cy="240" r="4" fill="#ecebe4"/>
+        <line x1="240" y1="240" x2="208" y2="272" stroke="#e8a33d" stroke-width="2" marker-end="url(#pg1)"/>
+
+        <circle cx="128" cy="176" r="5" fill="#4fc3c0"/>
+        <text x="140" y="172" font-family="IBM Plex Mono" font-size="12" fill="#4fc3c0">P</text>
+        <line x1="80" y1="80" x2="128" y2="176" stroke="#4fc3c0" stroke-width="1" stroke-dasharray="3 3"/>
+        <line x1="240" y1="80" x2="128" y2="176" stroke="#4fc3c0" stroke-width="1" stroke-dasharray="3 3"/>
+        <line x1="80" y1="240" x2="128" y2="176" stroke="#4fc3c0" stroke-width="1" stroke-dasharray="3 3"/>
+        <line x1="240" y1="240" x2="128" y2="176" stroke="#4fc3c0" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="80" y="360" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">amber = losowe gradienty w węzłach</text>
+        <text x="80" y="378" font-family="IBM Plex Mono" font-size="10.5" fill="#4fc3c0">cyan = wektory odległości do P</text>
+      </svg>
+      <div class="diagram-caption">Cztery gradienty, cztery wektory odległości, cztery iloczyny skalarne — to jest cały surowy materiał na jedną próbkę szumu.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>To dokładnie ta różnica, którą czasem widzisz jako opcję „Noise Type: Value / Perlin / Simplex” w node’ie szumu w Blenderze, Substance czy Houdinim. Value noise jest szybszy, ale przy dużym zbliżeniu widać „kafelkowanie”. Perlin/Simplex kosztują trochę więcej, ale nie mają tej wady — to właśnie dlatego są domyślnym wyborem do organicznych wzorów: chmur, marmuru, terenu.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Value noise</dt><dd>Losowa wartość w węźle siatki, interpolowana — podatna na widoczną siatkowość.</dd>
+      <dt>Gradient noise (Perlin)</dt><dd>Losowy wektor kierunku w węźle, użyty przez iloczyn skalarny.</dd>
+      <dt>Wektor odległości</dt><dd>Wektor od węzła siatki do punktu zapytania P.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Część 2 rozpisuje cały algorytm krok po kroku, na w pełni zweryfikowanym przykładzie liczbowym — od czterech gradientów do jednej, konkretnej wartości szumu.</p>
+    <div class="series-nav">
+      <span class="current">Część 1: Idea</span><span>Część 2: Algorytm</span><span>Część 3: Oktawy/fBm</span><span>Część 4: Simplex</span>
+    </div>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-09-tekstury-i-uv.html">↑ Rozdział 9: Tekstury i UV</a>
+</div>
+</div>
+</body>
+</html>

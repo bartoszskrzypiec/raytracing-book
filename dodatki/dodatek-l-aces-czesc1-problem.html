@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek L — ACES, część 1: problem, który rozwiązuje</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>PROBLEM · interchange</span><span>ORG · AMPAS → ASWF</span><span>1.0 · grudzień 2014</span><span>EXT OF · Dodatek E</span>
+  </div>
+
+  <div class="eyebrow">Wykład: ACES — część 1 z 4</div>
+  <h1>Dlaczego ACES istnieje</h1>
+  <p class="subtitle">Dodatek E nauczył Cię, czym jest gamma i tone mapping. ACES to nie kolejny operator tone mapowania — to cały standard, który mówi, jak te operatory łączyć w jeden, przewidywalny pipeline między kamerą, setką programów po drodze i ekranem klienta.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Bez standardu każda kamera, program i ekran mają własną, niekompatybilną przestrzeń kolorów — ten sam plik wygląda inaczej w każdym miejscu pipeline’u.</li>
+      <li>ACES (Academy Color Encoding System) to jedna, urządzenio-niezależna przestrzeń pośrednia, przez którą przechodzi wszystko — powstała pod skrzydłami Academy of Motion Picture Arts and Sciences, od sierpnia 2025 rozwijana przez Academy Software Foundation.</li>
+      <li>Kluczowe rozróżnienie: scene-referred (opisuje światło w scenie, bez górnego limitu) kontra display-referred (już przycięte do konkretnego ekranu) — cała matematyka światła z Rozdziałów 5–15 produkuje wartości scene-referred.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Problem</div>
+    <h2>Chaos przed standardem</h2>
+    <p>Kamera ARRI koduje obraz w LogC. RED używa Log3G10. Sony ma własny S-Log3. Każda z nich ma inny zestaw podstawowych barw (primaries) i inną krzywą kodowania. Bez wspólnego standardu, żeby przenieść materiał z kamery przez Nuke, Houdini, Maya i na ekran klienta, potrzebujesz osobnej konwersji dla <em>każdej</em> par narzędzi — a każda z tych konwersji to kolejna szansa, żeby kolor zaczął wyglądać inaczej niż zamierzono.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Interchange.chaos.vs.hub</span><span>before / after ACES</span></div>
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+        <text x="190" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">PRZED: KAŻDY Z KAŻDYM</text>
+        <text x="570" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">PO: JEDEN STANDARD POŚREDNI</text>
+        <line x1="380" y1="15" x2="380" y2="280" stroke="#2a2f38"/>
+
+        <circle cx="190" cy="80" r="8" fill="#e8a33d"/><text x="190" y="65" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">ARRI</text>
+        <circle cx="90" cy="180" r="8" fill="#e8a33d"/><text x="70" y="200" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">RED</text>
+        <circle cx="290" cy="180" r="8" fill="#e8a33d"/><text x="300" y="200" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">Sony</text>
+        <circle cx="190" cy="250" r="8" fill="#4fc3c0"/><text x="190" y="270" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">Ekran</text>
+        <g stroke="#9c82d8" stroke-width="1" stroke-opacity="0.6">
+          <line x1="190" y1="80" x2="90" y2="180"/><line x1="190" y1="80" x2="290" y2="180"/><line x1="190" y1="80" x2="190" y2="250"/>
+          <line x1="90" y1="180" x2="290" y2="180"/><line x1="90" y1="180" x2="190" y2="250"/><line x1="290" y1="180" x2="190" y2="250"/>
+        </g>
+
+        <circle cx="570" cy="160" r="14" fill="#20242c" stroke="#e8a33d" stroke-width="2"/><text x="570" y="164" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#e8a33d">ACES</text>
+        <circle cx="480" cy="80" r="7" fill="#4fc3c0"/><line x1="480" y1="80" x2="562" y2="150" stroke="#8b909b" stroke-width="1"/>
+        <circle cx="660" cy="80" r="7" fill="#4fc3c0"/><line x1="660" y1="80" x2="578" y2="150" stroke="#8b909b" stroke-width="1"/>
+        <circle cx="480" cy="240" r="7" fill="#4fc3c0"/><line x1="480" y1="240" x2="562" y2="170" stroke="#8b909b" stroke-width="1"/>
+        <circle cx="660" cy="240" r="7" fill="#4fc3c0"/><line x1="660" y1="240" x2="578" y2="170" stroke="#8b909b" stroke-width="1"/>
+      </svg>
+      <div class="diagram-caption">Sześć niekompatybilnych połączeń zamienia się w cztery proste, jednakowe konwersje do i z jednego centrum.</div>
+    </div>
+
+    <p>ACES nie jest jednym „filtrem”. To cały, ustandaryzowany łańcuch: konwersja z kamery <em>do</em> ACES (IDT — Dodatek M), praca i grading <em>w</em> ACES, konwersja <em>z</em> ACES na konkretny ekran (RRT+ODT — Dodatek N). Każde ogniwo jest publicznie zdefiniowane, więc dwa studia używające ACES dostają ten sam wynik z tych samych plików, bez ręcznego dopasowywania.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Scene-referred</div>
+    <h2>Scene-referred kontra display-referred</h2>
+    <p>To rozróżnienie jest sercem całego systemu. <span class="term-cyan">Scene-referred</span> oznacza: wartość opisuje światło, które faktycznie istniało (albo zostało wyliczone) w scenie — słońce może mieć wartość 1000, żarówka 50, ściana w cieniu 0,02. Nie ma górnego limitu, bo scena go nie ma. <span class="term-amber">Display-referred</span> oznacza: wartość jest już dopasowana do jednego, konkretnego ekranu — przycięta do 0–1, z wbudowanym tone mappingiem dla tego wyświetlacza.</p>
+
+    <div class="formula">Rozdziały 5–15 (Lambert, GGX, path tracing) → wartości scene-referred<br>Dodatek E (tone mapping) + ACES RRT/ODT → konwersja na display-referred<span class="sub">to dwa różne etapy tego samego pipeline’u, nie konkurujące ze sobą podejścia</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Scene-referred.vs.display-referred</span><span>no ceiling vs baked-in</span></div>
+      <svg viewBox="0 0 760 240" xmlns="http://www.w3.org/2000/svg">
+        <text x="190" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">SCENE-REFERRED</text>
+        <text x="570" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">DISPLAY-REFERRED</text>
+        <line x1="380" y1="15" x2="380" y2="220" stroke="#2a2f38"/>
+
+        <rect x="90" y="60" width="200" height="140" fill="none" stroke="#2a2f38" stroke-width="1.3"/>
+        <circle cx="150" cy="80" r="10" fill="#e8a33d"/><text x="150" y="60" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#e8a33d">słońce: 1000</text>
+        <circle cx="230" cy="150" r="5" fill="#9c82d8"/><text x="230" y="130" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#9c82d8">żarówka: 50</text>
+        <circle cx="120" cy="180" r="3" fill="#4fc3c0"/><text x="120" y="200" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#4fc3c0">cień: 0,02</text>
+        <text x="190" y="215" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">brak górnego limitu</text>
+
+        <rect x="470" y="60" width="200" height="140" fill="#20242c" stroke="#e8a33d" stroke-width="1.5"/>
+        <text x="570" y="135" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">0 — 1</text>
+        <text x="570" y="215" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">przycięte dla tego ekranu</text>
+      </svg>
+      <div class="diagram-caption">Ten sam render — po lewej wciąż „surowe” światło, po prawej już zdecydowane, jak ma wyglądać na jednym konkretnym monitorze.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Jeśli pracujesz w Nuke, Houdinim, Mayi czy Blenderze z włączonym color managementem OCIO, i widzisz „ACEScg” jako przestrzeń roboczą — to właśnie ten scene-referred etap. „View Transform” albo „Display” w tym samym panelu to etap display-referred z Dodatku E i N. To dwa różne przełączniki i mylenie ich jest jednym z najczęstszych błędów w praktyce (więcej w części 4).</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>ACES</dt><dd>Academy Color Encoding System — standard wymiany kolorów w produkcji filmowej.</dd>
+      <dt>AMPAS / ASWF</dt><dd>Academy of Motion Picture Arts and Sciences (twórca); Academy Software Foundation (od 2025 opiekun).</dd>
+      <dt>Scene-referred</dt><dd>Wartość opisująca światło w scenie, bez górnego limitu.</dd>
+      <dt>Display-referred</dt><dd>Wartość już dopasowana do jednego, konkretnego ekranu.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Część 2 pokazuje, czym właściwie jest „przestrzeń ACES” — AP0 i AP1, i skąd się bierze IDT, które wpuszcza materiał z kamery do tego systemu.</p>
+    <div class="series-nav">
+      <span class="current">Część 1: Problem</span><span>Część 2: AP0/AP1</span><span>Część 3: RRT/ODT</span><span>Część 4: 1.0 vs 2.0</span>
+    </div>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="dodatek-e-kolor-tonemapping.html">↑ Dodatek E: Kolor i tone mapping</a>
+</div>
+</div>
+</body>
+</html>

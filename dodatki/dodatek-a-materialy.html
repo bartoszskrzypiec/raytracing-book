@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek A — Głębiej: warianty materiałów PBR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>D · anisotropic</span><span>LAYERS · base+coat</span><span>ENERGY · compensated</span><span>EXT OF · R.10–11</span>
+  </div>
+
+  <div class="eyebrow">Dodatek A / Głębiej: Materiały</div>
+  <h1>Warianty materiałów PBR</h1>
+  <p class="subtitle">Rozdziały 10–11 dały Ci izotropowy, jednowarstwowy, jednorazowo-rozproszony GGX. To fundament, ale trzy realne materiały — szczotkowany metal, lakier samochodowy, bardzo chropowaty metal — potrzebują trzech konkretnych rozszerzeń tego samego modelu.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Anizotropia: roughness inny wzdłuż dwóch osi tangenty — stąd rozciągnięty, nie kołowy błysk na szczotkowanym metalu.</li>
+      <li>Clearcoat: druga, niezależna warstwa specular nad bazowym materiałem — dwa Fresnele, nie jeden.</li>
+      <li>Multi-scatter GGX: przy wysokim roughness jednorazowe odbicie gubi energię między fasetkami — trzeba ją dopłacić z powrotem.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Anizotropia</div>
+    <h2>Gdy roughness ma kierunek</h2>
+    <p>GGX z Rozdziału 11 zakłada jeden α — fasetki rozrzucone tak samo we wszystkie strony. Szczotkowany metal, satyna, płyta CD i włosy (Rozdział 20) mają fasetki wyrównane wzdłuż konkretnego kierunku — gładsze wzdłuż rys szczotkowania, chropowate w poprzek. Trzeba rozdzielić α na dwie wartości, jedną dla każdej osi lokalnej ramki (tangenta T, bitangenta B):</p>
+
+    <div class="formula">D(H) = 1 / ( π·αx·αy·( (H·T/αx)² + (H·B/αy)² + (H·N)² )² )<span class="sub">αx, αy — roughness wzdłuż T i B; αx=αy sprowadza wzór z powrotem do izotropowego GGX z Rozdziału 11</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Isotropic.vs.anisotropic</span><span>highlight shape</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="sgA" cx="35%" cy="30%" r="70%">
+            <stop offset="0%" stop-color="#3a4552"/><stop offset="60%" stop-color="#242b34"/><stop offset="100%" stop-color="#171b21"/>
+          </radialGradient>
+          <radialGradient id="hlA" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/><stop offset="60%" stop-color="#ffffff" stop-opacity="0.25"/><stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+          </radialGradient>
+          <marker id="anT" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4fc3c0"/></marker>
+        </defs>
+        <text x="190" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">IZOTROPOWY</text>
+        <text x="570" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">ANIZOTROPOWY</text>
+        <line x1="380" y1="20" x2="380" y2="240" stroke="#2a2f38"/>
+
+        <circle cx="190" cy="150" r="70" fill="url(#sgA)"/>
+        <ellipse cx="165" cy="120" rx="18" ry="18" fill="url(#hlA)"/>
+
+        <circle cx="570" cy="150" r="70" fill="url(#sgA)"/>
+        <ellipse cx="545" cy="120" rx="38" ry="9" fill="url(#hlA)"/>
+        <line x1="500" y1="120" x2="590" y2="120" stroke="#4fc3c0" stroke-width="1.5" marker-end="url(#anT)"/>
+        <text x="600" y="124" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">T</text>
+      </svg>
+      <div class="diagram-caption">Ten sam kąt padania światła — kołowy błysk kontra rozciągnięty wzdłuż tangenty T.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Clearcoat</div>
+    <h2>Dwie warstwy, dwa Fresnele</h2>
+    <p>Lakier samochodowy, polerowane drewno, skóra — mają przezroczystą warstwę <em>nad</em> materiałem bazowym. Światło najpierw trafia w tę warstwę: część odbija się od razu (własny, zwykle bardzo gładki specular), reszta wchodzi do bazy, gdzie dostaje pełny model materiału z Rozdziałów 10–11 (diffuse + specular bazy), i wychodzi z powrotem przez tę samą warstwę — drugi Fresnel przy wyjściu.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Clearcoat.cross-section</span><span>2 layers, 2 fresnels</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="cc1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+          <marker id="cc2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#ecebe4"/></marker>
+          <marker id="cc3" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4fc3c0"/></marker>
+        </defs>
+        <rect x="100" y="80" width="560" height="30" fill="#4fc3c0" fill-opacity="0.12" stroke="#4fc3c0" stroke-width="1.3"/>
+        <text x="670" y="99" text-anchor="end" font-family="IBM Plex Mono" font-size="10" fill="#4fc3c0">clearcoat</text>
+        <rect x="100" y="110" width="560" height="110" fill="#20242c" stroke="#2a2f38" stroke-width="1.3"/>
+        <text x="670" y="200" text-anchor="end" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">materiał bazowy</text>
+
+        <line x1="350" y1="20" x2="350" y2="80" stroke="#e8a33d" stroke-width="2.2" marker-end="url(#cc1)"/>
+        <line x1="350" y1="80" x2="398" y2="28" stroke="#ecebe4" stroke-width="1.8" marker-end="url(#cc2)"/>
+        <text x="404" y="24" font-family="IBM Plex Mono" font-size="10" fill="#ecebe4">Fresnel #1 (coat)</text>
+
+        <line x1="350" y1="80" x2="350" y2="160" stroke="#e8a33d" stroke-width="1.8" stroke-dasharray="4 4"/>
+        <circle cx="350" cy="160" r="5" fill="#e8a33d"/>
+        <text x="360" y="178" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">pełny BRDF bazy (R.10–11)</text>
+
+        <line x1="350" y1="160" x2="350" y2="80" stroke="#4fc3c0" stroke-width="1.8" stroke-dasharray="4 4"/>
+        <line x1="350" y1="80" x2="300" y2="25" stroke="#4fc3c0" stroke-width="2.2" marker-end="url(#cc3)"/>
+        <text x="230" y="20" font-family="IBM Plex Mono" font-size="10" fill="#4fc3c0">Fresnel #2 (wyjście)</text>
+      </svg>
+      <div class="diagram-caption">Praktyczny model nie śledzi tego w pełni fizycznie — po prostu dodaje drugi, gładki lob specular na wierzch.</div>
+    </div>
+
+    <p>Produkcyjne implementacje rzadko symulują to w pełni — zamiast tego po prostu <em>dodają</em> drugi, niezależny, zwykle bardzo niski-roughness lob specular na wierzch pełnego BRDF bazy, ważony własnym Fresnelem. Prostsze niż prawdziwa symulacja dwuwarstwowa, a wizualnie bardzo zbliżone.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Multi-scatter</div>
+    <h2>Naprawianie utraty energii</h2>
+    <p>GGX z Rozdziału 11 liczy tylko <em>jedno</em> odbicie od mikrofasetki. Przy wysokim roughness część światła, która trafia w fasetkę odwróconą "źle", w realu odbija się do sąsiedniej fasetki i odbija ponownie, aż w końcu dotrze do widza. Model jednorazowego rozproszenia tę energię po prostu gubi — bardzo chropowate metale wychodzą sztucznie ciemniejsze, niż powinny.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Energy.compensation</span><span>Kulla & Conty, 2017</span></div>
+      <svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg">
+        <line x1="60" y1="220" x2="560" y2="220" stroke="#8b909b" stroke-width="1.5"/>
+        <rect x="150" y="40" width="80" height="180" fill="none" stroke="#3a4048" stroke-width="1.3" stroke-dasharray="3 3"/>
+        <rect x="150" y="140" width="80" height="80" fill="#e8a33d" fill-opacity="0.75"/>
+        <text x="190" y="234" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">SINGLE-SCATTER</text>
+        <text x="190" y="100" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#9c82d8">stracona energia</text>
+
+        <rect x="370" y="40" width="80" height="180" fill="none" stroke="#3a4048" stroke-width="1.3" stroke-dasharray="3 3"/>
+        <rect x="370" y="140" width="80" height="80" fill="#e8a33d" fill-opacity="0.75"/>
+        <rect x="370" y="70" width="80" height="70" fill="#9c82d8" fill-opacity="0.45"/>
+        <text x="410" y="234" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">MULTI-SCATTER</text>
+        <text x="410" y="55" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#9c82d8">dopłacone</text>
+      </svg>
+      <div class="diagram-caption">Wysoki roughness, ten sam materiał — fioletowy pasek to energia, którą jednorazowe rozproszenie ukradło, a wielorazowe oddaje.</div>
+    </div>
+
+    <p>Metoda Kulli i Conty'ego (2017) szacuje tę brakującą energię analitycznie — z tabeli policzonej raz, offline, w funkcji roughness i kąta — i dodaje ją jako dodatkowy, miękki lob. Coraz więcej silników (Blender Cycles, Arnold, Unreal) robi to domyślnie, bez żadnego przełącznika po stronie artysty.</p>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>„Anisotropy” i „Anisotropic Rotation” w Blenderze/Unrealu/Arnoldzie to αx/αy i orientacja T z tego rozdziału. „Clearcoat” i „Clearcoat Roughness” w Principled BSDF to dosłownie drugi lob z sekcji o lakierze. Multi-scatter najczęściej nie ma własnego slidera — po prostu jest domyślnie włączony w nowszych wersjach silników.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Anizotropia</dt><dd>Roughness zależny od kierunku wzdłuż powierzchni.</dd>
+      <dt>Tangenta / bitangenta (T, B)</dt><dd>Dwie osie lokalnej ramki na powierzchni, prostopadłe do N.</dd>
+      <dt>Clearcoat</dt><dd>Druga, niezależna warstwa specular nad materiałem bazowym.</dd>
+      <dt>Multi-scatter GGX</dt><dd>Kompensacja energii utraconej przez model jednorazowego rozproszenia.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Dodatek B rozwija Rozdział 15: importance sampling, next event estimation i multiple importance sampling — czyli dlaczego niektóre próbki w path tracingu „liczą się” dużo bardziej niż inne.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-10-materialy.html">↑ Rozdział 10: Materiały</a>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Rozdział 17 — Struktury sceny, transformacje i instancing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.formula{font-size:15px;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>GRAPH · scene tree</span><span>XFORM · parent∘child</span><span>INSTANCE · shared BVH</span><span>RAY · to local space</span>
+  </div>
+
+  <div class="eyebrow">Rozdział 17 / Zastosowania praktyczne</div>
+  <h1>Struktury sceny, transformacje i instancing</h1>
+  <p class="subtitle">Mamy już kompletny silnik światła. Zostało pytanie równie praktyczne: jak w ogóle zorganizować milion obiektów, kamerę i światła w jedną strukturę, którą ten silnik przetestuje.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Scena to drzewo transformacji — każdy obiekt ma swoją pozycję względem rodzica, nie względem świata.</li>
+      <li>Instancing pozwala tysiącom kopii tego samego obiektu (drzewa w lesie, śruby w silniku) dzielić jedną siatkę i jedno BVH z Rozdziału 13 — różni je tylko macierz transformacji.</li>
+      <li>Sztuczka wydajnościowa: transformujesz promień do lokalnej przestrzeni obiektu, nie geometrię do świata — test przecięcia zostaje dokładnie ten z Rozdziału 4.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Hierarchia</div>
+    <h2>Scena jako drzewo transformacji</h2>
+    <p>Koło samochodu nie ma sensownej „pozycji w świecie” zapisanej na trwałe — ma pozycję <em>względem</em> nadwozia, a nadwozie ma pozycję względem świata. Gdy samochód rusza, każde koło porusza się automatycznie, bo dziedziczy transformację rodzica. To jest dosłownie ten sam mechanizm co parent/child w outlinerze Mayi albo Blendera.</p>
+
+    <div class="formula">M_world = M_parent · M_local<span class="sub">macierze transformacji składają się przez mnożenie, od korzenia drzewa aż do konkretnego obiektu</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Scene.graph</span><span>parent → child</span></div>
+      <svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="380" cy="50" r="16" fill="#20242c" stroke="#9c82d8" stroke-width="2"/>
+        <text x="380" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#9c82d8">WORLD</text>
+
+        <line x1="380" y1="66" x2="380" y2="120" stroke="#4fc3c0" stroke-width="1.8"/>
+        <circle cx="380" cy="135" r="14" fill="#20242c" stroke="#4fc3c0" stroke-width="1.8"/>
+        <text x="380" y="115" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#4fc3c0">SAMOCHÓD (T1)</text>
+
+        <line x1="380" y1="149" x2="220" y2="220" stroke="#e8a33d" stroke-width="1.5"/>
+        <line x1="380" y1="149" x2="380" y2="220" stroke="#e8a33d" stroke-width="1.5"/>
+        <line x1="380" y1="149" x2="540" y2="220" stroke="#e8a33d" stroke-width="1.5"/>
+
+        <circle cx="220" cy="230" r="10" fill="#e8a33d" fill-opacity="0.7"/>
+        <text x="220" y="252" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">KOŁO_PL (T2)</text>
+        <circle cx="380" cy="230" r="10" fill="#e8a33d" fill-opacity="0.7"/>
+        <text x="380" y="252" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">KOŁO_PP (T3)</text>
+        <circle cx="540" cy="230" r="10" fill="#e8a33d" fill-opacity="0.7"/>
+        <text x="540" y="252" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">NADWOZIE (T4)</text>
+      </svg>
+      <div class="diagram-caption">Każde T to transformacja względna do rodzica — poruszenie SAMOCHODU automatycznie poruszy wszystkie koła.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Instancing</div>
+    <h2>Jedna siatka, tysiące kopii</h2>
+    <p>Las z dziesięciu tysięcy drzew nie potrzebuje dziesięciu tysięcy kopii geometrii i BVH w pamięci. Instancing przechowuje jedną „master” siatkę z jednym BVH, a każde wystąpienie w scenie to tylko odniesienie do niej plus własna macierz transformacji (pozycja, rotacja, skala).</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Instancing</span><span>1 mesh, N transforms</span></div>
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+        <rect x="30" y="90" width="120" height="120" rx="8" fill="#20242c" stroke="#9c82d8" stroke-width="2"/>
+        <polygon points="90,120 70,175 110,175" fill="#4fc3c0" fill-opacity="0.6"/>
+        <text x="90" y="230" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#9c82d8">MASTER MESH</text>
+        <text x="90" y="245" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#9c82d8">+ BVH</text>
+
+        <polygon points="330,150 314,195 346,195" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-dasharray="3 3"/>
+        <polygon points="460,110 442,165 478,165" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-dasharray="3 3"/>
+        <polygon points="560,190 548,222 572,222" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-dasharray="3 3"/>
+        <polygon points="670,140 652,190 688,190" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-dasharray="3 3"/>
+
+        <line x1="150" y1="150" x2="322" y2="172" stroke="#8b909b" stroke-width="1" stroke-dasharray="2 3"/>
+        <line x1="150" y1="150" x2="452" y2="138" stroke="#8b909b" stroke-width="1" stroke-dasharray="2 3"/>
+        <line x1="150" y1="150" x2="556" y2="206" stroke="#8b909b" stroke-width="1" stroke-dasharray="2 3"/>
+        <line x1="150" y1="150" x2="660" y2="165" stroke="#8b909b" stroke-width="1" stroke-dasharray="2 3"/>
+
+        <text x="330" y="215" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">T_a</text>
+        <text x="460" y="180" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">T_b</text>
+        <text x="560" y="235" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">T_c</text>
+        <text x="670" y="205" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">T_d</text>
+      </svg>
+      <div class="diagram-caption">Cztery instancje, jedna siatka w pamięci — każda różni się tylko macierzą transformacji.</div>
+    </div>
+
+    <p>Żeby to zadziałało bez kopiowania geometrii, promień testowany przeciw instancji jest transformowany odwrotną macierzą instancji do jej lokalnej przestrzeni — i tam trafia w dokładnie tę samą siatkę i BVH, co każda inna instancja.</p>
+
+    <div class="formula">ray_local = M⁻¹ · ray_world<br>hit_world = M · hit_local</div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Transform.the.ray</span><span>not the geometry</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <line x1="380" y1="20" x2="380" y2="240" stroke="#2a2f38"/>
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">ŚWIAT</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">LOKALNIE (OBJECT SPACE)</text>
+
+        <g transform="translate(190,150) rotate(25)">
+          <rect x="-50" y="-40" width="100" height="80" fill="#20242c" stroke="#4fc3c0" stroke-width="1.6"/>
+          <polygon points="0,-20 -18,20 18,20" fill="#e8a33d" fill-opacity="0.6"/>
+        </g>
+        <line x1="60" y1="220" x2="180" y2="140" stroke="#e8a33d" stroke-width="2"/>
+
+        <rect x="520" y="90" width="100" height="80" fill="#20242c" stroke="#4fc3c0" stroke-width="1.6"/>
+        <polygon points="570,110 552,150 588,150" fill="#e8a33d" fill-opacity="0.6"/>
+        <line x1="430" y1="200" x2="545" y2="150" stroke="#e8a33d" stroke-width="2"/>
+        <text x="570" y="200" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">test jak w Rozdziale 4/13</text>
+      </svg>
+      <div class="diagram-caption">Ten sam promień, ta sama siatka — tylko obrócona i przesunięta w jedną albo drugą stronę macierzą M.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Instancje w Blenderze, Houdinim (copy-to-points) czy Unrealu (Instanced Static Mesh) to dosłownie ten mechanizm — dlatego rozsypanie dziesięciu tysięcy kopii tego samego kamienia kosztuje ułamek pamięci dziesięciu tysięcy unikalnych siatek.</p>
+    <p>Import z OBJ, FBX, glTF czy USD sprowadza się do wypełnienia dokładnie tych struktur: pozycje wierzchołków (Rozdział 2), normalne (Rozdział 4), UV (Rozdział 9) i hierarchia transformacji z tego rozdziału. Żaden z tych formatów nie wymaga nowej matematyki — tylko innego układu bajtów na dysku.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Scene graph</dt><dd>Hierarchiczna struktura transformacji obiektów w scenie.</dd>
+      <dt>Transformacja lokalna / world</dt><dd>Pozycja względem rodzica kontra pozycja finalna w świecie.</dd>
+      <dt>Instancing</dt><dd>Wiele wystąpień jednej siatki, różniących się macierzą transformacji.</dd>
+      <dt>Object space</dt><dd>Lokalny układ współrzędnych siatki, niezależny od jej umiejscowienia w scenie.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Scenę mamy już zorganizowaną. W następnym rozdziale wracamy do samego światła — ale tym razem przechodzącego <em>przez</em> materię: mgła, dym i rozpraszanie podpowierzchniowe, czyli wolumetria.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="rozdzial-16-bdpt-photon-mapping.html">← Poprzedni</a>
+    <a href="rozdzial-18-wolumetria.html">Następny →</a>
+</div>
+</div>
+</body>
+</html>

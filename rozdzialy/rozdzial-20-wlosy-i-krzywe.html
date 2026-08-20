@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Rozdział 20 — Włosy, sierść i krzywe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.formula{font-size:15px;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>PRIMITIVE · curve</span><span>SHADING AXIS · T (tangent)</span><span>PATHS · R / TT / TRT</span><span>MODEL · Marschner</span>
+  </div>
+
+  <div class="eyebrow">Rozdział 20 / Specjalizacje</div>
+  <h1>Włosy, sierść i krzywe</h1>
+  <p class="subtitle">Wszystko od Rozdziału 4 zakładało trójkąty. Ludzka głowa ma około stu tysięcy włosów — trójkątowanie każdego byłoby szaleństwem. Włosy renderuje się inaczej: jako krzywe, cieniowane względem kierunku wzdłuż włosa, nie normalnej powierzchni.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Włos to krzywa z promieniem, nie siatka trójkątów — test przecięcia sprawdza cienki „rurkowaty” kształt wzdłuż krzywej.</li>
+      <li>Włos nie ma dobrze zdefiniowanej normalnej powierzchni — cieniowanie liczy się względem tangenty T, kierunku wzdłuż włosa.</li>
+      <li>Model Marschnera rozdziela światło na trzy ścieżki przez przekrój włosa: R (odbicie), TT (przejście na wylot), TRT (przejście, odbicie wewnątrz, wylot) — stąd charakterystyczny podwójny błysk i kolorowa poświata prawdziwych włosów.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Prymityw</div>
+    <h2>Krzywa, nie trójkąt</h2>
+    <p>Włos reprezentuje się jako krzywa (najczęściej Béziera) z promieniem — cienka „rurka” wygięta w przestrzeni. Test przecięcia promienia z taką rurką jest osobnym prymitywem, obok sfery z Rozdziału 2 i trójkąta z Rozdziału 4: sprawdzasz odległość promienia od osi krzywej w każdym punkcie, porównując z promieniem włosa. BVH z Rozdziału 13 działa identycznie — każdy segment krzywej dostaje własne AABB, tak jak każdy trójkąt.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Triangle.N.vs.hair.T</span><span>different shading axis</span></div>
+      <svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="hc1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+        </defs>
+        <line x1="380" y1="20" x2="380" y2="260" stroke="#2a2f38"/>
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">TRÓJKĄT: NORMALNA N</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">WŁOS: TANGENTA T</text>
+
+        <polygon points="120,220 280,220 200,110" fill="#20242c" stroke="#2a2f38" stroke-width="1.5"/>
+        <line x1="200" y1="180" x2="200" y2="100" stroke="#9c82d8" stroke-width="2.3" marker-end="url(#hc1)"/>
+        <text x="212" y="95" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">N</text>
+        <circle cx="200" cy="180" r="4" fill="#ecebe4"/>
+
+        <path d="M 480,220 C 500,150 560,140 560,90 C 560,70 590,60 610,60" fill="none" stroke="#8b909b" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="555" cy="120" r="4" fill="#ecebe4"/>
+        <line x1="555" y1="120" x2="600" y2="98" stroke="#e8a33d" stroke-width="2.3" marker-end="url(#hc1)"/>
+        <text x="608" y="90" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">T</text>
+        <ellipse cx="555" cy="120" rx="9" ry="5" fill="none" stroke="#4fc3c0" stroke-width="1.3" transform="rotate(-35 555 120)"/>
+      </svg>
+      <div class="diagram-caption">Trójkąt cieniujesz względem N, sterczącej z płaskiej powierzchni. Włos — względem T, biegnącej wzdłuż krzywej.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Modele</div>
+    <h2>Kajiya-Kay i Marschner</h2>
+    <p>Najprostszy model (Kajiya-Kay, 1989) traktuje włos jak nieskończenie tonki cylinder: diffuse i specular liczone względem T, analogicznie do Lamberta i Blinn-Phonga z Rozdziału 5, tylko z sin kąta między promieniem a T w miejsce cos kąta względem N. Wystarcza do przekonującej sierści z daleka, ale nie oddaje charakterystycznego, kolorowego błysku prawdziwych włosów z bliska.</p>
+    <p>Model Marschnera (2003) idzie głębiej: włos to nie matowy cylinder, a przezroczyste włókno z rdzeniem, w którym światło może się odbić na powierzchni albo wniknąć do wnętrza — dokładnie ta sama fizyka co załamanie ze Rozdziału 7, tylko w cylindrycznym przekroju.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Marschner.paths</span><span>R / TT / TRT</span></div>
+      <svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="mp1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+          <marker id="mp2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4fc3c0"/></marker>
+          <marker id="mp3" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9c82d8"/></marker>
+        </defs>
+        <circle cx="380" cy="150" r="80" fill="#20242c" fill-opacity="0.5" stroke="#3a4048" stroke-width="1.5"/>
+        <line x1="200" y1="70" x2="330" y2="115" stroke="#8b909b" stroke-width="1.6"/>
+
+        <line x1="330" y1="115" x2="255" y2="55" stroke="#e8a33d" stroke-width="2" marker-end="url(#mp1)"/>
+        <text x="220" y="45" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">R</text>
+
+        <path d="M330,115 L430,185 L500,150" fill="none" stroke="#4fc3c0" stroke-width="2" marker-end="url(#mp2)"/>
+        <text x="510" y="146" font-family="IBM Plex Mono" font-size="12" fill="#4fc3c0">TT</text>
+
+        <path d="M330,115 L400,210 L340,230 L280,175" fill="none" stroke="#9c82d8" stroke-width="2" marker-end="url(#mp3)"/>
+        <text x="255" y="185" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">TRT</text>
+
+        <text x="380" y="250" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">przekrój włosa</text>
+      </svg>
+      <div class="diagram-caption">R daje pierwszy błysk, TRT drugi (przesunięty, kolorowy) — to ich suma tworzy charakterystyczny, podwójny highlight na włosach.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Systemy włosów w XGen (Maya), Houdinim czy Blenderze generują krzywe, ale renderer (Arnold, RenderMan) i tak zamienia je na dedykowany prymityw krzywej z własnym BVH — nie na trójkątowaną „wstążkę”, która nie dałaby poprawnego cieniowania Marschnera.</p>
+    <p>Sto tysięcy włosów, każdy z kilkoma segmentami krzywej, to i tak miliony prymitywów do przetestowania — dlatego sierść i włosy są jednym z najdroższych elementów renderu, mimo że każdy pojedynczy włos jest niemal niewidzialny.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Krzywa (curve primitive)</dt><dd>Prymityw geometrii: cienka rurka wzdłuż krzywej Béziera.</dd>
+      <dt>Tangenta (T)</dt><dd>Kierunek wzdłuż włosa; oś odniesienia dla cieniowania, zamiast normalnej.</dd>
+      <dt>Model Kajiya-Kay</dt><dd>Prosty model diffuse+specular dla włosa jako matowego cylindra.</dd>
+      <dt>Model Marschnera</dt><dd>Model rozdzielający światło na ścieżki R, TT, TRT przez przekrój włosa.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Z mikroskali włosa przechodzimy do skali planetarnej. W następnym rozdziale: atmosfera i niebo — dokładnie ten sam wolumen z Rozdziału 18, tylko rozciągnięty na całą planetę.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="rozdzial-19-denoising.html">← Poprzedni</a>
+    <a href="rozdzial-21-atmosfera.html">Następny →</a>
+</div>
+</div>
+</body>
+</html>

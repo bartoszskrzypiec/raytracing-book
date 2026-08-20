@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek M — ACES, część 2: przestrzenie AP0 i AP1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>AP0 · archiwalny, całe widmo</span><span>AP1 · roboczy (ACEScg)</span><span>IDT · kamera → ACES</span><span>SERIA · ACES 2/4</span>
+  </div>
+
+  <div class="eyebrow">Wykład: ACES — część 2 z 4</div>
+  <h1>Przestrzenie AP0 i AP1</h1>
+  <p class="subtitle">ACES nie używa sRGB, nawet w tle. Ma własne, dużo szersze podstawowe barwy (primaries) — i dwa różne warianty, bo jeden do archiwizacji, a drugi do liczenia, to dwa różne zadania.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>AP0 (użyte w ACES2065-1) obejmuje praktycznie całą przestrzeń widzialnych barw — nawet trochę więcej, dla zapasu na przyszłość.</li>
+      <li>AP1 (użyte w ACEScg) jest węższe, ale wciąż dużo szersze niż sRGB — wybrane, żeby operacje matematyczne (blur, mix, grading) nie „wychodziły” tak łatwo poza sensowny zakres jak w AP0.</li>
+      <li>IDT (Input Device Transform) to konwersja z konkretnej kamery (LogC, S-Log3, Log3G10) do ACES — każdy producent kamery publikuje własny.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Gamut</div>
+    <h2>Dlaczego ACES ma własne, szersze primaries</h2>
+    <p>sRGB (Dodatek E) obejmuje ułamek barw, które widzi ludzkie oko — wystarczająco dla typowego monitora, za mało dla materiału z kamery filmowej, która rejestruje dużo więcej. ACES definiuje własne primaries na tyle szerokie, że praktycznie żadna realna kamera ani ekran nie wychodzi poza nie — dzięki temu konwersja <em>do</em> ACES z jakiegokolwiek źródła nigdy nie musi „ścinać” koloru.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Chromaticity.AP0.AP1.sRGB</span><span>nested gamuts</span></div>
+      <svg viewBox="0 0 500 420" xmlns="http://www.w3.org/2000/svg">
+        <path d="M170,380 Q100,300 120,180 Q130,80 200,60 Q280,40 340,90 Q400,160 430,340 L170,380 Z" fill="#20242c" stroke="#3a4048" stroke-width="1.5"/>
+        <text x="250" y="410" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">diagram chromatyczności (schematycznie)</text>
+
+        <polygon points="430,340 120,60 170,380" fill="none" stroke="#9c82d8" stroke-width="1.8"/>
+        <text x="440" y="345" font-family="IBM Plex Mono" font-size="11" fill="#9c82d8">AP0</text>
+
+        <polygon points="410,325 140,75 180,370" fill="none" stroke="#4fc3c0" stroke-width="1.8"/>
+        <text x="380" y="60" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">AP1 (ACEScg)</text>
+
+        <polygon points="370,310 160,110 200,355" fill="#e8a33d" fill-opacity="0.18" stroke="#e8a33d" stroke-width="1.8"/>
+        <text x="300" y="330" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">sRGB</text>
+      </svg>
+      <div class="diagram-caption">Trzy zagnieżdżone trójkąty — sRGB to niewielki wycinek tego, co obejmuje AP0.</div>
+    </div>
+
+    <p>ACES2065-1 (plik archiwalny, AP0) jest zaprojektowany, żeby nigdy nie trzeba było go „przerabiać” — nawet jeśli za 20 lat pojawi się ekran o gamucie szerszym niż dzisiejsze, oryginalne dane wciąż go obejmą. ACEScg (przestrzeń robocza, AP1) jest węższe świadomie: niektóre operacje matematyczne (mocny blur, niektóre mnożenia macierzowe w kompozycji) w AP0 łatwiej wypychają wartości w ujemne albo bardzo nietypowe liczby — AP1 jest bezpieczniejszym kompromisem do faktycznego liczenia i renderowania.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: IDT</div>
+    <h2>Input Device Transform: wejście z kamery</h2>
+    <p>Każda kamera zapisuje obraz we własnym, zoptymalizowanym pod swój sensor kodowaniu logarytmicznym — ARRI LogC, Sony S-Log3, RED Log3G10. IDT to publikowana przez producenta konwersja z tego konkretnego kodowania na liniowe wartości ACES. Bez IDT, wczytanie materiału z dwóch różnych kamer do jednego projektu dałoby dwa niekompatybilne zestawy liczb, mimo że oba mają wyglądać „tak samo”.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>IDT.pipeline</span><span>camera log → ACES linear</span></div>
+      <svg viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="idt1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+        </defs>
+        <g font-family="IBM Plex Sans" font-size="11.5" fill="#ecebe4">
+          <rect x="20" y="70" width="170" height="60" rx="8" fill="#20242c" stroke="#4fc3c0" stroke-opacity="0.7"/>
+          <text x="105" y="95" text-anchor="middle">Kamera</text><text x="105" y="112" text-anchor="middle">(LogC / S-Log3 / …)</text>
+
+          <rect x="260" y="70" width="170" height="60" rx="8" fill="#20242c" stroke="#e8a33d" stroke-opacity="0.7"/>
+          <text x="345" y="95" text-anchor="middle">IDT</text><text x="345" y="112" text-anchor="middle">(od producenta)</text>
+
+          <rect x="500" y="70" width="170" height="60" rx="8" fill="#20242c" stroke="#e8a33d"/>
+          <text x="585" y="95" text-anchor="middle" font-weight="600">ACES</text><text x="585" y="112" text-anchor="middle">(linear, AP0/AP1)</text>
+        </g>
+        <line x1="190" y1="100" x2="258" y2="100" stroke="#e8a33d" stroke-width="2" marker-end="url(#idt1)"/>
+        <line x1="430" y1="100" x2="498" y2="100" stroke="#e8a33d" stroke-width="2" marker-end="url(#idt1)"/>
+      </svg>
+      <div class="diagram-caption">Osobny IDT na każdą kamerę — ale ten sam ACES na wyjściu, niezależnie od tego, skąd materiał przyszedł.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Kiedy w Resolve, Nuke czy After Effects wybierasz „Input Color Space: ARRI LogC” albo „RED Log3G10” — wybierasz właśnie IDT z tego rozdziału. Jeśli wybierzesz złą kamerę dla danego materiału (albo zły model sensora tej samej kamery), kolory wejdą do ACES już przekłamane — żaden kolejny krok w pipeline nie naprawi tego błędu, bo dzieje się na samym wejściu.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>AP0</dt><dd>Primaries ACES2065-1 — obejmują praktycznie całe widzialne widmo.</dd>
+      <dt>AP1</dt><dd>Primaries ACEScg — węższe, bezpieczniejsze do faktycznych obliczeń.</dd>
+      <dt>ACES2065-1</dt><dd>Format archiwalny/wymiany, oparty na AP0.</dd>
+      <dt>ACEScg</dt><dd>Przestrzeń robocza do renderowania i kompozycji, oparta na AP1.</dd>
+      <dt>IDT (Input Device Transform)</dt><dd>Konwersja z natywnego kodowania konkretnej kamery do ACES.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Część 3 domyka drugą stronę pipeline’u: jak scene-referred ACES trafia z powrotem na konkretny ekran przez RRT i ODT.</p>
+    <div class="series-nav">
+      <span>Część 1: Problem</span><span class="current">Część 2: AP0/AP1</span><span>Część 3: RRT/ODT</span><span>Część 4: 1.0 vs 2.0</span>
+    </div>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek G — Głębiej: mipmapping i filtrowanie tekstur</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>MIP · log2(footprint)</span><span>FILTER · tri/aniso</span><span>FIX · minification aliasing</span><span>EXT OF · R.9</span>
+  </div>
+
+  <div class="eyebrow">Dodatek G / Głębiej: Tekstury</div>
+  <h1>Mipmapping i filtrowanie tekstur</h1>
+  <p class="subtitle">Rozdział 9 nauczył Cię filtrowania biliniowego — dobrego, gdy zbliżasz się do tekstury. Ten dodatek pokazuje odwrotny problem: co się dzieje, gdy tekstura jest daleko albo widziana pod kątem, i czemu jeden teksel przestaje wystarczać.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Minifikacja: gdy jeden piksel ekranu pokrywa wiele teksli, próbkowanie jednego z nich (nawet biliniowo) gubi resztę — stąd migotanie.</li>
+      <li>Mipmapa to piramida wstępnie zmniejszonych, uśrednionych wersji tekstury; poziom wybiera się z pochodnych UV względem pikseli ekranu.</li>
+      <li>Filtrowanie anizotropowe naprawia przypadek, gdy odcisk piksela na teksturze jest rozciągniętym prostokątem, nie kwadratem — klasyczny widok podłogi pod kątem.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Problem</div>
+    <h2>Kiedy jeden teksel to za mało: minifikacja</h2>
+    <p>Rozdział 9 zajmował się powiększeniem — jeden piksel ekranu mniejszy niż jeden teksel, więc interpolujesz między kilkoma. Minifikacja to sytuacja odwrotna: tekstura widziana z daleka albo pod kątem, gdzie jeden piksel ekranu odpowiada za <em>dziesiątki</em> teksli. Próbkowanie tylko jednego z nich (nawet biliniowo, czyli czterech) ignoruje resztę — dokładnie ten sam rodzaj aliasingu z Rozdziału 8, tylko na detalu tekstury, nie na krawędzi geometrii.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Mipmapy</div>
+    <h2>Piramida wstępnie zmniejszonych wersji</h2>
+    <p>Mipmapping wstępnie liczy ciąg coraz mniejszych, poprawnie <em>uśrednionych</em> (nie tylko przerzedzonych) wersji tekstury — każdy poziom w połowie rozdzielczości poprzedniego. Renderer szacuje, jak duży obszar tekstury pokrywa piksel (z pochodnych ekranowych współrzędnych UV — jak szybko UV zmienia się między sąsiednimi pikselami) i wybiera poziom, którego rozmiar teksla z grubsza odpowiada temu obszarowi.</p>
+
+    <div class="formula">poziom_mip ≈ log2( max(|∂uv/∂x|, |∂uv/∂y|) · rozmiar_tekstury )<span class="sub">∂uv/∂x, ∂uv/∂y — jak szybko UV zmienia się wzdłuż pikseli ekranu; większa zmiana = wyższy (bardziej rozmyty) poziom mip</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Mip.pyramid</span><span>each level pre-averaged</span></div>
+      <svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="chk4" width="25%" height="25%" patternUnits="objectBoundingBox">
+            <rect width="50%" height="50%" fill="#e8a33d"/><rect x="50%" width="50%" height="50%" fill="#20242c"/>
+            <rect y="50%" width="50%" height="50%" fill="#20242c"/><rect x="50%" y="50%" width="50%" height="50%" fill="#e8a33d"/>
+          </pattern>
+          <pattern id="chk2" width="50%" height="50%" patternUnits="objectBoundingBox">
+            <rect width="50%" height="50%" fill="#e8a33d"/><rect x="50%" width="50%" height="50%" fill="#20242c"/>
+            <rect y="50%" width="50%" height="50%" fill="#20242c"/><rect x="50%" y="50%" width="50%" height="50%" fill="#e8a33d"/>
+          </pattern>
+        </defs>
+        <rect x="40" y="50" width="140" height="140" fill="url(#chk4)" stroke="#2a2f38"/>
+        <text x="110" y="205" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">mip 0 (pełna rozdz.)</text>
+
+        <rect x="220" y="90" width="70" height="70" fill="url(#chk2)" stroke="#2a2f38"/>
+        <text x="255" y="175" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">mip 1</text>
+
+        <rect x="330" y="108" width="35" height="35" fill="url(#chk2)" stroke="#2a2f38"/>
+        <text x="347" y="158" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">mip 2</text>
+
+        <rect x="400" y="117" width="17" height="17" fill="#6b6244" stroke="#2a2f38"/>
+        <text x="408" y="150" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">mip 3</text>
+
+        <rect x="450" y="120" width="9" height="9" fill="#6b6244" stroke="#2a2f38"/>
+      </svg>
+      <div class="diagram-caption">Każdy poziom to prawdziwa, uśredniona wersja poprzedniego — nie zwykłe zmniejszenie obrazka.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Filtrowanie</div>
+    <h2>Trójliniowe i anizotropowe</h2>
+    <p>Filtrowanie <strong>trójliniowe</strong> próbkuje biliniowo (Rozdział 9) z dwóch sąsiednich poziomów mip naraz i miesza je liniowo — wygładza „przeskakiwanie” między poziomami przy ruchu kamery.</p>
+    <p>Mipmapping zakłada, że odcisk piksela na teksturze jest z grubsza kwadratowy. Pod płytkim kątem — klasyczna podłoga uciekająca w dal — odcisk jest długim, wąskim prostokątem: krótki w jedną stronę, bardzo długi w drugą. Zwykła mipmapa musi wybrać jeden poziom dla obu wymiarów naraz — albo rozmywa zbyt mocno w kierunku krótkim, albo zbyt mało w długim. <strong>Filtrowanie anizotropowe</strong> próbkuje kilka punktów wzdłuż wydłużonego kierunku, z wyższego (ostrzejszego) poziomu mip, i uśrednia — zachowując ostrość tam, gdzie się liczy.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Footprint.isotropic.vs.stretched</span><span>grazing angle</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <line x1="380" y1="20" x2="380" y2="240" stroke="#2a2f38"/>
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">ODCISK KWADRATOWY</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">ODCISK ROZCIĄGNIĘTY (KĄT PŁYTKI)</text>
+
+        <rect x="160" y="130" width="60" height="60" fill="#4fc3c0" fill-opacity="0.25" stroke="#4fc3c0" stroke-width="1.5"/>
+        <circle cx="190" cy="160" r="4" fill="#e8a33d"/>
+        <text x="190" y="215" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">1 próbka mip wystarczy</text>
+
+        <rect x="470" y="150" width="200" height="24" fill="#4fc3c0" fill-opacity="0.25" stroke="#4fc3c0" stroke-width="1.5"/>
+        <circle cx="500" cy="162" r="3.5" fill="#e8a33d"/><circle cx="540" cy="162" r="3.5" fill="#e8a33d"/><circle cx="580" cy="162" r="3.5" fill="#e8a33d"/><circle cx="620" cy="162" r="3.5" fill="#e8a33d"/><circle cx="655" cy="162" r="3.5" fill="#e8a33d"/>
+        <text x="570" y="200" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">kilka próbek wzdłuż rozciągnięcia</text>
+      </svg>
+      <div class="diagram-caption">Ten sam ekranowy piksel — po prawej jego odcisk na teksturze jest dużo dłuższy niż szerszy.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>„Anisotropic Filtering: 2×/4×/8×/16×” to ustawienie karty graficznej i gry kontrolujące, ile próbek wzdłuż rozciągnięcia pozwala wziąć filtr. Mipmapy generują się automatycznie przy imporcie tekstury w Unity/Unrealu — ale bardzo drobne wzory (tekst, tonkie linie) potrafią migotać nawet z dobrym filtrowaniem, stąd wytyczne dla artystów tekstur o unikaniu ekstremalnie wysokich częstotliwości w powtarzalnych wzorach.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Minifikacja</dt><dd>Sytuacja, gdy piksel ekranu pokrywa wiele teksli tekstury.</dd>
+      <dt>Mipmapa</dt><dd>Piramida wstępnie uśrednionych, coraz mniejszych wersji tekstury.</dd>
+      <dt>Poziom mip</dt><dd>Wybrany stopień piramidy, szacowany z pochodnych UV względem ekranu.</dd>
+      <dt>Filtrowanie trójliniowe</dt><dd>Interpolacja między dwoma sąsiednimi poziomami mip.</dd>
+      <dt>Filtrowanie anizotropowe</dt><dd>Wielopróbkowe filtrowanie wzdłuż rozciągniętego odcisku piksela.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Dodatek H wraca do Rozdziału 7: dyspersja i aberracja chromatyczna — czemu pryzmat rozszczepia światło na kolory, i jak to symulować w ray tracerze.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-09-tekstury-i-uv.html">↑ Rozdział 9: Tekstury i UV</a>
+</div>
+</div>
+</body>
+</html>

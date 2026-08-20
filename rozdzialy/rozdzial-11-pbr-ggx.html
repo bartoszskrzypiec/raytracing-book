@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Rozdział 11 — PBR: rozkład GGX i pełny model Cook-Torrance'a</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>D · GGX</span><span>G · SMITH</span><span>F · SCHLICK</span><span>α = ROUGHNESS²</span>
+  </div>
+
+  <div class="eyebrow">Rozdział 11 / Realizm i jakość obrazu</div>
+  <h1>PBR: rozkład GGX i pełny model Cook-Torrance'a</h1>
+  <p class="subtitle">Rozdział 10 przedstawił D, G i F jako koncepcje. Ten rozdział daje im konkretne wzory — te, które dosłownie stoją za każdym „Principled”/„Standard Surface” shaderem, jakiego dotknąłeś w Blenderze, Arnoldzie czy Unrealu.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Rozkład GGX mówi, jaki procent mikrofasetek jest zwrócony w stronę H — to człon D, teraz z konkretnym wzorem i charakterystycznym, długim „ogonem”.</li>
+      <li>Człon G koryguje D o to, że fasetki wzajemnie się zasłaniają i zacieniają — bez niego BRDF traci energię.</li>
+      <li>Złożenie D, G, F i diffuse ważonego przez (1 − metallic) to kompletny, energooszczędny PBR w parametryzacji metallic-roughness.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Rozkład D</div>
+    <h2>GGX: ile fasetek jest zwróconych w stronę H</h2>
+    <p>Standardem od połowy 2010. jest rozkład GGX (Trowbridge-Reitz), spopularyzowany przez kursy Disneya o PBR. Mówi, jaka część mikrofasetek ma normalną wystarczająco bliską H, żeby wziąć udział w odbiciu:</p>
+
+    <div class="formula">D(H) = α² / (π · ((N·H)²·(α²−1) + 1)²)<span class="sub">α = roughness² — artyści ustawiają „roughness”, ale wzór używa jego kwadratu; to sprawia, że slider czuje się bardziej liniowy percepcyjnie</span></div>
+
+    <p>GGX wyróżnia się na tle starszych rozkładów (jak wykładnik Blinn-Phonga z Rozdziału 5) długim „ogonem” — nawet bardzo gładkie materiały zachowują subtelną, miękką poświatę wokół ostrego jądra błysku. To właśnie ten ogon dał GGX-owi przewagę: fotografie realnych materiałów też mają taką poświatę, a starsze modele jej nie miały.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>GGX.vs.BlinnPhong</span><span>tail comparison</span></div>
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+        <line x1="60" y1="250" x2="680" y2="250" stroke="#8b909b" stroke-width="1.5"/>
+        <line x1="60" y1="250" x2="60" y2="40" stroke="#8b909b" stroke-width="1.5"/>
+        <g font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">
+          <text x="60" y="268" text-anchor="middle">0°</text>
+          <text x="266" y="268" text-anchor="middle">20°</text>
+          <text x="473" y="268" text-anchor="middle">40°</text>
+          <text x="680" y="268" text-anchor="middle">60°</text>
+          <text x="380" y="288" text-anchor="middle">kąt od H</text>
+          <text x="48" y="253" text-anchor="end">0</text>
+          <text x="48" y="44" text-anchor="end">1,0</text>
+        </g>
+        <text x="20" y="150" font-family="IBM Plex Mono" font-size="11" fill="#8b909b" transform="rotate(-90 20 150)">D(H)</text>
+
+        <path d="M 60,40 C 90,70 120,115 143,145 C 170,180 195,205 215,219 C 245,232 265,238 287,244 C 320,248 350,249 370,249 C 420,250 480,250 525,250" fill="none" stroke="#4fc3c0" stroke-width="2.3"/>
+        <path d="M 60,40 C 110,70 145,110 163,135 C 200,175 240,195 267,204 C 310,215 340,222 370,229 C 430,236 480,239 525,242 C 580,244 630,246 680,247" fill="none" stroke="#e8a33d" stroke-width="2.6"/>
+
+        <circle cx="600" cy="55" r="5" fill="#e8a33d"/>
+        <text x="612" y="59" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">GGX</text>
+        <circle cx="600" cy="75" r="5" fill="#4fc3c0"/>
+        <text x="612" y="79" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">Blinn-Phong</text>
+      </svg>
+      <div class="diagram-caption">Ten sam szczyt, inny ogon — GGX zostaje widoczny daleko poza kątem, gdzie Blinn-Phong już spadł do zera.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Człon G</div>
+    <h2>Samo-zasłanianie i samo-zacienianie mikrofasetek</h2>
+    <p>Nie każda mikrofasetka zwrócona w stronę H faktycznie bierze udział w odbiciu. Sąsiednia, wyższa fasetka może ją zacienić od strony światła (promień L nigdy nie dociera) albo zamaskować od strony widza (odbity promień nigdy nie dociera do V) — to ten sam mechanizm samo-zacieniania, który poznałeś w Rozdziale 6, tylko teraz w mikroskali i liczony statystycznie, wzorem, bez śledzenia promieni.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Smith.G1</span><span>shadowing vs masking</span></div>
+      <svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="g1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+          <marker id="g2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4fc3c0"/></marker>
+        </defs>
+        <line x1="380" y1="20" x2="380" y2="260" stroke="#2a2f38"/>
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">ZACIENIANIE · od L</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">MASKOWANIE · do V</text>
+
+        <polyline points="40.0,186.7 77.5,194.2 115.0,219.7 152.5,187.6 190.0,190.5 227.5,196.1 265.0,167.9 302.5,190.8 340.0,199.1" fill="none" stroke="#8b909b" stroke-width="2"/>
+        <line x1="340" y1="90" x2="265" y2="167.9" stroke="#e8a33d" stroke-width="2.2" marker-end="url(#g1)"/>
+        <text x="330" y="80" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">L</text>
+        <circle cx="265" cy="167.9" r="4" fill="#9c82d8"/>
+        <line x1="265" y1="167.9" x2="115" y2="219.7" stroke="#8b909b" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <circle cx="115" cy="219.7" r="4" fill="#8b909b"/>
+        <text x="80" y="240" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">w cieniu</text>
+
+        <polyline points="420.0,186.7 457.5,194.2 495.0,219.7 532.5,187.6 570.0,190.5 607.5,196.1 645.0,167.9 682.5,190.8 720.0,199.1" fill="none" stroke="#8b909b" stroke-width="2"/>
+        <line x1="495" y1="219.7" x2="645" y2="167.9" stroke="#4fc3c0" stroke-width="2.2" marker-end="url(#g2)"/>
+        <circle cx="645" cy="167.9" r="4" fill="#9c82d8"/>
+        <line x1="645" y1="167.9" x2="740" y2="90" stroke="#8b909b" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <text x="748" y="86" text-anchor="end" font-family="IBM Plex Mono" font-size="12" fill="#8b909b">V</text>
+        <text x="560" y="240" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">zamaskowane</text>
+      </svg>
+      <div class="diagram-caption">Ta sama chropowata powierzchnia — po lewej sąsiedni szczyt blokuje L, po prawej blokuje ścieżkę do V.</div>
+    </div>
+
+    <p>Standardowy wybór to człon Smitha, rozdzielony na dwie niezależne części — jedną dla L, jedną dla V:</p>
+
+    <div class="formula">G(L,V) = G1(L) · G1(V)<br>G1(V) = 2(N·V) / ( (N·V) + √(α² + (1−α²)(N·V)²) )<span class="sub">ten sam wzór dla G1(L), z L w miejsce V; bez tego członu BRDF „traci” energię przy dużym roughness i płytkich kątach</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Kompozycja</div>
+    <h2>Składanie kompletnego PBR: metallic-roughness</h2>
+    <p>Zbieramy wszystko z Rozdziałów 5, 7, 10 i 11 w jeden model. Jedyna nowość: F0 (odbicie przy patrzeniu na wprost, z Rozdziału 7) przestaje być stałą — zależy od tego, czy materiał jest dielektrykiem czy metalem:</p>
+
+    <div class="formula">F0 = mix(0.04, albedo, metallic)<br>color = (1−metallic)·albedo·diffuse(N·L) + specular(D,G,F)<span class="sub">metallic = 0 → F0 ≈ 0,04 (dielektryk, biały specular, pełny diffuse); metallic = 1 → F0 = albedo (metal, kolorowy specular, zero diffuse)</span></div>
+
+    <p>To jest dosłownie to samo równanie, które Rozdział 10 opisał słowami — teraz z każdym symbolem podłączonym do konkretnego wzoru z poprzednich sześciu rozdziałów. Nic tu nie jest już arbitralne.</p>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>„Principled BSDF” w Blenderze, „Standard Surface” w Arnoldzie/USD, materiał „Metallic-Roughness” w glTF, Unrealu i Unity — to wszystko ten sam przepis: GGX + Smith + Schlick + parametryzacja metallic-roughness, czasem z dodatkami (multi-scatter GGX naprawiający utratę energii przy bardzo chropowatych metalach, clearcoat, anizotropia).</p>
+    <p>α = roughness² to nie szczegół implementacyjny bez znaczenia — właśnie dzięki tej reparametryzacji przesuwanie slidera „Roughness” od 0 do 1 daje wizualnie równomierną progresję błysku, zamiast skoku „ostro / od razu bardzo rozmyto” w pierwszych kilku procentach.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Rozkład GGX (Trowbridge-Reitz)</dt><dd>Standardowy człon D; charakteryzuje się długim ogonem.</dd>
+      <dt>Człon geometryczny (G) / Smith</dt><dd>G(L,V) = G1(L)·G1(V); koryguje D o samo-zasłanianie fasetek.</dd>
+      <dt>Samo-zacienianie / maskowanie mikrofasetek</dt><dd>Blokowanie L (zacienianie) albo V (maskowanie) przez sąsiednie fasetki.</dd>
+      <dt>α (alpha)</dt><dd>roughness²; parametr wejściowy do D i G.</dd>
+      <dt>F0</dt><dd>Odbicie przy N·V=1; mix(0,04, albedo, metallic).</dd>
+      <dt>Metallic-roughness workflow</dt><dd>Standard PBR: dwa slidery zamiast osobnych map na każdy parametr.</dd>
+      <dt>Principled BSDF / Standard Surface</dt><dd>Nazwy tego samego modelu w Blenderze i Arnoldzie/USD.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Materiał mamy już kompletny i fizycznie spójny. W następnym rozdziale wracamy do kamery — głębia ostrości i motion blur, czyli efekty, które nie mają nic wspólnego z materiałem, a wszystko z tym, jak w ogóle generujemy promienie z Rozdziału 3.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="rozdzial-10-materialy.html">← Poprzedni</a>
+    <a href="rozdzial-12-efekty-kamery.html">Następny →</a>
+</div>
+</div>
+</body>
+</html>

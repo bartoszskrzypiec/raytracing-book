@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek S — Perlin Noise, część 4: simplex i praktyka</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>2001 · Perlin sam się poprawia</span><span>KOSZT · n+1 kontra 2ⁿ narożników</span><span>UŻYCIE · displacement, wolumetria</span><span>SERIA · Perlin 4/4</span>
+  </div>
+
+  <div class="eyebrow">Wykład: Perlin Noise — część 4 z 4</div>
+  <h1>Simplex noise i praktyka</h1>
+  <p class="subtitle">W 2001 roku Ken Perlin sam wrócił do własnego wynalazku i poprawił mu dwie realne wady. Ten ostatni rozdział wykładu pokazuje, co poprawił — i gdzie w tej książce ten cały temat już się przewijał.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Klasyczny Perlin noise skaluje się źle w wyższych wymiarach — potrzebuje 2ⁿ narożników (4 w 2D, 8 w 3D, 16 w 4D).</li>
+      <li>Simplex noise Perlina (2001) używa siatki symplicjalnej (trójkątnej w 2D, czworościennej w 3D) — potrzebuje tylko n+1 narożników, więc skaluje się dużo lepiej.</li>
+      <li>Ten sam szum stoi za displacementem (Dodatek I), wolumetrią (Rozdział 18) i atmosferą (Rozdział 21) — wszędzie, gdzie potrzeba organicznej, ale kontrolowalnej losowości.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Problem skalowania</div>
+    <h2>Czemu klasyczny Perlin noise nie wystarczał</h2>
+    <p>Algorytm z części 2 potrzebuje 4 narożników w 2D. W 3D (potrzebnym do prawdziwej tekstury proceduralnej na powierzchni w przestrzeni) to już 8 narożników — sześcian. W 4D (przestrzeń + czas, do animowanego szumu) to 16. Koszt rośnie jak 2ⁿ — wykładniczo z liczbą wymiarów. Do tego klasyczny Perlin noise ma subtelne, ale wykrywalne artefakty skierowane wzdłuż osi siatki (bo siatka jest kwadratowa/sześcienna, uprzywilejowuje pewne kierunki).</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Square.grid.vs.simplex.grid</span><span>4 corners vs 3 corners (2D)</span></div>
+      <svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg">
+        <line x1="380" y1="20" x2="380" y2="260" stroke="#2a2f38"/>
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">KLASYCZNY PERLIN: SIATKA KWADRATOWA</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">SIMPLEX: SIATKA TRÓJKĄTNA</text>
+
+        <g stroke="#2a2f38" stroke-width="1">
+          <line x1="120" y1="70" x2="120" y2="230"/><line x1="260" y1="70" x2="260" y2="230"/>
+          <line x1="120" y1="70" x2="260" y2="70"/><line x1="120" y1="150" x2="260" y2="150"/><line x1="120" y1="230" x2="260" y2="230"/>
+        </g>
+        <rect x="120" y="70" width="140" height="80" fill="#9c82d8" fill-opacity="0.15" stroke="#9c82d8" stroke-width="1.6"/>
+        <circle cx="120" cy="70" r="4" fill="#e8a33d"/><circle cx="260" cy="70" r="4" fill="#e8a33d"/>
+        <circle cx="120" cy="150" r="4" fill="#e8a33d"/><circle cx="260" cy="150" r="4" fill="#e8a33d"/>
+        <text x="190" y="245" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">4 narożniki na komórkę</text>
+
+        <g stroke="#2a2f38" stroke-width="1">
+          <line x1="480" y1="230" x2="560" y2="70"/><line x1="560" y1="70" x2="640" y2="230"/><line x1="480" y1="230" x2="640" y2="230"/>
+          <line x1="520" y1="150" x2="600" y2="150"/><line x1="520" y1="150" x2="560" y2="70"/><line x1="600" y1="150" x2="560" y2="70"/>
+          <line x1="520" y1="150" x2="480" y2="230"/><line x1="600" y1="150" x2="640" y2="230"/>
+        </g>
+        <polygon points="520,150 600,150 560,70" fill="#4fc3c0" fill-opacity="0.18" stroke="#4fc3c0" stroke-width="1.6"/>
+        <circle cx="520" cy="150" r="4" fill="#e8a33d"/><circle cx="600" cy="150" r="4" fill="#e8a33d"/><circle cx="560" cy="70" r="4" fill="#e8a33d"/>
+        <text x="560" y="245" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">3 narożniki na komórkę</text>
+      </svg>
+      <div class="diagram-caption">W 3D to różnica między 8 narożnikami sześcianu i 4 narożnikami czworościanu — simplex wygrywa jeszcze bardziej.</div>
+    </div>
+
+    <p>Mechanika simplex noise jest analogiczna do części 2 — wciąż gradienty, wciąż iloczyny skalarne, wciąż funkcja fade — tylko podzielona przestrzeń nie jest kwadratami, a trójkątami (w 2D) czy czworościanami (w 3D). Mniej narożników do sprawdzenia na próbkę, i brak uprzywilejowanych osi, bo siatka trójkątna nie ma „kierunków kwadratu”.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Synteza</div>
+    <h2>Gdzie to już widziałeś w tej książce</h2>
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Noise.everywhere</span><span>connections across the book</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="ns1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8b909b"/></marker>
+        </defs>
+        <circle cx="380" cy="130" r="16" fill="#20242c" stroke="#e8a33d" stroke-width="2"/>
+        <text x="380" y="134" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#e8a33d">NOISE</text>
+
+        <line x1="365" y1="118" x2="180" y2="60" stroke="#8b909b" stroke-width="1.3" marker-end="url(#ns1)"/>
+        <text x="150" y="50" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">R.9 tekstury proceduralne</text>
+
+        <line x1="365" y1="140" x2="150" y2="180" stroke="#8b909b" stroke-width="1.3" marker-end="url(#ns1)"/>
+        <text x="150" y="200" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">Dodatek I displacement</text>
+
+        <line x1="395" y1="118" x2="600" y2="60" stroke="#8b909b" stroke-width="1.3" marker-end="url(#ns1)"/>
+        <text x="620" y="50" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">R.18 wolumetria — gęstość dymu</text>
+
+        <line x1="395" y1="140" x2="610" y2="190" stroke="#8b909b" stroke-width="1.3" marker-end="url(#ns1)"/>
+        <text x="620" y="210" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">R.21 atmosfera — kształt obłoków</text>
+      </svg>
+      <div class="diagram-caption">Jeden algorytm z części 2, cztery zupełnie różne zastosowania w tej samej książce.</div>
+    </div>
+    <p>Gęstość dymu w Rozdziale 18 to zwykle fBm z tego wykładu, próbkowany w każdym kroku ray marchingu. Kształt obłoków w Rozdziale 21 to ta sama funkcja, tylko w większej skali. Displacement z Dodatku I najczęściej używa fBm jako mapy wysokości. To nie jest cztery różne techniki — to jedna funkcja, użyta cztery razy w czterech miejscach.</p>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Node „Noise Texture” w Blenderze ma dropdown z opcją 4D — to właśnie po to, żeby dodać czas jako czwarty wymiar i animować szum płynnie, bez „przeskakiwania” między niezależnymi klatkami. Houdinim VEX ma zarówno <code>noise()</code> (klasyczny Perlin) jak i <code>xnoise()</code>/warianty simplex — w praktyce różnica bywa niezauważalna wizualnie, ale odczuwalna w czasie renderu przy dużej liczbie próbek na piksel.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Simplex noise</dt><dd>Ulepszona wersja Perlin noise (2001) na siatce symplicjalnej.</dd>
+      <dt>Simplex (trójkąt/czworościan)</dt><dd>Najprostszy możliwy kształt wypełniający przestrzeń n-wymiarową, n+1 narożników.</dd>
+      <dt>Artefakt osiowy</dt><dd>Subtelna preferencja kierunków siatki kwadratowej/sześciennej w klasycznym Perlin noise.</dd>
+    </dl>
+  </div>
+
+  <div class="closing">
+    <p>To zamyka czterorozdziałowy wykład o szumie Perlina — od idei gradientu w 1985 roku, przez pełny, zweryfikowany numerycznie algorytm, oktawy i fBm, po simplex noise i to, gdzie ta jedna funkcja matematyczna chowa się w kilku różnych rozdziałach tej książki.</p>
+    <div class="sign">Koniec wykładu o Perlin Noise</div>
+    <div class="series-nav" style="justify-content:center;">
+      <span>Część 1: Idea</span><span>Część 2: Algorytm</span><span>Część 3: Oktawy/fBm</span><span class="current">Część 4: Simplex</span>
+    </div>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+</div>
+</div>
+</body>
+</html>

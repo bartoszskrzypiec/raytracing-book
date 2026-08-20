@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek C — Głębiej: budowa BVH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>SPLIT · SAH-optimal</span><span>COST · C_trav + P·N·C_isect</span><span>GPU · LBVH</span><span>EXT OF · R.13</span>
+  </div>
+
+  <div class="eyebrow">Dodatek C / Głębiej: Wydajność</div>
+  <h1>Budowa BVH: SAH i alternatywy</h1>
+  <p class="subtitle">Rozdział 13 pokazał, jak BVH przycina drzewo trawersowania. Nie pokazał, jak zbudować dobre drzewo w pierwszej kolejności — a od tego zależy, czy przycinanie faktycznie coś da.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Podział po samej liczbie obiektów może dać pudełka, które się mocno nakładają — a nakładające się pudełka rzadko dają się przycinać.</li>
+      <li>Surface Area Heuristic (SAH) szacuje oczekiwany koszt trawersowania dla każdego kandydata na podział i wybiera najlepszy — poniżej policzony, konkretny przykład z dwoma kandydatami i realnym zwycięzcą.</li>
+      <li>LBVH (krzywa Mortona) buduje drzewo błyskawicznie na GPU; spatial splits (SBVH) tną same obiekty, gdy grupowanie ich całych nie wystarcza.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Problem</div>
+    <h2>Dlaczego podział na pół nie wystarcza</h2>
+    <p>Najprostsza strategia — podziel obiekty na dwie równe grupy po liczbie, wzdłuż najdłuższej osi — działa świetnie, gdy obiekty są rozłożone równomiernie. Zawodzi, gdy nie są: gęsty klaster małych obiektów w jednym rogu i jeden odległy, duży obiekt gdzie indziej wciąż podzieli się „po połowie”, produkując dwa ogromne, mocno nakładające się pudełka — a przycinanie z Rozdziału 13 działa tylko wtedy, gdy pudełka faktycznie się rozchodzą w przestrzeni.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Median.vs.spatial.split</span><span>overlap matters</span></div>
+      <svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg">
+        <line x1="380" y1="20" x2="380" y2="260" stroke="#2a2f38"/>
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">PODZIAŁ PO LICZBIE (ŚLEPY)</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">PODZIAŁ ŚWIADOMY PRZESTRZENI</text>
+
+        <rect x="60" y="100" width="200" height="90" fill="none" stroke="#9c82d8" stroke-width="1.8"/>
+        <rect x="150" y="90" width="190" height="110" fill="none" stroke="#4fc3c0" stroke-width="1.8"/>
+        <circle cx="90" cy="120" r="3.5" fill="#e8a33d"/><circle cx="110" cy="140" r="3.5" fill="#e8a33d"/><circle cx="75" cy="160" r="3.5" fill="#e8a33d"/><circle cx="100" cy="175" r="3.5" fill="#e8a33d"/><circle cx="85" cy="145" r="3.5" fill="#e8a33d"/>
+        <circle cx="300" cy="150" r="7" fill="#e8a33d"/>
+        <text x="200" y="220" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">pudełka ogromne, nakładają się</text>
+
+        <rect x="445" y="110" width="60" height="75" fill="none" stroke="#9c82d8" stroke-width="1.8"/>
+        <rect x="665" y="135" width="30" height="30" fill="none" stroke="#4fc3c0" stroke-width="1.8"/>
+        <circle cx="470" cy="120" r="3.5" fill="#e8a33d"/><circle cx="490" cy="140" r="3.5" fill="#e8a33d"/><circle cx="455" cy="160" r="3.5" fill="#e8a33d"/><circle cx="480" cy="175" r="3.5" fill="#e8a33d"/><circle cx="465" cy="145" r="3.5" fill="#e8a33d"/>
+        <circle cx="680" cy="150" r="7" fill="#e8a33d"/>
+        <text x="570" y="220" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">pudełka szczelne, rozłączne</text>
+      </svg>
+      <div class="diagram-caption">Te same dziewięć obiektów — po lewej podział „po liczbie” psuje wszystko, po prawej podział rozumie przestrzeń.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: SAH</div>
+    <h2>Surface Area Heuristic: licz koszt, nie zgaduj</h2>
+    <p>SAH formalizuje „jak dobry jest ten podział”, szacując oczekiwany koszt trawersowania — prawdopodobieństwo, że promień wejdzie w każde dziecko, przybliżone stosunkiem powierzchni jego pudełka do powierzchni pudełka rodzica:</p>
+
+    <div class="formula">koszt(podział) = C_trav + (SA_L/SA_parent)·N_L·C_isect + (SA_R/SA_parent)·N_R·C_isect<span class="sub">SA — powierzchnia pudełka (surface area); N — liczba obiektów w dziecku; C_trav, C_isect — koszty jednostkowe trawersowania i testu przecięcia</span></div>
+
+    <p>Budowa drzewa próbuje wielu kandydatów na podział (zwykle wzdłuż każdej osi, w kilkunastu pozycjach) i wybiera ten o najniższym koszcie SAH — rekurencyjnie, dla każdego węzła.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>SAH.cost.landscape</span><span>minimum wins</span></div>
+      <svg viewBox="0 0 700 260" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="sah1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9c82d8"/></marker>
+        </defs>
+        <line x1="60" y1="220" x2="680" y2="220" stroke="#8b909b" stroke-width="1.5"/>
+        <text x="370" y="240" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">kandydaci na pozycję podziału wzdłuż osi</text>
+
+        <path d="M100,80 L180,110 L260,150 L340,175 L420,165 L500,130 L580,90 L660,60" fill="none" stroke="#4fc3c0" stroke-width="2.2"/>
+        <circle cx="100" cy="80" r="3.5" fill="#4fc3c0"/><circle cx="180" cy="110" r="3.5" fill="#4fc3c0"/><circle cx="260" cy="150" r="3.5" fill="#4fc3c0"/>
+        <circle cx="420" cy="165" r="3.5" fill="#4fc3c0"/><circle cx="500" cy="130" r="3.5" fill="#4fc3c0"/><circle cx="580" cy="90" r="3.5" fill="#4fc3c0"/><circle cx="660" cy="60" r="3.5" fill="#4fc3c0"/>
+
+        <line x1="340" y1="220" x2="340" y2="180" stroke="#9c82d8" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#sah1)"/>
+        <circle cx="340" cy="175" r="6" fill="#e8a33d"/>
+        <text x="340" y="200" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#e8a33d">wybrany podział</text>
+      </svg>
+      <div class="diagram-caption">Dolina kosztu — nie zawsze pośrodku, nie zawsze intuicyjna, ale policzona, nie odgadnięta.</div>
+    </div>
+
+    <div class="worked">
+      <div class="wlabel">Pełny przykład liczbowy — te same 4 obiekty co w poprzednim diagramie</div>
+      <div class="step">Dane: 4 jednostkowe kostki (1×1×1) wzdłuż osi X: obj1 x∈[0,1], obj2 x∈[2,3], obj3 x∈[4,5], obj4 x∈[10,11] (odległy outlier). C_trav=1, C_isect=1 (jednostki umowne).</div>
+      <div class="step">Pudełko rodzica: x∈[0,11], y,z∈[0,1]. SA_parent = 2·(11·1+11·1+1·1) = 2·23 = <span class="v">46</span></div>
+    </div>
+
+    <div class="worked">
+      <div class="wlabel">Kandydat 1 — podział „po liczbie” (x=3,5): {obj1,obj2} | {obj3,obj4}</div>
+      <div class="step">SA_L = pudełko x∈[0,3]: 2·(3+3+1) = <span class="v">14</span>. N_L=2.</div>
+      <div class="step">SA_R = pudełko x∈[4,11]: 2·(7+7+1) = <span class="v">30</span>. N_R=2.</div>
+      <div class="step">koszt = 1 + (14/46)·2 + (30/46)·2 = 1 + 0,6087 + 1,3043 = <span class="v">2,9130</span></div>
+    </div>
+
+    <div class="worked">
+      <div class="wlabel">Kandydat 2 — podział izolujący outlier (x=6): {obj1,obj2,obj3} | {obj4}</div>
+      <div class="step">SA_L = pudełko x∈[0,5]: 2·(5+5+1) = <span class="v">22</span>. N_L=3.</div>
+      <div class="step">SA_R = pudełko x∈[10,11]: 2·(1+1+1) = <span class="v">6</span>. N_R=1.</div>
+      <div class="step">koszt = 1 + (22/46)·3 + (6/46)·1 = 1 + 1,4348 + 0,1304 = <span class="v">2,5652</span></div>
+      <div class="result">Kandydat 2 wygrywa (2,565 &lt; 2,913) — mimo że dzieli obiekty bardziej „nierówno” (3 kontra 1, nie 2 kontra 2).</div>
+      <div class="check">Sprawdzenie sensu: brak podziału (jeden węzeł, testuj wszystkie 4) kosztowałby 4·C_isect=4,0 — oba kandydaci są lepsi niż brak podziału, a Kandydat 2 jest lepszy od Kandydata 1 właśnie dlatego, że odizolowanie odległego obiektu daje dużo mniejsze, szczelniejsze pudełko SA_R=6, nie 30.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Alternatywy</div>
+    <h2>LBVH i spatial splits</h2>
+    <p><strong>LBVH (Linear BVH)</strong> pomija kosztowną, rekurencyjną ocenę SAH: sortuje obiekty według ich pozycji na krzywej Mortona (Z-order — bity x, y, z przeplecione w jedną liczbę) i budowa drzewa staje się prostym sortowaniem, świetnie równoległym na GPU. Jakość drzewa jest nieco niższa niż z SAH, ale budowa jest na tyle szybka, że opłaca się przebudowywać je co klatkę dla animowanej geometrii.</p>
+    <p><strong>Spatial splits (SBVH)</strong> rozwiązują inny problem: gdy jeden obiekt jest bardzo długi (ściana przez całą scenę), żaden podział po <em>liczbie</em> obiektów nie pomoże — ten jeden obiekt i tak trafi do obu dzieci. SBVH pozwala <em>przeciąć</em> pudełko obiektu w przestrzeni, przypisując różne jego fragmenty do różnych dzieci.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>LBVH.morton</span><span>+ spatial split</span></div>
+      <svg viewBox="0 0 760 220" xmlns="http://www.w3.org/2000/svg">
+        <line x1="380" y1="10" x2="380" y2="210" stroke="#2a2f38"/>
+        <text x="150" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">LBVH: KRZYWA MORTONA</text>
+        <text x="580" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">SPATIAL SPLIT (SBVH)</text>
+
+        <g stroke="#2a2f38" stroke-width="1">
+          <line x1="40" y1="60" x2="152" y2="60"/><line x1="40" y1="88" x2="152" y2="88"/><line x1="40" y1="116" x2="152" y2="116"/><line x1="40" y1="144" x2="152" y2="144"/><line x1="40" y1="172" x2="152" y2="172"/>
+          <line x1="40" y1="60" x2="40" y2="172"/><line x1="68" y1="60" x2="68" y2="172"/><line x1="96" y1="60" x2="96" y2="172"/><line x1="124" y1="60" x2="124" y2="172"/><line x1="152" y1="60" x2="152" y2="172"/>
+        </g>
+        <path d="M 54,74 L 82,74 L 54,102 L 82,102 L 110,74 L 138,74 L 110,102 L 138,102 L 54,130 L 82,130 L 54,158 L 82,158 L 110,130 L 138,130 L 110,158 L 138,158" fill="none" stroke="#e8a33d" stroke-width="1.8"/>
+
+        <line x1="480" y1="120" x2="720" y2="120" stroke="#8b909b" stroke-width="6"/>
+        <line x1="600" y1="70" x2="600" y2="170" stroke="#3a4048" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <rect x="480" y="100" width="120" height="40" fill="none" stroke="#9c82d8" stroke-width="1.6"/>
+        <rect x="600" y="100" width="120" height="40" fill="none" stroke="#4fc3c0" stroke-width="1.6"/>
+        <text x="540" y="90" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#9c82d8">fragment L</text>
+        <text x="660" y="90" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#4fc3c0">fragment R</text>
+      </svg>
+      <div class="diagram-caption">Z-order odwiedza sąsiadów w przestrzeni po kolei — idealne do sortowania. Po prawej: jeden długi obiekt, przecięty na dwa fragmenty.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>To dlaczego „Build Acceleration Structure” trwa zauważalnie dłużej dla scen z milionami trójkątów w Arnoldzie czy RenderManie — wysokiej jakości SAH build jest kosztowny, ale opłaca się przy renderze trwającym godziny. Sprzętowy RT (RTX) w grach używa szybszych, LBVH-podobnych buildów z refittingiem co klatkę — bo scena i tak zmienia się 60 razy na sekundę, więc idealne drzewo nie ma czasu się przydać.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Median split</dt><dd>Podział po liczbie obiektów, niezależnie od ich rozmieszczenia w przestrzeni.</dd>
+      <dt>Surface Area Heuristic (SAH)</dt><dd>Szacowanie kosztu podziału przez stosunek powierzchni pudełek.</dd>
+      <dt>Koszt trawersowania</dt><dd>Oczekiwana liczba operacji potrzebna do przejścia drzewa dla promienia.</dd>
+      <dt>LBVH</dt><dd>Szybka budowa BVH przez sortowanie po krzywej Mortona.</dd>
+      <dt>Kod Mortona (Z-order)</dt><dd>Przeplot bitów współrzędnych, dający jednowymiarowe uporządkowanie punktów 3D.</dd>
+      <dt>Spatial split (SBVH)</dt><dd>Przecinanie pudełka obiektu między dzieci, nie tylko grupowanie całych obiektów.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Dodatek D, ostatni, rozwija Rozdział 19: jak faktycznie liczy się wagi w filtrze denoisera, i czemu agresywny denoising „gubi” futro i ostre kaustyki.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-13-bvh.html">↑ Rozdział 13: Struktury akceleracyjne</a>
+</div>
+</div>
+</body>
+</html>

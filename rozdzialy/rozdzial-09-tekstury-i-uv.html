@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Rozdział 9 — Tekstury i mapowanie UV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.formula{font-size:15px;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>UV · (u,v) ∈ [0,1]²</span><span>FILTER · BILINEAR</span><span>WRAP · REPEAT</span><span>MIP · AUTO</span>
+  </div>
+
+  <div class="eyebrow">Rozdział 9 / Realizm i jakość obrazu</div>
+  <h1>Tekstury i mapowanie UV</h1>
+  <p class="subtitle">Każdy materiał od Rozdziału 5 miał jeden, płaski kolor kd. W tym rozdziale ten kolor zaczyna zależeć od tego, w które miejsce powierzchni trafił promień — a to właśnie robią tekstury.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>UV to dwuwymiarowe współrzędne przypisane do każdego wierzchołka, mapujące punkt na siatce na punkt na obrazie tekstury.</li>
+      <li>W punkcie trafienia interpolujemy UV z tych samych wag barycentrycznych z Rozdziału 4 — dokładnie tak, jak interpolowaliśmy tam normalną.</li>
+      <li>Tekstury proceduralne liczą kolor wzorem, bez żadnego obrazka — nieskończona rozdzielczość, zero szwów, ale własny koszt obliczeniowy.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: UV</div>
+    <h2>Druga, dwuwymiarowa współrzędna każdego wierzchołka</h2>
+    <p>Oprócz pozycji (3D) i normalnej (3D), każdy wierzchołek siatki niesie zwykle też UV — parę liczb (u,v), zazwyczaj z zakresu [0,1]. To współrzędne, które ustawiłeś ręcznie w edytorze UV w Blenderze czy Mayi, „rozkładając” zakrzywioną powierzchnię 3D na płaski obraz.</p>
+    <p>W punkcie trafienia nie mamy UV od razu — musimy je zinterpolować z UV trzech wierzchołków, tymi samymi wagami barycentrycznymi, które policzył algorytm Möllera–Trumbore w Rozdziale 4:</p>
+
+    <div class="formula">uv_hit = (1−u−v)·uvA + u·uvB + v·uvC<span class="sub">u, v — te same wagi barycentryczne z Rozdziału 4; uwaga, to inne u,v niż same współrzędne UV tekstury — nazwy się powtarzają, ale to dwie różne pary liczb</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>3D.to.UV</span><span>same weights</span></div>
+      <svg viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg">
+        <line x1="380" y1="20" x2="380" y2="300" stroke="#2a2f38"/>
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">TRÓJKĄT W 3D</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">TEN SAM TRÓJKĄT W UV</text>
+
+        <!-- left: 3D triangle (same coloring as ch4) -->
+        <polygon points="90,270 330,270 210,100" fill="#20242c" stroke="#2a2f38" stroke-width="2"/>
+        <circle cx="90" cy="270" r="5.5" fill="#e8a33d"/>
+        <text x="72" y="292" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">A</text>
+        <circle cx="330" cy="270" r="5.5" fill="#4fc3c0"/>
+        <text x="336" y="292" font-family="IBM Plex Mono" font-size="12" fill="#4fc3c0">B</text>
+        <circle cx="210" cy="100" r="5.5" fill="#9c82d8"/>
+        <text x="216" y="92" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">C</text>
+        <circle cx="186" cy="236" r="4.5" fill="#ecebe4"/>
+        <text x="192" y="252" font-family="IBM Plex Mono" font-size="11.5" fill="#ecebe4">P</text>
+        <line x1="186" y1="236" x2="90" y2="270" stroke="#e8a33d" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <line x1="186" y1="236" x2="330" y2="270" stroke="#4fc3c0" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <line x1="186" y1="236" x2="210" y2="100" stroke="#9c82d8" stroke-width="1.3" stroke-dasharray="4 4"/>
+
+        <!-- right: UV space -->
+        <rect x="460" y="90" width="180" height="180" fill="#20242c" stroke="#4fc3c0" stroke-width="1.5"/>
+        <text x="452" y="282" text-anchor="end" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">(0,0)</text>
+        <text x="648" y="98" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">(1,1)</text>
+        <polygon points="500,250 620,230 560,110" fill="none" stroke="#8b909b" stroke-width="1.5"/>
+        <circle cx="500" cy="250" r="5.5" fill="#e8a33d"/>
+        <text x="482" y="270" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">uvA</text>
+        <circle cx="620" cy="230" r="5.5" fill="#4fc3c0"/>
+        <text x="626" y="228" font-family="IBM Plex Mono" font-size="12" fill="#4fc3c0">uvB</text>
+        <circle cx="560" cy="110" r="5.5" fill="#9c82d8"/>
+        <text x="566" y="104" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">uvC</text>
+        <circle cx="548" cy="216" r="4.5" fill="#ecebe4"/>
+        <text x="554" y="232" font-family="IBM Plex Mono" font-size="11.5" fill="#ecebe4">uv_P</text>
+        <line x1="548" y1="216" x2="500" y2="250" stroke="#e8a33d" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <line x1="548" y1="216" x2="620" y2="230" stroke="#4fc3c0" stroke-width="1.3" stroke-dasharray="4 4"/>
+        <line x1="548" y1="216" x2="560" y2="110" stroke="#9c82d8" stroke-width="1.3" stroke-dasharray="4 4"/>
+      </svg>
+      <div class="diagram-caption">Te same wagi (1−u−v, u, v) — inny kształt trójkąta po drugiej stronie. UV nie musi zachowywać proporcji 3D.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Teksel</div>
+    <h2>Od UV do koloru piksela tekstury</h2>
+    <p>Mając uv_hit, zamieniamy je na współrzędne w pikselach obrazu tekstury (Tw × Th):</p>
+
+    <div class="formula">x = u · Tw,  y = (1 − v) · Th<span class="sub">(1−v), bo v=0 zwykle oznacza dół tekstury, a rząd 0 obrazu to jego góra — ten sam problem odwrócenia osi co przy pikselach w Rozdziale 3</span></div>
+
+    <p>x, y rzadko wypadają na dokładny środek teksela — zwykle lądują gdzieś pomiędzy czterema najbliższymi. Filtrowanie <strong>najbliższego sąsiada</strong> po prostu zaokrągla (blokowe piksele z bliska). Filtrowanie <strong>biliniowe</strong> uśrednia cztery najbliższe teksele, ważąc je odległością — dokładnie tą samą logiką co interpolacja barycentryczna, tylko na kwadratowej siatce, nie trójkącie:</p>
+
+    <div class="formula">color = (1−fx)(1−fy)·C01 + fx(1−fy)·C11 + (1−fx)fy·C00 + fx·fy·C10<span class="sub">fx, fy — część dziesiętna współrzędnej teksela; C00…C11 — cztery najbliższe teksele</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Bilinear.weights</span><span>area = weight</span></div>
+      <svg viewBox="0 0 500 300" xmlns="http://www.w3.org/2000/svg">
+        <rect x="130" y="40" width="120" height="120" fill="#e8a33d" fill-opacity="0.28"/>
+        <rect x="250" y="40" width="120" height="120" fill="#4fc3c0" fill-opacity="0.28"/>
+        <rect x="130" y="160" width="120" height="120" fill="#9c82d8" fill-opacity="0.28"/>
+        <rect x="250" y="160" width="120" height="120" fill="#8b909b" fill-opacity="0.22"/>
+        <rect x="130" y="40" width="240" height="240" fill="none" stroke="#2a2f38" stroke-width="1.5"/>
+
+        <text x="140" y="58" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">C01</text>
+        <text x="340" y="58" font-family="IBM Plex Mono" font-size="12" fill="#4fc3c0">C11</text>
+        <text x="140" y="270" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">C00</text>
+        <text x="332" y="270" font-family="IBM Plex Mono" font-size="12" fill="#8b909b">C10</text>
+
+        <line x1="214" y1="40" x2="214" y2="280" stroke="#ecebe4" stroke-width="1" stroke-dasharray="4 4"/>
+        <line x1="130" y1="184" x2="370" y2="184" stroke="#ecebe4" stroke-width="1" stroke-dasharray="4 4"/>
+        <circle cx="214" cy="184" r="4.5" fill="#ecebe4"/>
+        <text x="222" y="180" font-family="IBM Plex Mono" font-size="12" fill="#ecebe4">P</text>
+
+        <line x1="130" y1="26" x2="214" y2="26" stroke="#8b909b" stroke-width="1"/>
+        <text x="172" y="18" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">fx</text>
+        <line x1="114" y1="40" x2="114" y2="184" stroke="#8b909b" stroke-width="1"/>
+        <text x="100" y="115" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b" transform="rotate(-90 100 115)">fy</text>
+      </svg>
+      <div class="diagram-caption">Waga każdego teksela to pole przekątnego prostokąta — im bliżej P, tym większa waga.</div>
+    </div>
+
+    <p>Osobny problem to <strong>wrapping</strong>: co zrobić, gdy u albo v wychodzi poza [0,1]? „Repeat” zawija wzór (u mod 1) — standard dla tekstur kaflowych. „Clamp” przycina do koloru z krawędzi. „Mirror” odbija naprzemiennie. To dokładnie te opcje, które widzisz jako Wrap Mode w Unity czy Unreal.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Proceduralne</div>
+    <h2>Tekstury proceduralne: kolor bez obrazka</h2>
+    <p>Alternatywa dla odczytu z obrazu: policz kolor prosto ze wzoru, na podstawie samego UV. Klasyczna szachownica:</p>
+
+    <div class="formula">checker(u,v) = (⌊u·N⌋ + ⌊v·N⌋) mod 2<span class="sub">N — liczba pól szachownicy na jednostkę UV; wynik 0 albo 1 wybiera jeden z dwóch kolorów</span></div>
+
+    <p>Bardziej organiczne wzory — marmur, drewno, obłoki — buduje się z <strong>szumu Perlina</strong>: gładkiej, pseudolosowej funkcji, która wygląda naturalnie i nie ma szwów. To dosłownie budulec każdego node’a „Noise” w grafie materiału.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Procedural.compare</span><span>formula vs noise</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="noiseFilter" x="0%" y="0%" width="100%" height="100%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.02 0.04" numOctaves="4" seed="7" result="noise"/>
+            <feColorMatrix in="noise" type="matrix" values="0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0 0 0 1 0"/>
+          </filter>
+        </defs>
+
+        <text x="180" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#8b909b">checker(u,v) — WZÓR</text>
+        <text x="580" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#8b909b">SZUM PERLINA (feTurbulence)</text>
+
+        <rect x="60" y="40" width="30" height="30" fill="#e8a33d"/><rect x="90" y="40" width="30" height="30" fill="#20242c"/><rect x="120" y="40" width="30" height="30" fill="#e8a33d"/><rect x="150" y="40" width="30" height="30" fill="#20242c"/><rect x="180" y="40" width="30" height="30" fill="#e8a33d"/><rect x="210" y="40" width="30" height="30" fill="#20242c"/><rect x="240" y="40" width="30" height="30" fill="#e8a33d"/><rect x="270" y="40" width="30" height="30" fill="#20242c"/>
+        <rect x="60" y="70" width="30" height="30" fill="#20242c"/><rect x="90" y="70" width="30" height="30" fill="#e8a33d"/><rect x="120" y="70" width="30" height="30" fill="#20242c"/><rect x="150" y="70" width="30" height="30" fill="#e8a33d"/><rect x="180" y="70" width="30" height="30" fill="#20242c"/><rect x="210" y="70" width="30" height="30" fill="#e8a33d"/><rect x="240" y="70" width="30" height="30" fill="#20242c"/><rect x="270" y="70" width="30" height="30" fill="#e8a33d"/>
+        <rect x="60" y="100" width="30" height="30" fill="#e8a33d"/><rect x="90" y="100" width="30" height="30" fill="#20242c"/><rect x="120" y="100" width="30" height="30" fill="#e8a33d"/><rect x="150" y="100" width="30" height="30" fill="#20242c"/><rect x="180" y="100" width="30" height="30" fill="#e8a33d"/><rect x="210" y="100" width="30" height="30" fill="#20242c"/><rect x="240" y="100" width="30" height="30" fill="#e8a33d"/><rect x="270" y="100" width="30" height="30" fill="#20242c"/>
+        <rect x="60" y="130" width="30" height="30" fill="#20242c"/><rect x="90" y="130" width="30" height="30" fill="#e8a33d"/><rect x="120" y="130" width="30" height="30" fill="#20242c"/><rect x="150" y="130" width="30" height="30" fill="#e8a33d"/><rect x="180" y="130" width="30" height="30" fill="#20242c"/><rect x="210" y="130" width="30" height="30" fill="#e8a33d"/><rect x="240" y="130" width="30" height="30" fill="#20242c"/><rect x="270" y="130" width="30" height="30" fill="#e8a33d"/>
+        <rect x="60" y="160" width="30" height="30" fill="#e8a33d"/><rect x="90" y="160" width="30" height="30" fill="#20242c"/><rect x="120" y="160" width="30" height="30" fill="#e8a33d"/><rect x="150" y="160" width="30" height="30" fill="#20242c"/><rect x="180" y="160" width="30" height="30" fill="#e8a33d"/><rect x="210" y="160" width="30" height="30" fill="#20242c"/><rect x="240" y="160" width="30" height="30" fill="#e8a33d"/><rect x="270" y="160" width="30" height="30" fill="#20242c"/>
+        <rect x="60" y="190" width="30" height="30" fill="#20242c"/><rect x="90" y="190" width="30" height="30" fill="#e8a33d"/><rect x="120" y="190" width="30" height="30" fill="#20242c"/><rect x="150" y="190" width="30" height="30" fill="#e8a33d"/><rect x="180" y="190" width="30" height="30" fill="#20242c"/><rect x="210" y="190" width="30" height="30" fill="#e8a33d"/><rect x="240" y="190" width="30" height="30" fill="#20242c"/><rect x="270" y="190" width="30" height="30" fill="#e8a33d"/>
+
+        <rect x="460" y="40" width="240" height="180" filter="url(#noiseFilter)"/>
+        <rect x="460" y="40" width="240" height="180" fill="none" stroke="#2a2f38" stroke-width="1.5"/>
+      </svg>
+      <div class="diagram-caption">Prawa strona to prawdziwy szum fraktalny (SVG feTurbulence) — nie ilustracja, tylko ten sam rodzaj funkcji, który liczy node „Noise”.</div>
+    </div>
+
+    <p>Kompromis jest praktyczny: tekstura proceduralna ma nieskończoną rozdzielczość i zero szwów, ale każde jej wywołanie to obliczenia — a skomplikowane, wielowarstwowe wzory (fBm, turbulencja) mogą być wolniejsze niż jeden odczyt z obrazu. Dlatego w produkcji proceduralne wzory często zapieka się (bake) do tekstury na koniec.</p>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Base Color, Roughness, Normal, Metallic — każdy slot mapy w grafie materiału robi dokładnie ten sam odczyt UV z tego rozdziału, tylko wynik trafia do innego parametru równania z Rozdziału 5, nie tylko do kd.</p>
+    <p>Mipmapping — z góry wyliczone, mniejsze wersje tekstury — istnieje z tego samego powodu co antyaliasing z Rozdziału 8: gdy tekstura jest widziana z daleka albo pod kątem, jeden teksel odpowiada za wiele pikseli ekranu, i bez mipmap dostajesz migoczący moiré na przeskalowanej teksturze, nie tylko na geometrii.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>UV / współrzędne tekstury</dt><dd>Dwuwymiarowe (u,v) przypisane do wierzchołka, mapujące go na obraz tekstury.</dd>
+      <dt>UV unwrapping</dt><dd>Rozkładanie zakrzywionej powierzchni 3D na płaski układ UV.</dd>
+      <dt>Teksel</dt><dd>Pojedynczy piksel obrazu tekstury.</dd>
+      <dt>Filtrowanie biliniowe</dt><dd>Ważone uśrednienie czterech najbliższych teksli.</dd>
+      <dt>Wrapping (Repeat / Clamp / Mirror)</dt><dd>Zachowanie UV poza zakresem [0,1].</dd>
+      <dt>Tekstura proceduralna</dt><dd>Kolor liczony wzorem z UV, bez obrazu.</dd>
+      <dt>Szum Perlina</dt><dd>Gładka, pseudolosowa funkcja bazowa dla organicznych wzorów.</dd>
+      <dt>Mipmapping</dt><dd>Wstępnie wyliczone, pomniejszone wersje tekstury, zapobiegające migotaniu z daleka.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Kolor materiału mamy już w pełni sterowalny. W następnym rozdziale zajmiemy się tym, co ten kolor właściwie <em>reprezentuje</em> fizycznie: dielektryki, metale i modele BRDF — most między Blinn-Phongiem z Rozdziału 5 a prawdziwym PBR.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="rozdzial-08-antyaliasing.html">← Poprzedni</a>
+    <a href="rozdzial-10-materialy.html">Następny →</a>
+</div>
+</div>
+</body>
+</html>

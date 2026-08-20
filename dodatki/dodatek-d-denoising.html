@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek D — Głębiej: mechanika denoisera</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>WEIGHT · spatial×normal×depth</span><span>PASS · à-trous</span><span>RISK · fine detail</span><span>EXT OF · R.19</span>
+  </div>
+
+  <div class="eyebrow">Dodatek D / Głębiej: Denoising</div>
+  <h1>Mechanika denoisera</h1>
+  <p class="subtitle">Rozdział 19 powiedział „filtr waży sąsiadów po podobieństwie normalnej”. Ten dodatek pokazuje dokładnie, jak liczy się ta waga — i czemu ta sama mechanika, która ratuje krawędzie, czasem zjada futro.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Filtr bilateralny mnoży trzy wagi Gaussa naraz: odległość w pikselach, różnicę normalnej, różnicę głębi — sąsiad musi przejść wszystkie trzy testy; policzony przykład niżej pokazuje 1800× różnicę wagi między dwoma sąsiadami w tej samej odległości.</li>
+      <li>À-trous (SVGF-style) powtarza ten filtr kilka razy z coraz większym rozstawem próbek — usuwa szum wielu skal, bez jednego, gigantycznego kernela.</li>
+      <li>Cienki, ostry sygnał (włos, kaustyka) wygląda dla filtra statystycznie podobnie do szumu — dlatego agresywny denoising go zjada razem z szumem.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Wagi</div>
+    <h2>Filtr bilateralny: waga to iloczyn, nie suma</h2>
+    <p>Każdy sąsiad dostaje wagę będącą <em>iloczynem</em> trzech niezależnych czynników Gaussa — musi być blisko w pikselach, mieć podobną normalną <em>i</em> podobną głębię. Wystarczy, że jeden czynnik spadnie do zera, żeby cały iloczyn spadł do zera, niezależnie jak dobre są pozostałe dwa.</p>
+
+    <div class="formula">w(p,q) = exp(−|p−q|²/2σ_s²) · exp(−|N_p−N_q|²/2σ_n²) · exp(−|D_p−D_q|²/2σ_d²)<span class="sub">σ_s, σ_n, σ_d — promienie tolerancji dla pozycji, normalnej i głębi; każdy czynnik osobno z zakresu [0,1]</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Bilateral.weight.breakdown</span><span>product of three factors</span></div>
+      <svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg">
+        <rect x="60" y="40" width="320" height="200" fill="#20242c"/>
+        <polygon points="380,40 380,240 200,240" fill="#262b33"/>
+        <line x1="380" y1="40" x2="200" y2="240" stroke="#4fc3c0" stroke-width="2"/>
+
+        <circle cx="290" cy="130" r="5" fill="#ecebe4"/>
+        <text x="298" y="126" font-family="IBM Plex Mono" font-size="11" fill="#ecebe4">P</text>
+
+        <circle cx="250" cy="110" r="9" fill="#e8a33d" fill-opacity="0.85"/>
+        <text x="440" y="95" font-family="IBM Plex Mono" font-size="10.5" fill="#e8a33d">A: s=0,757 · n=0,799 · d=0,999</text>
+        <text x="440" y="112" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">w = 0,604 (wysoka)</text>
+
+        <circle cx="330" cy="155" r="4" fill="#3a4048"/>
+        <text x="440" y="165" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">B: s=0,757 · n=0,040 · d=0,011</text>
+        <text x="440" y="182" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">w = 0,00034 (odrzucone)</text>
+      </svg>
+      <div class="diagram-caption">A i B są <em>identycznie</em> blisko w pikselach (spatial=0,757 dla obu) — tylko normalna i głębia decydują, kto trafia do średniej.</div>
+    </div>
+
+    <div class="worked">
+      <div class="wlabel">Pełny przykład liczbowy — piksel P i dwaj sąsiedzi</div>
+      <div class="step">P: normalna N_P=(0,1,0), głębia D_P=5,0, kolor C_P=0,9 (zaszumiona próbka). σ_s=3, σ_n=0,3, σ_d=1.</div>
+      <div class="step">A (ta sama powierzchnia): offset (2,1)px, N_A=(0; 0,98; 0,2), D_A=5,05, C_A=0,8.</div>
+      <div class="step">B (przez krawędź): offset (2,−1)px — ta sama odległość co A, N_B=(0,7; 0,7; 0), D_B=8,0, C_B=0,1.</div>
+    </div>
+
+    <div class="worked">
+      <div class="wlabel">Krok po kroku — sąsiad A</div>
+      <div class="step">spatial: exp(−(2²+1²)/(2·3²)) = exp(−5/18) = <span class="v">0,7575</span></div>
+      <div class="step">normal: |N_P−N_A|²=0,02²+0,2²=0,0404 → exp(−0,0404/(2·0,3²)) = exp(−0,2244) = <span class="v">0,7990</span></div>
+      <div class="step">depth: (5,0−5,05)²=0,0025 → exp(−0,0025/2) = <span class="v">0,9988</span></div>
+      <div class="step">w_A = 0,7575 · 0,7990 · 0,9988 = <span class="v">0,6044</span></div>
+    </div>
+
+    <div class="worked">
+      <div class="wlabel">Krok po kroku — sąsiad B</div>
+      <div class="step">spatial: identyczne jak A (ta sama odległość w pikselach) = <span class="v">0,7575</span></div>
+      <div class="step">normal: |N_P−N_B|²=0,7²+0,3²=0,58 → exp(−0,58/0,18) = <span class="v">0,0399</span></div>
+      <div class="step">depth: (5,0−8,0)²=9,0 → exp(−9/2) = <span class="v">0,0111</span></div>
+      <div class="step">w_B = 0,7575 · 0,0399 · 0,0111 = <span class="v">0,000335</span> — 1800× mniejsza waga niż A</div>
+    </div>
+
+    <div class="worked">
+      <div class="wlabel">Wynik: odfiltrowany kolor P</div>
+      <div class="step">Filtr bilateralny: (1·0,9 + 0,6044·0,8 + 0,000335·0,1) / (1+0,6044+0,000335) = <span class="v">0,862</span></div>
+      <div class="step">Zwykły blur (tylko spatial, bez normal/depth): (1·0,9 + 0,7575·0,8 + 0,7575·0,1) / (1+0,7575+0,7575) = <span class="v">0,629</span></div>
+      <div class="result">Prawdziwa wartość na powierzchni P (średnia P i A, bez B) ≈ 0,85. Filtr bilateralny: błąd 0,012. Zwykły blur: błąd 0,221 — 18× większy.</div>
+      <div class="check">To jest dokładnie „przeciekanie koloru przez krawędź” (color bleeding) — zwykły blur miesza w ciemny kolor z zupełnie innej powierzchni B, bilateralny go prawie całkowicie odrzuca.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: À-trous</div>
+    <h2>Wielorozdzielczość: filtr z dziurami</h2>
+    <p>Mały kernel nie usuwa dużych, „grudkowatych” plam szumu. Wielki kernel jest drogi i ryzykuje rozmycie prawdziwego detalu. SVGF i podobne techniki robią coś pomiędzy: powtarzają ten sam filtr bilateralny kilka razy, każdy raz z coraz większym rozstawem między próbkowanymi pikselami (à-trous — „z dziurami”, sample'ujesz rzadko, ale na dużym obszarze) — usuwając szum wielu częstotliwości za cenę kilku małych przebiegów, nie jednego gigantycznego.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>A-trous.passes</span><span>increasing step size</span></div>
+      <svg viewBox="0 0 760 220" xmlns="http://www.w3.org/2000/svg">
+        <text x="130" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">PASS 1 · step=1</text>
+        <text x="380" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">PASS 2 · step=2</text>
+        <text x="630" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">PASS 3 · step=4</text>
+
+        <g fill="#e8a33d">
+          <circle cx="90" cy="70" r="3"/><circle cx="130" cy="70" r="3"/><circle cx="170" cy="70" r="3"/>
+          <circle cx="90" cy="110" r="3"/><circle cx="130" cy="110" r="4.5"/><circle cx="170" cy="110" r="3"/>
+          <circle cx="90" cy="150" r="3"/><circle cx="130" cy="150" r="3"/><circle cx="170" cy="150" r="3"/>
+        </g>
+        <g fill="#4fc3c0">
+          <circle cx="300" cy="50" r="3"/><circle cx="380" cy="50" r="3"/><circle cx="460" cy="50" r="3"/>
+          <circle cx="300" cy="130" r="3"/><circle cx="380" cy="130" r="4.5"/><circle cx="460" cy="130" r="3"/>
+          <circle cx="300" cy="210" r="3"/><circle cx="380" cy="210" r="3"/><circle cx="460" cy="210" r="3"/>
+        </g>
+        <g fill="#9c82d8">
+          <circle cx="550" cy="30" r="3"/><circle cx="630" cy="30" r="3"/><circle cx="710" cy="30" r="3"/>
+          <circle cx="550" cy="110" r="3"/><circle cx="630" cy="110" r="4.5"/><circle cx="710" cy="110" r="3"/>
+          <circle cx="550" cy="190" r="3"/><circle cx="630" cy="190" r="3"/><circle cx="710" cy="190" r="3"/>
+        </g>
+      </svg>
+      <div class="diagram-caption">Ten sam piksel centralny (większy punkt) — trzy przebiegi, coraz szerszy zasięg, wciąż tylko 9 próbek każdy.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Granice</div>
+    <h2>Dlaczego denoiser gubi futro i kaustyki</h2>
+    <p>Filtr (klasyczny albo sieć neuronowa) odróżnia „prawdziwy detal” od „szumu” na podstawie koherencji — czy sąsiednie piksele zgadzają się ze sobą. Cienki włos (Rozdział 20) albo ostra kaustyka (Rozdział 16) są z natury <em>wysokoczęstotliwościowe</em> — zmieniają się piksel do piksela tak samo nagle jak szum. Bez dodatkowej informacji (bufor pokrycia sub-pikselowego, osobna maska) filtr nie ma jak ich rozróżnić.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Fine.detail.loss</span><span>real feGaussianBlur</span></div>
+      <svg viewBox="0 0 760 220" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="denBlur" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="4"/>
+          </filter>
+        </defs>
+        <line x1="380" y1="10" x2="380" y2="210" stroke="#2a2f38"/>
+        <text x="190" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">WŁOSY: SYGNAŁ WYSOKIEJ CZĘST.</text>
+        <text x="570" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">PO AGRESYWNYM DENOISINGU</text>
+
+        <g stroke="#ecebe4" stroke-width="1.3" fill="none">
+          <path d="M60,60 C90,120 70,160 100,190"/>
+          <path d="M85,55 C110,115 95,155 120,188"/>
+          <path d="M110,58 C135,118 118,158 145,190"/>
+          <path d="M135,55 C160,112 145,152 170,186"/>
+          <path d="M160,60 C185,118 168,158 195,190"/>
+          <path d="M185,58 C210,116 195,155 220,188"/>
+          <path d="M210,55 C235,112 220,152 245,186"/>
+          <path d="M235,60 C260,118 245,158 270,190"/>
+          <path d="M260,58 C285,116 270,155 295,188"/>
+          <path d="M285,55 C310,112 295,152 320,186"/>
+        </g>
+
+        <g stroke="#ecebe4" stroke-width="1.3" fill="none" filter="url(#denBlur)">
+          <path d="M440,60 C470,120 450,160 480,190"/>
+          <path d="M465,55 C490,115 475,155 500,188"/>
+          <path d="M490,58 C515,118 498,158 525,190"/>
+          <path d="M515,55 C540,112 525,152 550,186"/>
+          <path d="M540,60 C565,118 548,158 575,190"/>
+          <path d="M565,58 C590,116 575,155 600,188"/>
+          <path d="M590,55 C615,112 600,152 625,186"/>
+          <path d="M615,60 C640,118 625,158 650,190"/>
+          <path d="M640,58 C665,116 650,155 675,188"/>
+          <path d="M665,55 C690,112 675,152 700,186"/>
+        </g>
+      </svg>
+      <div class="diagram-caption">Prawdziwy Gaussian blur (feGaussianBlur) na tych samych krzywych — dziesięć osobnych włosów staje się jedną miękką masą.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Slidery „Denoise Strength” / „Blend” w Arnoldzie, RenderManie i Blenderze istnieją właśnie po to, żeby dało się oddać kompromis między szumem i utratą detalu w Twoje ręce. Produkcyjne pipeline'y często renderują włosy, sierść i kaustyki jako osobne AOV/passy i stosują do nich słabszy denoising albo żaden — kompozytując je z powrotem po fakcie, żeby beauty pass mógł dostać pełną moc filtra bez zjadania tego, co się liczy najbardziej.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Filtr bilateralny</dt><dd>Filtr ważący sąsiadów iloczynem kilku niezależnych czynników Gaussa.</dd>
+      <dt>À-trous</dt><dd>Wielokrotny przebieg filtra z rosnącym rozstawem próbek między pikselami.</dd>
+      <dt>SVGF</dt><dd>Spatiotemporal Variance-Guided Filtering — konkretna, wpływowa technika łącząca à-trous z historią czasową.</dd>
+      <dt>Sygnał wysokiej częstotliwości</dt><dd>Detal zmieniający się nagle piksel do piksela — trudny do odróżnienia od szumu.</dd>
+    </dl>
+  </div>
+
+  <div class="closing">
+    <p>To zamyka wszystkie cztery dodatki. Rozdziały 1–22 dały Ci pełny szkielet ray tracingu; te cztery dodatki pokazały, co jest pod maską najważniejszych „czarnych skrzynek” z tego szkieletu — materiałów, próbkowania, przyspieszania i czyszczenia obrazu.</p>
+    <div class="sign">Koniec dodatków</div>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-19-denoising.html">↑ Rozdział 19: Denoising</a>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek W — Transformacja między rozkładami: powierzchnia i kąt bryłowy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>dω = dA·cosθ'/r²</span><span>JAKOBIAN · zamiana gęstości</span><span>UŻYCIE · próbkowanie świateł</span><span>EXT OF · R.6,15,16 · Dodatek U,V</span>
+  </div>
+
+  <div class="eyebrow">Dodatek W / Fundamenty Monte Carlo</div>
+  <h1>Transformacja między rozkładami</h1>
+  <p class="subtitle">Próbkujesz punkt na powierzchni światła — łatwe, jednorodne po polu. Ale rendering equation z Rozdziału 15 integruje po kącie bryłowym, nie po powierzchni. Te dwie gęstości nie są tym samym — i pomylenie ich to jeden z klasycznych, cichych błędów w domowych path tracerach.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Gdy zmieniasz przestrzeń, w której mierzysz gęstość prawdopodobieństwa, musisz przeskalować ją przez jakobian tej zamiany — inaczej estymator z Dodatku V przestaje być nieobciążony.</li>
+      <li>Dla światła o powierzchni: dω = dA·cosθ'/r² — ten sam wzór, którego cosθ' i r² już widziałeś w Rozdziale 6 i Dodatku T, tylko teraz jako jakobian, nie osobne prawo fizyczne.</li>
+      <li>Próbkujesz jednorodnie po polu (łatwe), a potem przeliczasz gęstość na kąt bryłowy (żeby wstawić do rendering equation) — nigdy w drugą stronę.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Problem</div>
+    <h2>Dwie gęstości, jeden punkt</h2>
+    <p>Wylosowałeś punkt na dysku światła jednorodnie po powierzchni — gęstość p_A jest stała, równa 1 przez całkowitą powierzchnię. Ale w rendering equation z Rozdziału 15 całkujesz po ω, kącie bryłowym widzianym z punktu trafienia — a ta sama fizyczna próbka odpowiada <em>różnej</em> gęstości w tej przestrzeni, zależnej od odległości i kąta, pod jakim światło jest nachylone.</p>
+
+    <div class="formula">dω = dA · cosθ' / r²<span class="sub">θ' — kąt między normalną powierzchni światła a kierunkiem do punktu trafienia; r — odległość; ten wzór to jakobian zamiany dA→dω</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Area.to.solid.angle.jacobian</span><span>foreshortening + distance</span></div>
+      <svg viewBox="0 0 500 320" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="jw1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+        </defs>
+        <g transform="translate(360,110) rotate(25)">
+          <rect x="-30" y="-6" width="60" height="12" fill="#4fc3c0" fill-opacity="0.5" stroke="#4fc3c0" stroke-width="1.3"/>
+          <line x1="0" y1="0" x2="0" y2="-45" stroke="#4fc3c0" stroke-width="1.5"/>
+          <text x="8" y="-40" font-family="IBM Plex Mono" font-size="10" fill="#4fc3c0">n'</text>
+        </g>
+        <text x="380" y="80" font-family="IBM Plex Mono" font-size="10" fill="#4fc3c0">dA</text>
+
+        <circle cx="80" cy="230" r="4" fill="#ecebe4"/>
+        <text x="60" y="250" font-family="IBM Plex Mono" font-size="10.5" fill="#ecebe4">punkt trafienia</text>
+        <line x1="80" y1="230" x2="360" y2="110" stroke="#8b909b" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="210" y="185" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">r</text>
+
+        <path d="M 130,210 A 260,260 0 0,1 145,150" fill="none" stroke="#e8a33d" stroke-width="1.8" marker-end="url(#jw1)"/>
+        <text x="105" y="175" font-family="IBM Plex Mono" font-size="10.5" fill="#e8a33d">θ'</text>
+
+        <text x="250" y="290" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">dω = (dA cosθ') / r² — ten sam człon co w Dodatku T</text>
+      </svg>
+      <div class="diagram-caption">Nachylenie (cosθ') skraca efektywną powierzchnię, odległość (r²) ją rozprasza — to jest cały jakobian.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Przykład</div>
+    <h2>Światło dyskowe: z powierzchni na kąt bryłowy</h2>
+    <div class="worked">
+      <div class="wlabel">Dane wejściowe</div>
+      <div class="step">Dysk-światło: radius R = 1 m, próbkowany jednorodnie po powierzchni. Punkt trafienia: r = 5 m, θ' = 30°.</div>
+    </div>
+    <div class="worked">
+      <div class="wlabel">Krok po kroku</div>
+      <div class="step">1) Gęstość po powierzchni: p_A = 1/(πR²) = 1/(π·1²) = <span class="v">0,3183 m⁻²</span></div>
+      <div class="step">2) cosθ' = cos(30°) = <span class="v">0,8660</span></div>
+      <div class="step">3) p_ω = p_A · r²/cosθ' = 0,3183 · 25/0,8660 = <span class="v">9,189 sr⁻¹</span></div>
+      <div class="result">Wynik: ta sama próbka ma gęstość 0,3183 w mierze powierzchni, ale 9,189 w mierze kąta bryłowego.</div>
+      <div class="check">To nie błąd zaokrąglenia — to dwie naprawdę różne liczby, opisujące ten sam fizyczny punkt w dwóch różnych przestrzeniach.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>To dosłownie to, co dzieje się w każdym „Area Light Sampler” w Arnoldzie, RenderManie czy Cyclesie: silnik próbkuje punkt po powierzchni światła (bo to naturalna, łatwa parametryzacja), a potem automatycznie mnoży przez ten jakobian, zanim wynik wejdzie do estymatora z Dodatku V. Jeśli pisałeś kiedyś własny path tracer i renderowane światła powierzchniowe wychodziły systematycznie za jasne albo za ciemne w zależności od odległości — to prawie zawsze pominięty albo źle zaimplementowany właśnie ten wzór.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Jakobian zamiany zmiennych</dt><dd>Współczynnik przeskalowujący gęstość przy przejściu między przestrzeniami próbkowania.</dd>
+      <dt>Gęstość po powierzchni (p_A)</dt><dd>Prawdopodobieństwo na jednostkę powierzchni światła.</dd>
+      <dt>Gęstość po kącie bryłowym (p_ω)</dt><dd>Prawdopodobieństwo na jednostkę kąta bryłowego widzianego z punktu trafienia.</dd>
+    </dl>
+  </div>
+
+  <div class="closing">
+    <p>To zamyka czwórkę dodatków o fundamentach fizycznych i Monte Carlo (T, U, V, W) — radiometria, kąt bryłowy, estymatory i teraz jakobiany. Wszystko, co Rozdziały 6, 15 i 16 robiły „intuicyjnie”, ma teraz formalne uzasadnienie.</p>
+    <div class="sign">Koniec grupy: Fundamenty fizyczne i Monte Carlo</div>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-06-cienie.html">↑ Rozdział 6: Cienie</a>
+</div>
+</div>
+</body>
+</html>

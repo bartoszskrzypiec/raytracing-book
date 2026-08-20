@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek O — ACES, część 4: ACES 1.0 kontra 2.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>1.0 · grudzień 2014</span><span>2.0 · kwiecień 2025</span><span>MODEL · JMH</span><span>SERIA · ACES 4/4</span>
+  </div>
+
+  <div class="eyebrow">Wykład: ACES — część 4 z 4</div>
+  <h1>ACES 1.0 kontra 2.0 — i praktyka</h1>
+  <p class="subtitle">Części 1–3 opisały architekturę, która stała w miejscu dekadę. W 2025 roku Academy wydała ACES 2.0 — pierwszą fundamentalną przebudowę tego, jak scene-referred kolor trafia na ekran. Ten rozdział pokazuje, co i czemu się zmieniło.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>RRT z ACES 1.x tone-mapował kanały R, G, B osobno (per-channel) — a to, przy bardzo nasyconych kolorach, przesuwało odcień (hue shift), zamiast tylko zmieniać jasność.</li>
+      <li>ACES 2.0 (kwiecień 2025) zastąpił RRT+ODT jedną transformacją per format wyjściowy (DRT), używającą modelu JMH — mapowania w przestrzeni percepcyjnej odcień/nasycenie/jasność, nie w surowym RGB.</li>
+      <li>Od sierpnia 2025 ACES jest rozwijany przez Academy Software Foundation, nie samą Academy — ten sam dom, co OpenColorIO i OpenEXR.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Problem 1.x</div>
+    <h2>Czemu ACES 1.x bywał krytykowany</h2>
+    <p>RRT z Rozdziału 3 tego wykładu liczył tone mapping dla kanału R, G i B <em>niezależnie</em>. To dobrze działa dla kolorów neutralnych, ale przy bardzo nasyconych barwach — neonowe niebieskie światła, czerwone LED-y, jaskrawe kostiumy — jeden kanał (często niebieski) zbliżał się do sufitu wcześniej niż inne. Wynik: kolor nie tylko robił się jaśniejszy, ale <em>zmieniał odcień</em>, czasem aż do „zbrylonych” (clumpy), niepoprawnych barw. Kolorystom to zjawisko było znane jako „ACES look” — charakterystyczna, czasem niechciana desaturacja i cieplejszy odcień, szczególnie widoczne w skórze i mocno nasyconych światłach.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Hue.drift.per-channel.vs.JMH</span><span>schematycznie</span></div>
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="380" cy="150" r="120" fill="#20242c" stroke="#3a4048" stroke-width="1.5"/>
+        <circle cx="380" cy="150" r="3" fill="#ecebe4"/>
+        <text x="380" y="140" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">neutralny</text>
+
+        <line x1="380" y1="150" x2="295.1" y2="234.9" stroke="#8b909b" stroke-width="1" stroke-dasharray="3 3"/>
+        <circle cx="350" cy="180" r="5" fill="#ecebe4"/>
+        <text x="330" y="170" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">start: nasycony kolor</text>
+
+        <path d="M350,180 Q400,230 369.6,269.5" fill="none" stroke="#9c82d8" stroke-width="2.2"/>
+        <circle cx="369.6" cy="269.5" r="4.5" fill="#9c82d8"/>
+        <text x="420" y="278" font-family="IBM Plex Mono" font-size="10.5" fill="#9c82d8">ACES 1.x: dryf odcienia</text>
+
+        <line x1="350" y1="180" x2="295.1" y2="234.9" stroke="#e8a33d" stroke-width="2.2"/>
+        <circle cx="295.1" cy="234.9" r="4.5" fill="#e8a33d"/>
+        <text x="150" y="250" font-family="IBM Plex Mono" font-size="10.5" fill="#e8a33d">ACES 2.0 (JMH): ten sam odcień</text>
+      </svg>
+      <div class="diagram-caption">Ta sama jasność docelowa — per-channel zbacza z linii odcienia, JMH zostaje na niej.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: ACES 2.0</div>
+    <h2>Co zmienia model JMH i unified DRT</h2>
+    <p>ACES 2.0 (wydane końcem kwietnia 2025, trafiające do narzędzi końcowych w ciągu 2025 roku) zastępuje dwuetapowy RRT+ODT jedną transformacją na format wyjściowy — Display Rendering Transform (DRT). Kluczowa zmiana pod maską: gamut mapping w przestrzeni <strong>JMH</strong> (Joint hue/chroma/lightness) — modelu percepcyjnym, w którym odcień, nasycenie i jasność są rozdzielone, zamiast trzech niezależnych kanałów RGB. Nasycone kolory kompresują się w stronę granicy gamutu <em>gładko</em>, po linii stałego odcienia, zamiast ścinać się kanał po kanale.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>RRT+ODT.vs.unified.DRT</span><span>1.x vs 2.0 architecture</span></div>
+      <svg viewBox="0 0 760 220" xmlns="http://www.w3.org/2000/svg">
+        <line x1="380" y1="15" x2="380" y2="200" stroke="#2a2f38"/>
+        <text x="190" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">ACES 1.x</text>
+        <text x="570" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">ACES 2.0</text>
+
+        <rect x="90" y="80" width="100" height="55" rx="7" fill="#20242c" stroke="#9c82d8" stroke-width="1.6"/>
+        <text x="140" y="112" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#9c82d8">RRT</text>
+        <rect x="210" y="80" width="100" height="55" rx="7" fill="#20242c" stroke="#9c82d8" stroke-width="1.6"/>
+        <text x="260" y="112" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#9c82d8">ODT</text>
+        <text x="190" y="160" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">per-channel RGB tone scale</text>
+
+        <rect x="500" y="80" width="180" height="55" rx="7" fill="#20242c" stroke="#e8a33d" stroke-width="1.8"/>
+        <text x="590" y="112" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">DRT (per output)</text>
+        <text x="590" y="160" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">gamut mapping JMH</text>
+      </svg>
+      <div class="diagram-caption">Prostsza architektura na wyjściu — jeden krok zamiast dwóch, dla każdego formatu ekranu.</div>
+    </div>
+
+    <p>Od 6 sierpnia 2025 opiekę nad ACES przejęła Academy Software Foundation (ASWF) — ten sam dom, w którym rozwijane są OpenColorIO, OpenEXR i USD. To sygnał, że ACES jest teraz traktowany jako otwarta infrastruktura branżowa, nie projekt jednej instytucji.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Adopcja</div>
+    <h2>Gdzie ACES 2.0 działa dzisiaj</h2>
+    <p>Wsparcie rozjeżdża się w tempie typowym dla dużej zmiany branżowej: Blender 5.0+ ma ACES 2.0 wbudowane; DaVinci Resolve dodał wsparcie (rozwijane od bety w 2025); OCIO 2.5 (część VFX Reference Platform 2026) ma gotowe konfiguracje ACES 2.0; Autodesk Flame, SGO Mistika i narzędzia Pomfort (Silverstack/Livegrade) też je wspierają. Nuke i Houdini dostają je pośrednio, przez aktualizację OCIO.</p>
+    <p class="note">Adopcja oprogramowania zmienia się z miesiąca na miesiąc — jeśli konkretny status wsparcia w Twoim narzędziu ma znaczenie, sprawdź dokumentację danego programu bezpośrednio.</p>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Najczęstszy błąd w praktyce: pomylenie „Input Color Space” (część 2, IDT) z „Display/View Transform” (część 3, RRT+ODT albo teraz DRT) — albo zaaplikowanie tej samej transformacji dwa razy w dwóch różnych programach po drodze, co daje podwójnie skompresowany, wypłaszczony obraz. AgX w Blenderze (Dodatek E) powstał częściowo właśnie jako odpowiedź na desaturację z ACES 1.x, jeszcze przed wydaniem 2.0 — niektóre studia wybierały go świadomie jako domyślny widok zamiast klasycznego ACES.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Per-channel tone mapping</dt><dd>Tone mapping liczony osobno dla R, G, B — może przesuwać odcień przy dużym nasyceniu.</dd>
+      <dt>JMH</dt><dd>Model percepcyjny (hue/chroma/lightness) użyty w gamut mappingu ACES 2.0.</dd>
+      <dt>DRT (Display Rendering Transform)</dt><dd>Jedna transformacja per format wyjściowy w ACES 2.0, zastępująca RRT+ODT.</dd>
+      <dt>ASWF</dt><dd>Academy Software Foundation — opiekun ACES od sierpnia 2025.</dd>
+    </dl>
+  </div>
+
+  <div class="closing">
+    <p>To zamyka czterorozdziałowy wykład o ACES — od problemu wymiany kolorów, przez AP0/AP1 i RRT/ODT, po to, jak ACES 2.0 naprawił dekadę znanych narzeków. Razem z Dodatkiem E masz teraz kompletny obraz tego, co się dzieje z kolorem między Twoim rendererem a ekranem klienta.</p>
+    <div class="sign">Koniec wykładu o ACES</div>
+    <div class="series-nav" style="justify-content:center;">
+      <span>Część 1: Problem</span><span>Część 2: AP0/AP1</span><span>Część 3: RRT/ODT</span><span class="current">Część 4: 1.0 vs 2.0</span>
+    </div>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+</div>
+</div>
+</body>
+</html>

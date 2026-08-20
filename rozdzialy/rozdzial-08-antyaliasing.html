@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Rozdział 8 — Antyaliasing i próbkowanie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.formula{font-size:15px;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>SAMPLES/PX · N</span><span>PATTERN · JITTERED</span><span>AA · ON</span><span>NOISE · stochastic</span>
+  </div>
+
+  <div class="eyebrow">Rozdział 8 / Realizm i jakość obrazu</div>
+  <h1>Antyaliasing i próbkowanie</h1>
+  <p class="subtitle">Mamy kompletny model materiału z Rozdziałów 5–7. Ale jeden promień na piksel z Rozdziału 3 wciąż daje poszczekane krawędzie. Czas to naprawić — nie zmieniając ani jednego wzoru na kolor, tylko to, ile razy go liczymy.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Jeden promień na piksel = piksel traktowany jako punkt, nie kwadrat — stąd postrzępione krawędzie (aliasing).</li>
+      <li>Supersampling: N promieni na piksel z różnych podpikselowych pozycji, kolory uśrednione.</li>
+      <li>Regularna siatka podpróbek naprawia krawędzie, ale sama może rezonować z regularnymi wzorami w scenie (moiré) — losowy jitter zamienia ten wzór w niegroźny szum.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Problem</div>
+    <h2>Dlaczego linie są poszczekane</h2>
+    <p>W Rozdziale 3 każdy piksel dostał jeden promień, wystrzelony przez jego środek. To traktuje piksel jako punkt — a piksel to w rzeczywistości mały <em>kwadrat</em> obrazu. Gdy krawędź obiektu przechodzi przez ten kwadrat, próbka ze środka daje odpowiedź binarną: promień trafił albo nie trafił, bez żadnego stanu pomiędzy.</p>
+    <p>Wzdłuż ukośnej krawędzi ta binarność układa się w charakterystyczne „schodki” — aliasing. To nie błąd w Twoim kodzie przecięć z Rozdziału 4; to fundamentalne ograniczenie próbkowania sceny w jednym punkcie na piksel.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Aliasing.staircase</span><span>1 vs 16 spp</span></div>
+      <svg viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg">
+        <text x="150" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#8b909b">1 PRÓBKA / PIKSEL</text>
+        <text x="550" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#8b909b">16 PRÓBEK / PIKSEL</text>
+
+        <rect x="60" y="60" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="90" y="60" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="120" y="60" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="150" y="60" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="180" y="60" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="210" y="60" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="60" y="90" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="90" y="90" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="120" y="90" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="150" y="90" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="180" y="90" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="210" y="90" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="60" y="120" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="90" y="120" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="120" y="120" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="150" y="120" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="180" y="120" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="210" y="120" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="60" y="150" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="90" y="150" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="120" y="150" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="150" y="150" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="180" y="150" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="210" y="150" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="60" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="90" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="120" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="150" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="180" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="210" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="60" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="90" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="120" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="150" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="180" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="210" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+
+        <rect x="460" y="60" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="490" y="60" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="520" y="60" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="550" y="60" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="580" y="60" width="30" height="30" fill="#e8a33d" fill-opacity="0.45" stroke="#14161a" stroke-width="1"/>
+        <rect x="610" y="60" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="460" y="90" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="490" y="90" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="520" y="90" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="550" y="90" width="30" height="30" fill="#e8a33d" fill-opacity="0.45" stroke="#14161a" stroke-width="1"/>
+        <rect x="580" y="90" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="610" y="90" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="460" y="120" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="490" y="120" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="520" y="120" width="30" height="30" fill="#e8a33d" fill-opacity="0.45" stroke="#14161a" stroke-width="1"/>
+        <rect x="550" y="120" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="580" y="120" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="610" y="120" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="460" y="150" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="490" y="150" width="30" height="30" fill="#e8a33d" fill-opacity="0.45" stroke="#14161a" stroke-width="1"/>
+        <rect x="520" y="150" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="550" y="150" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="580" y="150" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="610" y="150" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="460" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="490" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="520" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="550" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="580" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="610" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="460" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="490" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="520" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="550" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="580" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+        <rect x="610" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+      </svg>
+      <div class="diagram-caption">Ta sama krawędź. Po lewej: binarna decyzja na pół piksela. Po prawej: uśredniony kolor mówi „ta krawędź przechodzi tędy w połowie”.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Supersampling</div>
+    <h2>Więcej niż jeden promień na piksel</h2>
+    <p>Prosta naprawa: zamiast jednej próbki w środku piksela, weź N próbek rozłożonych po jego obszarze, wystrzel promień z każdej, uśrednij wyniki.</p>
+
+    <div class="formula">color_pixel = (1/N) · Σ trace(ray_i),  i = 1…N<span class="sub">N promieni na piksel, każdy z innej pozycji podpikselowej; wynik to prosta średnia</span></div>
+
+    <p>Najprostszy rozkład to regularna siatka — podziel piksel na N×N komórek i strzelaj przez środek każdej. To już naprawia krawędzie z poprzedniego diagramu. Ale regularna siatka ma swój własny problem: jeśli scena zawiera regularny wzór — cienkie linie płotu, siatkę okienną, teksturę w kratkę — regularne próbkowanie może z nim „rezonować”, produkując pulsujący wzór zwany <strong>moiré</strong>. Naprawiasz jeden rodzaj aliasingu i przypadkiem tworzysz inny.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Jitter</div>
+    <h2>Losowość jako lekarstwo</h2>
+    <p>Rozwiązanie: zamiast strzelać dokładnie przez środek każdej komórki siatki, dodaj do pozycji małe, losowe przesunięcie — wciąż jedna próbka na komórkę (więc rozkład jest wciąż równomierny, tzw. <em>stratified sampling</em>), ale już nie w idealnie regularnej pozycji.</p>
+
+    <div class="formula">próbka(i,j) = ( (i+ξ)/N , (j+ξ)/N )<span class="sub">i, j — indeks komórki w siatce N×N wewnątrz piksela; ξ — niezależna losowa liczba z [0,1) dla każdej współrzędnej</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Sampling.pattern</span><span>regular vs jittered</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <text x="140" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#8b909b">SIATKA REGULARNA</text>
+        <text x="540" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#8b909b">STRATIFIED + JITTER</text>
+
+        <line x1="60" y1="60" x2="60" y2="220" stroke="#2a2f38" stroke-width="1"/>
+        <line x1="60" y1="60" x2="220" y2="60" stroke="#2a2f38" stroke-width="1"/>
+        <line x1="100" y1="60" x2="100" y2="220" stroke="#2a2f38" stroke-width="1"/>
+        <line x1="60" y1="100" x2="220" y2="100" stroke="#2a2f38" stroke-width="1"/>
+        <line x1="140" y1="60" x2="140" y2="220" stroke="#2a2f38" stroke-width="1"/>
+        <line x1="60" y1="140" x2="220" y2="140" stroke="#2a2f38" stroke-width="1"/>
+        <line x1="180" y1="60" x2="180" y2="220" stroke="#2a2f38" stroke-width="1"/>
+        <line x1="60" y1="180" x2="220" y2="180" stroke="#2a2f38" stroke-width="1"/>
+        <line x1="220" y1="60" x2="220" y2="220" stroke="#2a2f38" stroke-width="1"/>
+        <line x1="60" y1="220" x2="220" y2="220" stroke="#2a2f38" stroke-width="1"/>
+
+        <circle cx="80.0" cy="80.0" r="3.2" fill="#e8a33d"/>
+        <circle cx="120.0" cy="80.0" r="3.2" fill="#e8a33d"/>
+        <circle cx="160.0" cy="80.0" r="3.2" fill="#e8a33d"/>
+        <circle cx="200.0" cy="80.0" r="3.2" fill="#e8a33d"/>
+        <circle cx="80.0" cy="120.0" r="3.2" fill="#e8a33d"/>
+        <circle cx="120.0" cy="120.0" r="3.2" fill="#e8a33d"/>
+        <circle cx="160.0" cy="120.0" r="3.2" fill="#e8a33d"/>
+        <circle cx="200.0" cy="120.0" r="3.2" fill="#e8a33d"/>
+        <circle cx="80.0" cy="160.0" r="3.2" fill="#e8a33d"/>
+        <circle cx="120.0" cy="160.0" r="3.2" fill="#e8a33d"/>
+        <circle cx="160.0" cy="160.0" r="3.2" fill="#e8a33d"/>
+        <circle cx="200.0" cy="160.0" r="3.2" fill="#e8a33d"/>
+        <circle cx="80.0" cy="200.0" r="3.2" fill="#e8a33d"/>
+        <circle cx="120.0" cy="200.0" r="3.2" fill="#e8a33d"/>
+        <circle cx="160.0" cy="200.0" r="3.2" fill="#e8a33d"/>
+        <circle cx="200.0" cy="200.0" r="3.2" fill="#e8a33d"/>
+
+        <line x1="460" y1="60" x2="460" y2="220" stroke="#2a2f38" stroke-width="1"/>
+        <line x1="460" y1="60" x2="620" y2="60" stroke="#2a2f38" stroke-width="1"/>
+        <line x1="500" y1="60" x2="500" y2="220" stroke="#2a2f38" stroke-width="1"/>
+        <line x1="460" y1="100" x2="620" y2="100" stroke="#2a2f38" stroke-width="1"/>
+        <line x1="540" y1="60" x2="540" y2="220" stroke="#2a2f38" stroke-width="1"/>
+        <line x1="460" y1="140" x2="620" y2="140" stroke="#2a2f38" stroke-width="1"/>
+        <line x1="580" y1="60" x2="580" y2="220" stroke="#2a2f38" stroke-width="1"/>
+        <line x1="460" y1="180" x2="620" y2="180" stroke="#2a2f38" stroke-width="1"/>
+        <line x1="620" y1="60" x2="620" y2="220" stroke="#2a2f38" stroke-width="1"/>
+        <line x1="460" y1="220" x2="620" y2="220" stroke="#2a2f38" stroke-width="1"/>
+
+        <circle cx="475.8" cy="71.6" r="3.2" fill="#4fc3c0"/>
+        <circle cx="523.6" cy="69.7" r="3.2" fill="#4fc3c0"/>
+        <circle cx="560.9" cy="76.8" r="3.2" fill="#4fc3c0"/>
+        <circle cx="589.4" cy="80.2" r="3.2" fill="#4fc3c0"/>
+        <circle cx="468.9" cy="118.4" r="3.2" fill="#4fc3c0"/>
+        <circle cx="509.7" cy="110.2" r="3.2" fill="#4fc3c0"/>
+        <circle cx="558.2" cy="127.8" r="3.2" fill="#4fc3c0"/>
+        <circle cx="591.0" cy="113.4" r="3.2" fill="#4fc3c0"/>
+        <circle cx="483.1" cy="170.7" r="3.2" fill="#4fc3c0"/>
+        <circle cx="521.9" cy="157.5" r="3.2" fill="#4fc3c0"/>
+        <circle cx="571.4" cy="149.1" r="3.2" fill="#4fc3c0"/>
+        <circle cx="608.6" cy="155.0" r="3.2" fill="#4fc3c0"/>
+        <circle cx="471.5" cy="190.8" r="3.2" fill="#4fc3c0"/>
+        <circle cx="515.4" cy="207.6" r="3.2" fill="#4fc3c0"/>
+        <circle cx="552.3" cy="202.0" r="3.2" fill="#4fc3c0"/>
+        <circle cx="603.3" cy="196.9" r="3.2" fill="#4fc3c0"/>
+      </svg>
+      <div class="diagram-caption">Ta sama liczba próbek, ten sam podział na komórki — jitter tylko rozbija regularność, która powoduje moiré.</div>
+    </div>
+
+    <p>Ludzkie oko jest dużo bardziej tolerancyjne dla przypadkowego szumu niż dla regularnego wzoru — dlatego zamiana strukturalnego aliasingu na losowy szum jest realną poprawą, nawet gdy liczba próbek się nie zmienia.</p>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Slider „Samples” albo „AA Samples” w Arnoldzie, V-Rayu, Cyclesie czy Unrealu to dosłownie N z tego rozdziału. Więcej próbek = gładsze krawędzie i mniej szumu z innych stochastycznych efektów (miękkie cienie z Rozdziału 6, GI w dalszych rozdziałach) — ale czas renderu rośnie liniowo z N.</p>
+    <p>Produkcyjne renderery rzadko używają czystego losowego jittera — sekwencje o niskiej dyskrepancji (Sobol) albo blue noise dają szybszą konwergencję i mniej „grudkowaty” szum przy tej samej liczbie próbek. Zasada jest ta sama: wiele próbek, uśrednionych, byle nie w regularnym wzorze.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Glosariusz</div>
+    <dl>
+      <dt>Aliasing</dt><dd>Postrzępione krawędzie wynikające z próbkowania sceny w jednym punkcie na piksel.</dd>
+      <dt>Supersampling</dt><dd>Uśrednianie wielu promieni na piksel z różnych pozycji podpikselowych.</dd>
+      <dt>Próbka (sample)</dt><dd>Jeden promień wystrzelony z konkretnej pozycji w obrębie piksela.</dd>
+      <dt>Stratified sampling</dt><dd>Podział piksela na komórki z jedną próbką w każdej — gwarantuje równomierne pokrycie.</dd>
+      <dt>Jittering</dt><dd>Losowe przesunięcie próbki wewnątrz jej komórki.</dd>
+      <dt>Moiré</dt><dd>Pulsujący wzór powstały z rezonansu regularnego próbkowania z regularną strukturą sceny.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Krawędzie mamy już gładkie. W następnym rozdziale zajmiemy się tym, co dzieje się <em>na</em> powierzchni: tekstury, mapowanie UV i sposoby, w jakie piksel obrazu trafia na konkretny punkt na mapie koloru czy normalnych.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="rozdzial-07-odbicia-i-zalamania.html">← Poprzedni</a>
+    <a href="rozdzial-09-tekstury-i-uv.html">Następny →</a>
+</div>
+</div>
+</body>
+</html>
