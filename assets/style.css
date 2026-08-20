@@ -80,8 +80,9 @@ h1{font-family:var(--display);font-weight:600;font-size:clamp(30px,5vw,50px);lin
 
 /* SERIES NAV (ACES / Perlin multi-part dodatki) */
 .series-nav{display:flex;gap:10px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;margin:20px 0 0;}
-.series-nav span{padding:5px 12px;border:1px solid var(--border);border-radius:14px;color:var(--text-dim);}
-.series-nav span.current{color:var(--amber);border-color:var(--amber);}
+.series-nav span,.series-nav a{padding:5px 12px;border:1px solid var(--border);border-radius:14px;color:var(--text-dim);text-decoration:none;transition:border-color .15s,color .15s;}
+.series-nav a:hover{color:var(--amber);border-color:var(--amber);}
+.series-nav .current{color:var(--amber);border-color:var(--amber);}
 
 .note{font-size:13px;color:var(--text-dim);font-style:italic;}
 
