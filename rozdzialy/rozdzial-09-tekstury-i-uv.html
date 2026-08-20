@@ -83,7 +83,7 @@
   <div class="section">
     <div class="section-eyebrow">Pass: Teksel</div>
     <h2>Od UV do koloru piksela tekstury</h2>
-    <p>Mając uv_hit, zamieniamy je na współrzędne w pikselach obrazu tekstury (Tw × Th):</p>
+    <p>uv_hit to para liczb z zakresu [0,1] — ale obraz tekstury to zwykła siatka pikseli (tu nazywanych tekselami, od „texture” + „pixel”) o konkretnych wymiarach Tw × Th, np. 2048×2048. Żeby wiedzieć, który dokładnie teksel odczytać, musimy przeskalować uv_hit z zakresu [0,1] do tej siatki:</p>
 
     <div class="formula">x = u · Tw,  y = (1 − v) · Th<span class="sub">(1−v), bo v=0 zwykle oznacza dół tekstury, a rząd 0 obrazu to jego góra — ten sam problem odwrócenia osi co przy pikselach w Rozdziale 3</span></div>
 
