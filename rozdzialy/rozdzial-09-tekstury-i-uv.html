@@ -34,9 +34,9 @@
     <div class="section-eyebrow">Pass: UV</div>
     <h2>Druga, dwuwymiarowa współrzędna każdego wierzchołka</h2>
     <p>Oprócz pozycji (3D) i normalnej (3D), każdy wierzchołek siatki niesie zwykle też UV — parę liczb (u,v), zazwyczaj z zakresu [0,1]. To współrzędne, które ustawiłeś ręcznie w edytorze UV w Blenderze czy Mayi, „rozkładając” zakrzywioną powierzchnię 3D na płaski obraz.</p>
-    <p>W punkcie trafienia nie mamy UV od razu — musimy je zinterpolować z UV trzech wierzchołków, tymi samymi wagami barycentrycznymi, które policzył algorytm Möllera–Trumbore w Rozdziale 4:</p>
+    <p>W punkcie trafienia nie mamy UV od razu — musimy je zinterpolować z UV trzech wierzchołków, tymi samymi wagami barycentrycznymi, które policzył algorytm Möllera–Trumbore w Rozdziale 4. Uwaga na nazewnictwo: w Rozdziale 4 wagi barycentryczne nazwaliśmy <strong>u</strong> i <strong>v</strong> — to zwykłe skalary mówiące, jak blisko którego wierzchołka leży punkt trafienia (u ≥ 0, v ≥ 0, u+v ≤ 1). UV z akapitu wyżej to zupełnie inna para liczb: współrzędna na mapie tekstury, z zakresu [0,1] niezależnie od kształtu trójkąta. Nazwy się powtórzyły przypadkiem, więc poniżej piszemy wagi barycentryczne jako same u, v, a współrzędne tekstury zawsze z przedrostkiem — uvA, uvB, uvC, uv_hit:</p>
 
-    <div class="formula">uv_hit = (1−u−v)·uvA + u·uvB + v·uvC<span class="sub">u, v — te same wagi barycentryczne z Rozdziału 4; uwaga, to inne u,v niż same współrzędne UV tekstury — nazwy się powtarzają, ale to dwie różne pary liczb</span></div>
+    <div class="formula">uv_hit = (1−u−v)·uvA + u·uvB + v·uvC<span class="sub">u, v — wagi barycentryczne z Rozdziału 4, nie współrzędne UV; uvA/uvB/uvC — UV trzech wierzchołków trójkąta; uv_hit — zinterpolowany wynik dla punktu trafienia</span></div>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>3D.to.UV</span><span>same weights</span></div>
