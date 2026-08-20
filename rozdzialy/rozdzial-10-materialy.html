@@ -34,7 +34,7 @@
     <div class="section-eyebrow">Pass: BRDF</div>
     <h2>Co właściwie jest BRDF</h2>
     <p>BRDF (bidirectional reflectance distribution function) to funkcja opisująca, ile światła przychodzącego z kierunku L wychodzi z powrotem w kierunku V, w konkretnym punkcie powierzchni. Diffuse z Rozdziału 5 i specular z Rozdziału 5 to po prostu dwie różne BRDF, dodane do siebie.</p>
-    <p>Żeby BRDF miała sens fizyczny, musi spełniać dwa warunki:</p>
+    <p>Żeby BRDF miała sens fizyczny, musi spełniać dwa warunki. Symbole poniżej: <strong>N</strong> — normalna powierzchni w punkcie trafienia, <strong>L</strong> i <strong>V</strong> — kierunki do światła i do obserwatora (z akapitu wyżej), <strong>f(L,V)</strong> — wartość BRDF dla tej pary kierunków, <strong>dL</strong> — nieskończenie mały element kąta bryłowego wokół kierunku L, po którym całkujemy, zbierając wkład ze wszystkich kierunków hemisfery.</p>
 
     <div class="formula">∫ f(L,V)·(N·L) dL ≤ 1<span class="sub">energooszczędność: suma odbitej energii po całej hemisferze kierunków L nie może przekroczyć energii, która padła — Blinn-Phong tego nie gwarantuje</span></div>
     <div class="formula">f(L,V) = f(V,L)<span class="sub">wzajemność (zasada Helmholtza): zamiana miejscami światła i widza nie zmienia wartości BRDF</span></div>
