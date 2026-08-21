@@ -37,87 +37,67 @@
     <p>Wzdłuż ukośnej krawędzi ta binarność układa się w charakterystyczne „schodki” — aliasing. To nie błąd w Twoim kodzie przecięć z Rozdziału 4; to fundamentalne ograniczenie próbkowania sceny w jednym punkcie na piksel.</p>
 
     <div class="diagram-frame">
-      <div class="diagram-hud"><span>Aliasing.staircase</span><span>1 vs 16 spp</span></div>
-      <svg viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg">
-        <text x="150" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#8b909b">1 PRÓBKA / PIKSEL</text>
-        <text x="550" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#8b909b">16 PRÓBEK / PIKSEL</text>
-
-        <rect x="60" y="60" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="90" y="60" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="120" y="60" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="150" y="60" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="180" y="60" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="210" y="60" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="60" y="90" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="90" y="90" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="120" y="90" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="150" y="90" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="180" y="90" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="210" y="90" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="60" y="120" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="90" y="120" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="120" y="120" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="150" y="120" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="180" y="120" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="210" y="120" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="60" y="150" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="90" y="150" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="120" y="150" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="150" y="150" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="180" y="150" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="210" y="150" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="60" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="90" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="120" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="150" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="180" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="210" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="60" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="90" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="120" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="150" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="180" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="210" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-
-        <rect x="460" y="60" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="490" y="60" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="520" y="60" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="550" y="60" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="580" y="60" width="30" height="30" fill="#e8a33d" fill-opacity="0.45" stroke="#14161a" stroke-width="1"/>
-        <rect x="610" y="60" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="460" y="90" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="490" y="90" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="520" y="90" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="550" y="90" width="30" height="30" fill="#e8a33d" fill-opacity="0.45" stroke="#14161a" stroke-width="1"/>
-        <rect x="580" y="90" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="610" y="90" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="460" y="120" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="490" y="120" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="520" y="120" width="30" height="30" fill="#e8a33d" fill-opacity="0.45" stroke="#14161a" stroke-width="1"/>
-        <rect x="550" y="120" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="580" y="120" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="610" y="120" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="460" y="150" width="30" height="30" fill="#20242c" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="490" y="150" width="30" height="30" fill="#e8a33d" fill-opacity="0.45" stroke="#14161a" stroke-width="1"/>
-        <rect x="520" y="150" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="550" y="150" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="580" y="150" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="610" y="150" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="460" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="490" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="520" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="550" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="580" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="610" y="180" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="460" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="490" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="520" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="550" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="580" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
-        <rect x="610" y="210" width="30" height="30" fill="#e8a33d" fill-opacity="1" stroke="#14161a" stroke-width="1"/>
+      <div class="diagram-hud"><span>Aliasing.staircase</span><span>1 vs N spp</span></div>
+      <div class="diagram-controls">
+        <label for="aaSamples">próbek na bok siatki (s)</label>
+        <input type="range" id="aaSamples" min="1" max="10" step="1" value="1">
+        <span class="value-readout" id="aaReadout">s = 1 → N = 1 (1 próbka/piksel)</span>
+      </div>
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+        <text x="380" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#8b909b">TA SAMA KRAWĘDŹ, ROSNĄCA LICZBA PRÓBEK</text>
+        <g id="aaGrid"></g>
       </svg>
-      <div class="diagram-caption">Ta sama krawędź. Po lewej: binarna decyzja na pół piksela. Po prawej: uśredniony kolor mówi „ta krawędź przechodzi tędy w połowie”.</div>
+      <div class="diagram-caption">Przesuń s — każda komórka to prawdziwy ułamek pokrycia z s×s podpróbek; przy s=1 dostajesz dokładnie binarną decyzję jednego promienia przez środek piksela.</div>
     </div>
+    <script>
+    (function(){
+      var svgNS = 'http://www.w3.org/2000/svg';
+      var group = document.getElementById('aaGrid');
+      var slider = document.getElementById('aaSamples');
+      var readout = document.getElementById('aaReadout');
+      var cols = 6, rows = 6, cellSize = 30, originX = 290, originY = 60;
+      var threshold = originX + originY + rows * cellSize;
+      var fgRects = [];
+      for (var r = 0; r < rows; r++) {
+        for (var c = 0; c < cols; c++) {
+          var x = originX + c * cellSize, y = originY + r * cellSize;
+          var bg = document.createElementNS(svgNS, 'rect');
+          bg.setAttribute('x', x); bg.setAttribute('y', y);
+          bg.setAttribute('width', cellSize); bg.setAttribute('height', cellSize);
+          bg.setAttribute('fill', '#20242c'); bg.setAttribute('stroke', '#14161a'); bg.setAttribute('stroke-width', '1');
+          group.appendChild(bg);
+          var fg = document.createElementNS(svgNS, 'rect');
+          fg.setAttribute('x', x); fg.setAttribute('y', y);
+          fg.setAttribute('width', cellSize); fg.setAttribute('height', cellSize);
+          fg.setAttribute('fill', '#e8a33d'); fg.setAttribute('stroke', '#14161a'); fg.setAttribute('stroke-width', '1');
+          group.appendChild(fg);
+          fgRects.push({el: fg, col: c, row: r});
+        }
+      }
+      function coverage(col, row, s){
+        var count = 0;
+        for (var i = 0; i < s; i++) {
+          for (var j = 0; j < s; j++) {
+            var px = originX + col * cellSize + (i + 0.5) * cellSize / s;
+            var py = originY + row * cellSize + (j + 0.5) * cellSize / s;
+            if (px + py >= threshold) count++;
+          }
+        }
+        return count / (s * s);
+      }
+      function update(){
+        var s = parseInt(slider.value, 10);
+        var N = s * s;
+        fgRects.forEach(function(item){
+          item.el.setAttribute('fill-opacity', coverage(item.col, item.row, s).toFixed(3));
+        });
+        var label = N === 1 ? '1 próbka/piksel' : N + ' próbek/piksel';
+        readout.textContent = 's = ' + s + ' → N = ' + N + ' (' + label + ')';
+      }
+      slider.addEventListener('input', update);
+      update();
+    })();
+    </script>
   </div>
 
   <div class="section">
