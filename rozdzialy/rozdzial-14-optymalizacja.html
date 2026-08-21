@@ -85,27 +85,67 @@
     <p>GPU wykonuje grupy wątków (warp/wavefront, zwykle 32) tą samą instrukcją naraz, na różnych danych (SIMT). Świetnie, gdy wszystkie promienie w warpie robią to samo. Katastrofalnie, gdy się rozjeżdżają: jeśli część promieni trafia w szkło (Rozdział 7), a część w diffuse (Rozdział 5), GPU musi wykonać <em>oba</em> fragmenty kodu dla <em>całego</em> warpu — wątki, które nie potrzebują danej ścieżki, po prostu czekają. To centralny problem GPU ray tracingu, którego rasteryzacja (jeden shader na cały trójkąt) w większości unika.</p>
 
     <div class="diagram-frame">
-      <div class="diagram-hud"><span>Warp.divergence</span><span>2 passes instead of 1</span></div>
+      <div class="diagram-hud"><span>Warp.divergence</span><span>mixed vs sorted</span></div>
+      <div class="diagram-controls">
+        <label for="warpSort">posortowanie promieni po materiale</label>
+        <input type="range" id="warpSort" min="0" max="1" step="0.01" value="0">
+        <span class="value-readout" id="warpReadout">posortowanie: 0% · 50% lanes w docelowym warpie · nadal 4 przebiegi (2 na warp)</span>
+      </div>
       <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
-        <text x="380" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">WARP: 8 PROMIENI, DWA MATERIAŁY</text>
-        <g font-family="IBM Plex Mono" font-size="10">
-          <circle cx="80" cy="70" r="10" fill="#e8a33d"/><circle cx="160" cy="70" r="10" fill="#e8a33d"/><circle cx="240" cy="70" r="10" fill="#4fc3c0"/><circle cx="320" cy="70" r="10" fill="#4fc3c0"/>
-          <circle cx="400" cy="70" r="10" fill="#e8a33d"/><circle cx="480" cy="70" r="10" fill="#4fc3c0"/><circle cx="560" cy="70" r="10" fill="#e8a33d"/><circle cx="640" cy="70" r="10" fill="#4fc3c0"/>
-        </g>
-
-        <text x="60" y="130" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">PASS 1 · diffuse</text>
-        <circle cx="80" cy="150" r="9" fill="#e8a33d"/><circle cx="160" cy="150" r="9" fill="#e8a33d"/><circle cx="240" cy="150" r="9" fill="#20242c" stroke="#3a4048"/><circle cx="320" cy="150" r="9" fill="#20242c" stroke="#3a4048"/>
-        <circle cx="400" cy="150" r="9" fill="#e8a33d"/><circle cx="480" cy="150" r="9" fill="#20242c" stroke="#3a4048"/><circle cx="560" cy="150" r="9" fill="#e8a33d"/><circle cx="640" cy="150" r="9" fill="#20242c" stroke="#3a4048"/>
-
-        <text x="60" y="190" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">PASS 2 · szkło</text>
-        <circle cx="80" cy="210" r="9" fill="#20242c" stroke="#3a4048"/><circle cx="160" cy="210" r="9" fill="#20242c" stroke="#3a4048"/><circle cx="240" cy="210" r="9" fill="#4fc3c0"/><circle cx="320" cy="210" r="9" fill="#4fc3c0"/>
-        <circle cx="400" cy="210" r="9" fill="#20242c" stroke="#3a4048"/><circle cx="480" cy="210" r="9" fill="#4fc3c0"/><circle cx="560" cy="210" r="9" fill="#20242c" stroke="#3a4048"/><circle cx="640" cy="210" r="9" fill="#4fc3c0"/>
-
-        <text x="700" y="150" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">aktywne</text>
-        <text x="700" y="210" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">czeka</text>
+        <text x="380" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">2 WARPY × 8 PROMIENI, DWA MATERIAŁY</text>
+        <text x="60" y="90" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">WARP A → diffuse (docelowo)</text>
+        <text x="60" y="205" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">WARP B → szkło (docelowo)</text>
+        <line x1="50" y1="100" x2="700" y2="100" stroke="#2a2f38" stroke-width="1" stroke-dasharray="3 4"/>
+        <line x1="50" y1="180" x2="700" y2="180" stroke="#2a2f38" stroke-width="1" stroke-dasharray="3 4"/>
+        <g id="warpLanes"></g>
       </svg>
-      <div class="diagram-caption">Ten sam warp musi przejść przez dwie sekwencyjne fazy — czas dwóch przebiegów za cenę jednego wywołania.</div>
+      <div class="diagram-caption">Przesuń suwak — dwa mieszane warpy (każdy wymaga obu przebiegów) rozdzielają się w jeden czysto-diffuse i jeden czysto-szklany warp (każdy potrzebuje już tylko jednego). To dosłownie krok „Sortuj po materiale” z pipeline'u niżej.</div>
     </div>
+    <script>
+    (function(){
+      var svgNS = 'http://www.w3.org/2000/svg';
+      var slider = document.getElementById('warpSort');
+      var readout = document.getElementById('warpReadout');
+      var group = document.getElementById('warpLanes');
+      var xs = [80, 160, 240, 320, 400, 480, 560, 640];
+      var rowA = 100, rowB = 180;
+      var amber = '#e8a33d', cyan = '#4fc3c0';
+      var defs = [
+        [amber, 0, 'A', 0, 'A'], [amber, 1, 'A', 1, 'A'], [amber, 4, 'A', 2, 'A'], [amber, 6, 'A', 3, 'A'],
+        [amber, 1, 'B', 4, 'A'], [amber, 3, 'B', 5, 'A'], [amber, 5, 'B', 6, 'A'], [amber, 7, 'B', 7, 'A'],
+        [cyan, 2, 'A', 0, 'B'], [cyan, 3, 'A', 1, 'B'], [cyan, 5, 'A', 2, 'B'], [cyan, 7, 'A', 3, 'B'],
+        [cyan, 0, 'B', 4, 'B'], [cyan, 2, 'B', 5, 'B'], [cyan, 4, 'B', 6, 'B'], [cyan, 6, 'B', 7, 'B']
+      ];
+      var lanes = defs.map(function(d){
+        var c = document.createElementNS(svgNS, 'circle');
+        c.setAttribute('r', '9'); c.setAttribute('fill', d[0]);
+        group.appendChild(c);
+        return {
+          el: c,
+          startX: xs[d[1]], startY: d[2] === 'A' ? rowA : rowB,
+          endX: xs[d[3]], endY: d[4] === 'A' ? rowA : rowB,
+          targetRow: d[4]
+        };
+      });
+      function update(){
+        var s = parseFloat(slider.value);
+        var matches = 0;
+        lanes.forEach(function(l){
+          var x = l.startX + (l.endX - l.startX) * s;
+          var y = l.startY + (l.endY - l.startY) * s;
+          l.el.setAttribute('cx', x.toFixed(1));
+          l.el.setAttribute('cy', y.toFixed(1));
+          var curRow = Math.abs(y - rowA) < Math.abs(y - rowB) ? 'A' : 'B';
+          if (curRow === l.targetRow) matches++;
+        });
+        var pct = Math.round(matches / 16 * 100);
+        var pure = matches === 16;
+        readout.textContent = 'posortowanie: ' + Math.round(s * 100) + '% · ' + pct + '% lanes w docelowym warpie · ' + (pure ? 'tylko 2 przebiegi (po 1 na warp)' : 'nadal 4 przebiegi (2 na warp)');
+      }
+      slider.addEventListener('input', update);
+      update();
+    })();
+    </script>
   </div>
 
   <div class="section">
