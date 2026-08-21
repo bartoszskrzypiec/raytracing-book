@@ -41,48 +41,72 @@
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Lambert.angle</span><span>diffuse = kd·I·(N·L)</span></div>
+      <div class="diagram-controls">
+        <label for="lambertTheta">kąt N–L (θ)</label>
+        <input type="range" id="lambertTheta" min="0" max="110" step="1" value="45">
+        <span class="value-readout" id="lambertReadout">θ = 45° · N·L = 0,71</span>
+      </div>
       <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <marker id="l1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
           <marker id="l2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9c82d8"/></marker>
         </defs>
 
-        <line x1="257" y1="20" x2="257" y2="260" stroke="#2a2f38"/>
-        <line x1="502" y1="20" x2="502" y2="260" stroke="#2a2f38"/>
+        <line x1="180" y1="200" x2="580" y2="200" stroke="#8b909b" stroke-width="2"/>
+        <circle cx="380" cy="200" r="4" fill="#ecebe4"/>
 
-        <text x="140" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#8b909b">N·L ≈ 0,1</text>
-        <text x="140" y="50" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">światło styczne</text>
-        <text x="385" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#8b909b">N·L ≈ 0,7</text>
-        <text x="385" y="50" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">kąt ~45°</text>
-        <text x="625" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#8b909b">N·L ≈ 1,0</text>
-        <text x="625" y="50" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">na wprost</text>
+        <line x1="380" y1="200" x2="380" y2="120" stroke="#e8a33d" stroke-width="2.5" marker-end="url(#l1)"/>
+        <text x="392" y="118" text-anchor="middle" font-family="IBM Plex Mono" font-size="13" fill="#e8a33d">N</text>
 
-        <!-- col 1 -->
-        <line x1="40" y1="200" x2="240" y2="200" stroke="#8b909b" stroke-width="2"/>
-        <line x1="140" y1="200" x2="140" y2="120" stroke="#e8a33d" stroke-width="2.5" marker-end="url(#l1)"/>
-        <text x="150" y="118" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">N</text>
-        <line x1="140" y1="200" x2="225" y2="185" stroke="#9c82d8" stroke-width="2.2" marker-end="url(#l2)"/>
-        <text x="222" y="178" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">L</text>
-        <rect x="95" y="225" width="90" height="24" rx="4" fill="#e8a33d" fill-opacity="0.08" stroke="#2a2f38"/>
+        <path id="lambertArc" d="M 380,170 A 30,30 0 0,1 380,170" fill="none" stroke="#8b909b" stroke-width="1.3"/>
 
-        <!-- col 2 -->
-        <line x1="285" y1="200" x2="485" y2="200" stroke="#8b909b" stroke-width="2"/>
-        <line x1="385" y1="200" x2="385" y2="120" stroke="#e8a33d" stroke-width="2.5" marker-end="url(#l1)"/>
-        <text x="395" y="118" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">N</text>
-        <line x1="385" y1="200" x2="440" y2="145" stroke="#9c82d8" stroke-width="2.2" marker-end="url(#l2)"/>
-        <text x="446" y="140" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">L</text>
-        <rect x="340" y="225" width="90" height="24" rx="4" fill="#e8a33d" fill-opacity="0.45" stroke="#2a2f38"/>
+        <line id="lambertL" x1="380" y1="200" x2="380" y2="120" stroke="#9c82d8" stroke-width="2.2" marker-end="url(#l2)"/>
+        <text id="lambertLLabel" x="392" y="118" text-anchor="middle" font-family="IBM Plex Mono" font-size="13" fill="#9c82d8">L</text>
 
-        <!-- col 3 -->
-        <line x1="530" y1="200" x2="730" y2="200" stroke="#8b909b" stroke-width="2"/>
-        <line x1="625" y1="200" x2="625" y2="120" stroke="#e8a33d" stroke-width="2.5" marker-end="url(#l1)"/>
-        <text x="635" y="118" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">N</text>
-        <line x1="611" y1="200" x2="611" y2="122" stroke="#9c82d8" stroke-width="2.2" marker-end="url(#l2)"/>
-        <text x="595" y="118" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">L</text>
-        <rect x="580" y="225" width="90" height="24" rx="4" fill="#e8a33d" fill-opacity="0.95" stroke="#2a2f38"/>
+        <rect id="lambertSwatch" x="330" y="225" width="100" height="30" rx="4" fill="#e8a33d" fill-opacity="0.71" stroke="#2a2f38"/>
+        <text id="lambertBelowLabel" x="380" y="272" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#9c82d8" opacity="0">światło pod horyzontem — N·L=0</text>
       </svg>
-      <div class="diagram-caption">Ta sama formuła, trzy kąty — jasność swatcha to po prostu wartość N·L.</div>
+      <div class="diagram-caption">Przesuń θ — jasność swatcha to na żywo max(0, N·L), dokładnie ten sam wzór co wyżej.</div>
     </div>
+    <script>
+    (function(){
+      var slider = document.getElementById('lambertTheta');
+      var readout = document.getElementById('lambertReadout');
+      var Lline = document.getElementById('lambertL');
+      var Llabel = document.getElementById('lambertLLabel');
+      var arc = document.getElementById('lambertArc');
+      var swatch = document.getElementById('lambertSwatch');
+      var belowLabel = document.getElementById('lambertBelowLabel');
+      var px = 380, py = 200, armLen = 80, arcR = 30;
+      function fmt(n, d){ return n.toFixed(d).replace('.', ','); }
+      function update(){
+        var thetaDeg = parseFloat(slider.value);
+        var thetaRad = thetaDeg * Math.PI / 180;
+        var lx = px + armLen * Math.sin(thetaRad);
+        var ly = py - armLen * Math.cos(thetaRad);
+        Lline.setAttribute('x2', lx.toFixed(1));
+        Lline.setAttribute('y2', ly.toFixed(1));
+        var labelR = armLen + 18;
+        Llabel.setAttribute('x', (px + labelR * Math.sin(thetaRad)).toFixed(1));
+        Llabel.setAttribute('y', (py - labelR * Math.cos(thetaRad) + 4).toFixed(1));
+
+        var ax = px + arcR * Math.sin(thetaRad);
+        var ay = py - arcR * Math.cos(thetaRad);
+        arc.setAttribute('d', 'M ' + px + ',' + (py - arcR) + ' A ' + arcR + ',' + arcR + ' 0 0,1 ' + ax.toFixed(1) + ',' + ay.toFixed(1));
+
+        var NdotL = Math.max(0, Math.cos(thetaRad));
+        swatch.setAttribute('fill-opacity', NdotL.toFixed(3));
+        var below = thetaDeg > 90;
+        Lline.setAttribute('opacity', below ? 0.4 : 1);
+        Lline.setAttribute('stroke-dasharray', below ? '5 4' : 'none');
+        belowLabel.setAttribute('opacity', below ? 1 : 0);
+
+        readout.textContent = 'θ = ' + thetaDeg.toFixed(0) + '° · N·L = ' + fmt(NdotL, 2) + (below ? ' (pod horyzontem)' : '');
+      }
+      slider.addEventListener('input', update);
+      update();
+    })();
+    </script>
   </div>
 
   <div class="section">
@@ -96,6 +120,11 @@
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Blinn-Phong.vectors</span><span>H vs R</span></div>
+      <div class="diagram-controls">
+        <label for="bpVAngle">kąt V</label>
+        <input type="range" id="bpVAngle" min="-70" max="70" step="1" value="55">
+        <span class="value-readout" id="bpReadout">V obrócone o 55° · H=normalize(L+V) · N·H=0,79</span>
+      </div>
       <svg viewBox="0 0 760 380" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <marker id="v1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
@@ -113,17 +142,55 @@
         <line x1="380" y1="280" x2="235" y2="165" stroke="#9c82d8" stroke-width="2.3" marker-end="url(#v2)"/>
         <text x="212" y="158" font-family="IBM Plex Mono" font-size="13" fill="#9c82d8">L</text>
 
-        <line x1="380" y1="280" x2="555" y2="175" stroke="#4fc3c0" stroke-width="2.3" marker-end="url(#v3)"/>
-        <text x="562" y="168" font-family="IBM Plex Mono" font-size="13" fill="#4fc3c0">V</text>
+        <line id="bpV" x1="380" y1="280" x2="555" y2="175" stroke="#4fc3c0" stroke-width="2.3" marker-end="url(#v3)"/>
+        <text id="bpVLabel" x="562" y="168" text-anchor="middle" font-family="IBM Plex Mono" font-size="13" fill="#4fc3c0">V</text>
 
-        <line x1="380" y1="280" x2="386" y2="180" stroke="#ecebe4" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#v4)"/>
-        <text x="398" y="182" font-family="IBM Plex Mono" font-size="13" fill="#ecebe4">H</text>
-
-        <line x1="380" y1="280" x2="458" y2="218" stroke="#8b909b" stroke-width="1.5" stroke-dasharray="2 4"/>
-        <text x="466" y="212" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">R (Phong)</text>
+        <line id="bpH" x1="380" y1="280" x2="386" y2="150" stroke="#ecebe4" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#v4)"/>
+        <text id="bpHLabel" x="398" y="150" text-anchor="middle" font-family="IBM Plex Mono" font-size="13" fill="#ecebe4">H</text>
       </svg>
-      <div class="diagram-caption">Blinn-Phong liczy N·H zamiast R·V — H ≈ dwusieczna L i V, dużo taniej niż odbijanie L względem N.</div>
+      <div class="diagram-caption">Przesuń V — H = normalize(L+V) przelicza się na żywo; N·H rośnie, gdy V zbliża się do lustrzanego odbicia L.</div>
     </div>
+    <script>
+    (function(){
+      var slider = document.getElementById('bpVAngle');
+      var readout = document.getElementById('bpReadout');
+      var Vline = document.getElementById('bpV');
+      var Vlabel = document.getElementById('bpVLabel');
+      var Hline = document.getElementById('bpH');
+      var Hlabel = document.getElementById('bpHLabel');
+      var point = {x: 380, y: 280};
+      var Lend = {x: 235, y: 165};
+      var Lvec = {x: Lend.x - point.x, y: Lend.y - point.y};
+      var Llen = Math.sqrt(Lvec.x * Lvec.x + Lvec.y * Lvec.y);
+      var Lunit = {x: Lvec.x / Llen, y: Lvec.y / Llen};
+      var armV = 175, armH = 130;
+      function fmt(n, d){ return n.toFixed(d).replace('.', ','); }
+      function update(){
+        var thetaV = parseFloat(slider.value);
+        var thetaRad = thetaV * Math.PI / 180;
+        var Vunit = {x: Math.sin(thetaRad), y: -Math.cos(thetaRad)};
+        var Vend = {x: point.x + armV * Vunit.x, y: point.y + armV * Vunit.y};
+        Vline.setAttribute('x2', Vend.x.toFixed(1));
+        Vline.setAttribute('y2', Vend.y.toFixed(1));
+        Vlabel.setAttribute('x', (point.x + (armV + 20) * Vunit.x).toFixed(1));
+        Vlabel.setAttribute('y', (point.y + (armV + 20) * Vunit.y).toFixed(1));
+
+        var Hsum = {x: Lunit.x + Vunit.x, y: Lunit.y + Vunit.y};
+        var Hlen = Math.sqrt(Hsum.x * Hsum.x + Hsum.y * Hsum.y);
+        var Hunit = Hlen > 0.0001 ? {x: Hsum.x / Hlen, y: Hsum.y / Hlen} : {x: 0, y: -1};
+        var Hend = {x: point.x + armH * Hunit.x, y: point.y + armH * Hunit.y};
+        Hline.setAttribute('x2', Hend.x.toFixed(1));
+        Hline.setAttribute('y2', Hend.y.toFixed(1));
+        Hlabel.setAttribute('x', (point.x + (armH + 16) * Hunit.x).toFixed(1));
+        Hlabel.setAttribute('y', (point.y + (armH + 16) * Hunit.y).toFixed(1));
+
+        var NdotH = -Hunit.y;
+        readout.textContent = 'V obrócone o ' + thetaV.toFixed(0) + '° · H=normalize(L+V) · N·H=' + fmt(NdotH, 2);
+      }
+      slider.addEventListener('input', update);
+      update();
+    })();
+    </script>
 
     <p>Wykładnik <em>shininess</em> kontroluje rozmiar i ostrość błysku: niski (np. 8) daje szeroki, rozmyty refleks — plastik, matowa farba; wysoki (128+) daje mały, ostry punkt — polerowany metal, mokra powierzchnia. To dokładnie ten sam parametr, który w silnikach PBR chowa się pod nazwą „glossiness”, albo odwrotnością „roughness”.</p>
   </div>
