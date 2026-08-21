@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek AF — Prefiltered IBL: irradiance i przybliżenie split-sum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>DIFFUSE · irradiance conv.</span><span>SPECULAR · prefiltered mips</span><span>METODA · split-sum (Karis 2013)</span><span>EXT OF · Dodatek Y · R.11</span>
+  </div>
+
+  <div class="eyebrow">Dodatek AF / Globalne oświetlenie</div>
+  <h1>Prefiltered IBL: irradiance i przybliżenie split-sum</h1>
+  <p class="subtitle">Dodatek Y nauczył Cię odpytywać panoramę przy każdym odbiciu ścieżki — poprawnie, ale za wolno na 60 klatek na sekundę. Silniki czasu rzeczywistego liczą tę samą całkę raz, zanim jeszcze zacznie się render, i potem tylko odczytują gotową odpowiedź.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Diffuse IBL to jedna, mocno rozmyta konwolucja panoramy na kierunek normalnej — policzona raz, nie co klatkę.</li>
+      <li>Specular IBL potrzebuje osobnej, coraz bardziej rozmytej wersji panoramy dla każdego poziomu roughness — stąd łańcuch mipów.</li>
+      <li>Split-sum approximation (Karis, 2013) rozbija pełną całkę na dwa niezależne, prealkulowane elementy — bez tej sztuczki real-time IBL by nie istniało w obecnej formie.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Problem z czasem rzeczywistym</div>
+    <h2>Path tracer może czekać. Gra — nie</h2>
+    <p>Dodatek Y odpytuje panoramę na nowo przy każdym odbiciu ścieżki, dla każdego piksela, w każdej klatce renderu offline — który i tak liczy się minuty albo godziny, więc kilkaset dodatkowych odczytów tekstury nie robi różnicy. Silnik czasu rzeczywistego ma na całą klatkę, ze wszystkim, budżet rzędu milisekund. Nie może sobie pozwolić na importance sampling po luminancji panoramy dla każdego piksela na ekranie, w każdej klatce.</p>
+    <p>Rozwiązanie jest tym samym pomysłem, co w Dodatku AE: <strong>policz raz, użyj szybko</strong>. Zanim gracz w ogóle zobaczy scenę, silnik piecze (bake) odpowiedź na całkę oświetleniową dla danej panoramy — raz, offline albo przy starcie poziomu — i w czasie gry tylko odczytuje gotowy wynik, dwoma-trzema odczytami tekstury na piksel.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Diffuse</div>
+    <h2>Irradiance convolution: jedna rozmyta wersja panoramy</h2>
+    <p>Dla światła rozproszonego (Lambert) potrzebujesz tylko jednej liczby na kierunek normalnej — napromieniowania E(N), czyli sumy światła dochodzącego z całej hemisfery, ważonej cosinusem, dokładnie jak AO w Dodatku AE, tylko bez binarnej widoczności — tu liczy się prawdziwa wartość radiancji z panoramy:</p>
+
+    <div class="formula">E(<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>) = ∫_Ω L_i(<span class="vec" data-tip="Dowolny kierunek na hemisferze">ω</span>) · (<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Dowolny kierunek na hemisferze">ω</span>) dω<span class="sub">L_i(ω) — radiancja odczytana z panoramy w kierunku ω (jak w Dodatku Y), skalar, nie wektor; wynikowy diffuse = (albedo/π)·E(N)</span></div>
+
+    <p>Ponieważ E(N) jest funkcją bardzo gładką (cosinus filtruje wszystkie wysokie częstotliwości panoramy — nawet ostre słońce rozmywa się w łagodny gradient), zwykle nie zapisuje się jej jako obrazu wcale. Zamiast tego kompresuje się ją do garstki liczb — <strong>sferycznych harmonik</strong> (Ramamoorthi i Hanrahan, 2001): 9 współczynników na kanał koloru wystarcza, żeby odtworzyć E(N) dla dowolnego N z błędem niezauważalnym gołym okiem. To dosłownie tysiące razy mniej danych niż pełna panorama.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Specular</div>
+    <h2>Łańcuch mipów: osobna rozmyta panorama na każdy roughness</h2>
+    <p>Rozdział 11 pokazał, że rozkład GGX D(H) rozszerza się z roughness — gładki materiał ma wąski lob, chropowaty szeroki. Prefiltrowanie specular IBL robi dokładnie to samo, tylko z panoramą zamiast pojedynczego światła: konwoluuje ją wokół kierunku odbicia R (przy standardowym w real-time uproszczeniu N=V=R) rozkładem GGX o zadanym roughness, i zapisuje wynik jako kolejny poziom mipmapy tej samej tekstury — mip 0 to ostra, oryginalna panorama (roughness≈0), najwyższy mip to najbardziej rozmyta wersja (roughness≈1):</p>
+
+    <div class="formula">PrefilteredColor(<span class="vec" data-tip="Kierunek odbicia lustrzanego">R</span>, roughness) = Σₖ L_i(<span class="vec" data-tip="Dowolny kierunek na hemisferze">ωₖ</span>) · (<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Dowolny kierunek na hemisferze">ωₖ</span>) / Σₖ (<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Dowolny kierunek na hemisferze">ωₖ</span>)<span class="sub">ωₖ — próbki wylosowane importance samplingiem GGX wokół R (Dodatek AD, tylko wokół R zamiast wokół H); suma znormalizowana, żeby jasność nie „uciekała” przy dużym roughness</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Prefiltered.mip.blur</span><span>roughness → σ blur</span></div>
+      <div class="diagram-controls">
+        <label for="iblRoughness">Roughness</label>
+        <input type="range" id="iblRoughness" min="0.05" max="1" step="0.01" value="0.3">
+        <span class="value-readout" id="iblReadout">roughness = 0,30 · mip ≈ 1,8 / 6 · σ ≈ 4,2px</span>
+      </div>
+      <svg viewBox="0 0 760 220" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="envBlur" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur id="envBlurAmt" stdDeviation="4.2"/>
+          </filter>
+        </defs>
+        <text x="380" y="26" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">EQUIRECTANGULAR PANORAMA — MIP AKTYWNY</text>
+        <g filter="url(#envBlur)">
+          <rect x="60" y="40" width="640" height="150" fill="#171a1f"/>
+          <rect x="60" y="40" width="640" height="80" fill="#233042"/>
+          <rect x="60" y="120" width="640" height="70" fill="#1a1f26"/>
+          <circle cx="560" cy="82" r="24" fill="#f0c880"/>
+          <circle cx="230" cy="95" r="10" fill="#e8a33d" fill-opacity="0.7"/>
+          <circle cx="420" cy="150" r="7" fill="#4fc3c0" fill-opacity="0.5"/>
+        </g>
+      </svg>
+      <div class="diagram-caption">Ten sam parametr roughness co w Rozdziale 11 — tylko zamiast szerokości błysku steruje teraz rozmyciem całej zapisanej panoramy.</div>
+    </div>
+    <script>
+    (function(){
+      var slider = document.getElementById('iblRoughness');
+      var readout = document.getElementById('iblReadout');
+      var blur = document.getElementById('envBlurAmt');
+      var maxMip = 6;
+      function fmt(n, d){ return n.toFixed(d).replace('.', ','); }
+      function update(){
+        var roughness = parseFloat(slider.value);
+        var mip = roughness * maxMip;
+        var stdDev = roughness * 14;
+        blur.setAttribute('stdDeviation', stdDev.toFixed(2));
+        readout.textContent = 'roughness = ' + fmt(roughness, 2) + ' · mip ≈ ' + fmt(mip, 1) + ' / ' + maxMip + ' · σ ≈ ' + fmt(stdDev, 1) + 'px';
+      }
+      slider.addEventListener('input', update);
+      update();
+    })();
+    </script>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Split-sum</div>
+    <h2>Dlaczego jedna tekstura nie wystarczy</h2>
+    <p>Prefiltrowana panorama z poprzedniej sekcji zależy tylko od R i roughness — ale prawdziwa specular IBL to pełna całka ∫f(l,v)·L_i(l)·(N·l)dl, która zależy <em>też</em> od F0 materiału i kąta patrzenia (N·V) osobno. Upieczenie tego wszystkiego w jedną teksturę per environment map byłoby ogromne i musiałoby się powtarzać dla każdej kombinacji materiału. Karis (2013, „Real Shading in Unreal Engine 4”) zauważył, że całkę da się rozbić w przybliżeniu na iloczyn dwóch niezależnych, dużo tańszych całek:</p>
+
+    <div class="formula">specular ≈ PrefilteredColor(<span class="vec" data-tip="Kierunek odbicia lustrzanego">R</span>, roughness) · (F0·A + B)<br>(A,B) = EnvBRDF-LUT(<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Kierunek od punktu trafienia do obserwatora">V</span>, roughness)<span class="sub">PrefilteredColor — zależy od konkretnej panoramy i roughness (policzone wyżej, raz na environment map); (A,B) — mała, uniwersalna tekstura 2D, niezależna od panoramy i materiału, policzona raz dla całego silnika i używana wszędzie</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Split-sum.product</span><span>2 textures × 1 multiply</span></div>
+      <svg viewBox="0 0 760 200" xmlns="http://www.w3.org/2000/svg">
+        <rect x="40" y="40" width="150" height="110" rx="6" fill="#20242c" stroke="#4fc3c0" stroke-width="1.5"/>
+        <circle cx="115" cy="95" r="30" fill="#f0c880" fill-opacity="0.5"/>
+        <text x="115" y="168" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">PrefilteredColor(R,roughness)</text>
+        <text x="115" y="182" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">per environment map</text>
+
+        <text x="230" y="105" text-anchor="middle" font-family="IBM Plex Mono" font-size="22" fill="#8b909b">×</text>
+
+        <rect x="270" y="40" width="150" height="110" rx="6" fill="#20242c" stroke="#9c82d8" stroke-width="1.5"/>
+        <g stroke="#9c82d8" stroke-opacity="0.5"><line x1="270" y1="70" x2="420" y2="70"/><line x1="270" y1="100" x2="420" y2="100"/><line x1="270" y1="130" x2="420" y2="130"/><line x1="315" y1="40" x2="315" y2="150"/><line x1="360" y1="40" x2="360" y2="150"/></g>
+        <text x="345" y="168" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">EnvBRDF-LUT(N·V, roughness)</text>
+        <text x="345" y="182" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">uniwersalna, raz dla silnika</text>
+
+        <text x="460" y="105" text-anchor="middle" font-family="IBM Plex Mono" font-size="22" fill="#8b909b">=</text>
+
+        <rect x="500" y="40" width="150" height="110" rx="6" fill="#20242c" stroke="#e8a33d" stroke-width="2"/>
+        <circle cx="575" cy="95" r="30" fill="#e8a33d" fill-opacity="0.6"/>
+        <text x="575" y="168" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#e8a33d">specular IBL</text>
+        <text x="575" y="182" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">2 odczyty tekstury + 1 mnożenie</text>
+      </svg>
+      <div class="diagram-caption">Zamiast jednej ogromnej, powtarzanej za każdym razem całki — dwa małe, wielokrotnego użytku odczyty tekstury.</div>
+    </div>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>„Reflection Captures” (Unreal), „Reflection Probes” (Unity), „Irradiance Volumes” i cubemapy odbić w Blender Eevee — wszystkie to dokładnie ten bake: irradiance (sferyczne harmoniki albo mała cubemapa) plus prefiltrowany łańcuch mipów. Dlatego przesunięcie dużego mebla w edytorze wymaga „rebake lighting” — geometria się zmieniła, więc precalkulowana odpowiedź na całkę jest już nieaktualna. To też dlaczego takie probe'y łapią tylko statyczną scenę — ruchome obiekty potrzebują dodatkowo SSR albo ray-traced reflections, żeby w ogóle się odbijały.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Słowniczek</div>
+    <dl>
+      <dt>Irradiance convolution</dt><dd>Całka E(N) — światło z całej hemisfery ważone cosinusem, per normalna.</dd>
+      <dt>Sferyczne harmoniki (SH)</dt><dd>Skompresowana reprezentacja E(N); zwykle 9 współczynników/kanał.</dd>
+      <dt>Prefiltered mip chain</dt><dd>Sekwencja coraz bardziej rozmytych wersji panoramy, indeksowana roughness.</dd>
+      <dt>Split-sum approximation</dt><dd>Karis 2013 — rozbicie całki specular IBL na PrefilteredColor × EnvBRDF-LUT.</dd>
+      <dt>EnvBRDF-LUT</dt><dd>Mała, uniwersalna tekstura 2D, niezależna od konkretnej panoramy.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Razem z Dodatkiem Y i Dodatkiem AE masz teraz pełny obraz: dlaczego IBL w ogóle działa (Y), jak jest wystarczająco szybkie na 60 klatek na sekundę (ten dodatek), i jak ten sam pomysł „policz raz, użyj szybko” wygląda zastosowany do samej geometrii zamiast światła (AE).</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../dodatki/dodatek-y-environment-lighting.html">↑ Dodatek Y: Environment lighting / HDRI</a>
+</div>
+</div>
+<script src="../assets/interactive.js"></script>
+</body>
+</html>

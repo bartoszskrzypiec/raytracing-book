@@ -31,6 +31,8 @@
     <div class="section-eyebrow">Pass: Idea</div>
     <h2>Obraz jako światło z każdego kierunku naraz</h2>
     <p>W Rozdziale 15, gdy promień nie trafiał w żaden obiekt, po prostu kończył ścieżkę bez wkładu światła. Environment light zmienia to: kierunek promienia, który uciekł ze scenę, odpytuje panoramiczny obraz (HDRI — High Dynamic Range Image, żeby poprawnie reprezentować bardzo jasne słońce i bardzo ciemne cienie w jednym pliku) i zwraca jego wartość jako Le — tak, jakby całe niebo (albo cała otaczająca scena, nagrana w realnym studiu czy plenerze) było jednym, nieskończenie odległym światłem.</p>
+    <p>To odpytywanie panoramy na nowo przy każdym odbiciu ścieżki ma sens w path tracerze, który i tak liczy się minutami — ale nie w silniku renderującym 60 klatek na sekundę.</p>
+    <a class="inline-deeper" href="../dodatki/dodatek-af-prefiltered-ibl.html">↓ Dodatek AF — jak silniki real-time robią to samo bez odpytywania panoramy co klatkę</a>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Equirectangular.mapping</span><span>sphere ↔ panorama</span></div>
@@ -106,10 +108,16 @@
     <p>Ostatni dodatek z tej rundy: pełny wzór funkcji fazowej Henyeya-Greensteina, nazwanej z imienia w Rozdziale 18, ale nigdy nie wypisanej.</p>
   </div>
 
+<div class="deeper">
+  <div class="deeper-label">Idź głębiej</div>
+  <a href="../dodatki/dodatek-af-prefiltered-ibl.html">Dodatek AF — Prefiltered IBL: irradiance i split-sum</a>
+</div>
+
 <div class="site-nav">
     <a href="../index.html">← Spis treści</a>
     <a href="../rozdzialy/rozdzial-15-path-tracing.html">↑ Rozdział 15: Path tracing i Monte Carlo</a>
 </div>
 </div>
+<script src="../assets/interactive.js"></script>
 </body>
 </html>
