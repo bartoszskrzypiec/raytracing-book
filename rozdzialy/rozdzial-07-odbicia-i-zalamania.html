@@ -41,6 +41,11 @@
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Reflection.angle</span><span>θ_in = θ_out</span></div>
+      <div class="diagram-controls">
+        <label for="reflTheta">kąt padania θ</label>
+        <input type="range" id="reflTheta" min="2" max="85" step="1" value="55">
+        <span class="value-readout" id="reflReadout">θ = 55° po obu stronach N</span>
+      </div>
       <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <marker id="r1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
@@ -51,22 +56,68 @@
         <line x1="120" y1="220" x2="620" y2="220" stroke="#8b909b" stroke-width="2"/>
         <circle cx="360" cy="220" r="4.5" fill="#ecebe4"/>
 
-        <line x1="200" y1="120" x2="360" y2="220" stroke="#e8a33d" stroke-width="2.5" marker-end="url(#r1)"/>
-        <text x="230" y="145" font-family="IBM Plex Mono" font-size="13" fill="#e8a33d">D</text>
+        <line id="reflD" x1="200" y1="120" x2="360" y2="220" stroke="#e8a33d" stroke-width="2.5" marker-end="url(#r1)"/>
+        <text id="reflDLabel" x="230" y="145" font-family="IBM Plex Mono" font-size="13" fill="#e8a33d">D</text>
 
         <line x1="360" y1="220" x2="360" y2="110" stroke="#9c82d8" stroke-width="2.5" marker-end="url(#r3)"/>
         <text x="368" y="105" font-family="IBM Plex Mono" font-size="13" fill="#9c82d8">N</text>
 
-        <line x1="360" y1="220" x2="470" y2="151" stroke="#4fc3c0" stroke-width="2.5" marker-end="url(#r2)"/>
-        <text x="480" y="145" font-family="IBM Plex Mono" font-size="13" fill="#4fc3c0">R</text>
+        <line id="reflR" x1="360" y1="220" x2="470" y2="151" stroke="#4fc3c0" stroke-width="2.5" marker-end="url(#r2)"/>
+        <text id="reflRLabel" x="480" y="145" font-family="IBM Plex Mono" font-size="13" fill="#4fc3c0">R</text>
 
-        <path d="M 335,195 Q 320,208 328,224" fill="none" stroke="#9c82d8" stroke-width="1.3"/>
-        <text x="308" y="204" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">θ</text>
-        <path d="M 385,195 Q 400,208 392,224" fill="none" stroke="#9c82d8" stroke-width="1.3"/>
-        <text x="404" y="204" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">θ</text>
+        <path id="reflArcL" d="M 360,192 A 28,28 0 0,0 335,195" fill="none" stroke="#9c82d8" stroke-width="1.3"/>
+        <text id="reflThetaLabelL" x="308" y="204" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">θ</text>
+        <path id="reflArcR" d="M 360,192 A 28,28 0 0,1 385,195" fill="none" stroke="#9c82d8" stroke-width="1.3"/>
+        <text id="reflThetaLabelR" x="404" y="204" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">θ</text>
       </svg>
-      <div class="diagram-caption">Kąt padania równy kątowi odbicia — mierzone od tej samej normalnej N.</div>
+      <div class="diagram-caption">Przesuń θ — D i R zostają lustrzanym odbiciem względem N, dokładnie zgodnie z R = D − 2(D·N)N.</div>
     </div>
+    <script>
+    (function(){
+      var slider = document.getElementById('reflTheta');
+      var readout = document.getElementById('reflReadout');
+      var Dline = document.getElementById('reflD');
+      var DLabel = document.getElementById('reflDLabel');
+      var Rline = document.getElementById('reflR');
+      var RLabel = document.getElementById('reflRLabel');
+      var arcL = document.getElementById('reflArcL');
+      var arcR = document.getElementById('reflArcR');
+      var thetaLabelL = document.getElementById('reflThetaLabelL');
+      var thetaLabelR = document.getElementById('reflThetaLabelR');
+      var point = {x: 360, y: 220}, armLen = 170, arcR_ = 28;
+      function update(){
+        var thetaDeg = parseFloat(slider.value);
+        var rad = thetaDeg * Math.PI / 180;
+        var sinT = Math.sin(rad), cosT = Math.cos(rad);
+
+        var sourceX = point.x - armLen * sinT, sourceY = point.y - armLen * cosT;
+        Dline.setAttribute('x1', sourceX.toFixed(1));
+        Dline.setAttribute('y1', sourceY.toFixed(1));
+        DLabel.setAttribute('x', (point.x - (armLen * 0.55) * sinT - 12).toFixed(1));
+        DLabel.setAttribute('y', (point.y - (armLen * 0.55) * cosT).toFixed(1));
+
+        var Rx = point.x + armLen * sinT, Ry = point.y - armLen * cosT;
+        Rline.setAttribute('x2', Rx.toFixed(1));
+        Rline.setAttribute('y2', Ry.toFixed(1));
+        RLabel.setAttribute('x', (point.x + (armLen * 0.7) * sinT + 12).toFixed(1));
+        RLabel.setAttribute('y', (point.y - (armLen * 0.7) * cosT - 6).toFixed(1));
+
+        var topX = point.x, topY = point.y - arcR_;
+        var leftX = point.x - arcR_ * sinT, leftY = point.y - arcR_ * cosT;
+        var rightX = point.x + arcR_ * sinT, rightY = point.y - arcR_ * cosT;
+        arcL.setAttribute('d', 'M ' + topX + ',' + topY + ' A ' + arcR_ + ',' + arcR_ + ' 0 0,0 ' + leftX.toFixed(1) + ',' + leftY.toFixed(1));
+        arcR.setAttribute('d', 'M ' + topX + ',' + topY + ' A ' + arcR_ + ',' + arcR_ + ' 0 0,1 ' + rightX.toFixed(1) + ',' + rightY.toFixed(1));
+        thetaLabelL.setAttribute('x', (point.x - (arcR_ + 22) * sinT).toFixed(1));
+        thetaLabelL.setAttribute('y', (point.y - (arcR_ + 10) * cosT).toFixed(1));
+        thetaLabelR.setAttribute('x', (point.x + (arcR_ + 22) * sinT).toFixed(1));
+        thetaLabelR.setAttribute('y', (point.y - (arcR_ + 10) * cosT).toFixed(1));
+
+        readout.textContent = 'θ = ' + thetaDeg.toFixed(0) + '° po obu stronach N';
+      }
+      slider.addEventListener('input', update);
+      update();
+    })();
+    </script>
   </div>
 
   <div class="section">
@@ -180,6 +231,11 @@
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Fresnel.curve</span><span>Schlick approx</span></div>
+      <div class="diagram-controls">
+        <label for="fresnelIOR">IOR (n1, n2=1,0)</label>
+        <input type="range" id="fresnelIOR" min="1" max="2.6" step="0.01" value="1.5">
+        <span class="value-readout" id="fresnelReadout">n = 1,50 (szkło) · R0 = 0,040</span>
+      </div>
       <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
         <line x1="60" y1="250" x2="680" y2="250" stroke="#8b909b" stroke-width="1.5"/>
         <line x1="60" y1="250" x2="60" y2="40" stroke="#8b909b" stroke-width="1.5"/>
@@ -197,13 +253,51 @@
         </g>
         <text x="20" y="150" font-family="IBM Plex Mono" font-size="11" fill="#8b909b" transform="rotate(-90 20 150)">R(θ)</text>
 
-        <line x1="60" y1="241.6" x2="680" y2="241.6" stroke="#9c82d8" stroke-width="1" stroke-dasharray="4 4"/>
-        <text x="686" y="245" font-family="IBM Plex Mono" font-size="10.5" fill="#9c82d8">R0 ≈ 0,04 (szkło)</text>
+        <line id="fresnelR0Line" x1="60" y1="241.6" x2="680" y2="241.6" stroke="#9c82d8" stroke-width="1" stroke-dasharray="4 4"/>
+        <text id="fresnelR0Label" x="686" y="245" font-family="IBM Plex Mono" font-size="10.5" fill="#9c82d8">R0 ≈ 0,04 (szkło)</text>
 
-        <path d="M 60,241.6 C 200,238 350,225 473,218 C 550,200 610,150 680,40" fill="none" stroke="#e8a33d" stroke-width="2.5"/>
+        <path id="fresnelCurve" d="M 60,241.6 C 200,238 350,225 473,218 C 550,200 610,150 680,40" fill="none" stroke="#e8a33d" stroke-width="2.5"/>
       </svg>
-      <div class="diagram-caption">Nawet szkło o niskim R0 przy kącie stycznym odbija praktycznie 100% światła — dlatego okno widziane pod kątem robi się zwierciadłem.</div>
+      <div class="diagram-caption">Przesuń IOR — nawet materiał o niskim R0 przy kącie stycznym odbija praktycznie 100% światła, dlatego okno widziane pod kątem robi się zwierciadłem.</div>
     </div>
+    <script>
+    (function(){
+      var slider = document.getElementById('fresnelIOR');
+      var readout = document.getElementById('fresnelReadout');
+      var curve = document.getElementById('fresnelCurve');
+      var r0Line = document.getElementById('fresnelR0Line');
+      var r0Label = document.getElementById('fresnelR0Label');
+      function fmt(n, d){ return n.toFixed(d).replace('.', ','); }
+      function materialName(n){
+        if (n < 1.05) return 'powietrze';
+        if (n < 1.20) return 'woda';
+        if (n < 1.60) return 'szkło';
+        return 'diament';
+      }
+      function update(){
+        var n1 = parseFloat(slider.value);
+        var n2 = 1.0;
+        var R0 = Math.pow((n1 - n2) / (n1 + n2), 2);
+        var pts = [];
+        for (var deg = 0; deg <= 90; deg += 2) {
+          var rad = deg * Math.PI / 180;
+          var Rt = R0 + (1 - R0) * Math.pow(1 - Math.cos(rad), 5);
+          var x = 60 + (deg / 90) * 620;
+          var y = 250 - Rt * 210;
+          pts.push(x.toFixed(1) + ',' + y.toFixed(1));
+        }
+        curve.setAttribute('d', 'M ' + pts.join(' L '));
+        var r0y = 250 - R0 * 210;
+        r0Line.setAttribute('y1', r0y.toFixed(1));
+        r0Line.setAttribute('y2', r0y.toFixed(1));
+        r0Label.setAttribute('y', (r0y + 4).toFixed(1));
+        r0Label.textContent = 'R0 ≈ ' + fmt(R0, 2) + ' (' + materialName(n1) + ')';
+        readout.textContent = 'n = ' + fmt(n1, 2) + ' (' + materialName(n1) + ') · R0 = ' + fmt(R0, 3);
+      }
+      slider.addEventListener('input', update);
+      update();
+    })();
+    </script>
   </div>
 
   <div class="panel practice">
