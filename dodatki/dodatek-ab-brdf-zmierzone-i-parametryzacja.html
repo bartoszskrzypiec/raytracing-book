@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek AB — Głębiej: zmierzone BRDF i pułapki parametryzacji</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>MERL · 100 materiałów</span><span>PARAM · Rusinkiewicz</span><span>GAP · analityczny vs zmierzony</span><span>EXT OF · R.10–11 · Dodatek A</span>
+  </div>
+
+  <div class="eyebrow">Dodatek AB / Głębiej: BRDF</div>
+  <h1>BRDF w praktyce: zmierzone dane i pułapki parametryzacji</h1>
+  <p class="subtitle">Cook-Torrance i GGX z Rozdziałów 10–11 to eleganckie, gładkie wzory — ale to wciąż tylko przybliżenie tego, co robią prawdziwe materiały. Ten dodatek pokazuje, skąd bierzemy dowód na to, jak bardzo (i gdzie) to przybliżenie się rozjeżdża z rzeczywistością — i dlaczego ten sam „Roughness = 0,3” może wyglądać zupełnie inaczej w dwóch różnych silnikach.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>MERL BRDF Database to zbiór realnie zmierzonych BRDF ze 100 materiałów — dowód na to, jak wyglądają prawdziwe loby odbicia, nie ich analityczne przybliżenia.</li>
+      <li>Niektóre materiały (aksamit, satyna) mają kształty loba, których żaden pojedynczy analityczny model z tej książki nie odda.</li>
+      <li>Mimo to produkcja niemal zawsze używa modeli analitycznych — bo są edytowalne, lekkie i generalizują się na nowe materiały; dane zmierzone nie mają żadnej z tych cech.</li>
+      <li>„Roughness” to nie jedna, uniwersalna liczba — różne konwencje remapowania (α=roughness vs α=roughness²) dają wizualnie bardzo różny wynik przy identycznej wartości na sliderze.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Dane zmierzone</div>
+    <h2>Skąd bierze się „prawdziwa” BRDF</h2>
+    <p>Cook-Torrance i GGX z Rozdziałów 10–11 to <em>modele</em> — matematyczne przybliżenia tego, jak zachowuje się światło na chropowatej powierzchni, wyprowadzone z uproszczonej fizyki mikrofasetek. Da się też zrobić coś zupełnie innego: wziąć prawdziwą próbkę materiału, umieścić ją w gonioreflektometrze (urządzenie obracające źródło światła i czujnik wokół próbki po tysiącach kombinacji kątów) i po prostu <em>zmierzyć</em>, ile światła wraca dla każdej pary kierunków L, V. Najbardziej znanym publicznym zbiorem takich pomiarów jest <strong>MERL BRDF Database</strong> — około 100 materiałów (metale, plastiki, tkaniny, farby), każdy zmierzony gęsto po kątach i zapisany jako tabela liczb, nie wzór.</p>
+    <p>Surowe dane z pomiaru miałyby cztery wymiary kątowe (kierunek L i kierunek V, każdy opisany dwoma kątami) — ogromna tabela. Rusinkiewicz (1998) pokazał, że dla materiałów izotropowych (takich, które wyglądają tak samo obrócone wokół swojej normalnej) dane da się przeparametryzować przez kąt half-vector θ_h (ten sam H z Rozdziału 5) i kąt różnicowy θ_d — w tej parametryzacji BRDF zmienia się bardzo powoli wzdłuż jednego z wymiarów, więc tabelę da się bez straty jakości skompresować drastycznie mocniej niż w surowych L,V.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Rozjazd</div>
+    <h2>Gdzie analityczny model się myli</h2>
+    <p>Dla większości „zwykłych” materiałów — plastiku, farby, polerowanego metalu — GGX z Rozdziału 11 jest bardzo bliski temu, co pokazują zmierzone dane: gładki, symetryczny lob wokół kierunku idealnego odbicia. Problem zaczyna się przy materiałach o innej mikrostrukturze niż „losowo zorientowane mikrofasetki”. Klasyczny przykład to <strong>aksamit</strong>: włókna tkaniny stoją niemal prostopadle do powierzchni, więc światło wchodzące pod płytkim kątem odbija się głównie z powrotem <em>w stronę, z której przyszło</em> (retroreflection) — zupełnie inny kształt loba niż cokolwiek, co potrafi wyprodukować GGX, który zawsze ma szczyt przy idealnym odbiciu zwierciadlanym, nigdy przy powrocie do źródła.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Lobe.shapes</span><span>GGX vs velvet (measured)</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <line x1="380" y1="20" x2="380" y2="240" stroke="#2a2f38"/>
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">GGX (ANALITYCZNY)</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">AKSAMIT (ZMIERZONY)</text>
+
+        <line x1="60" y1="200" x2="320" y2="200" stroke="#8b909b" stroke-width="2"/>
+        <line x1="130" y1="120" x2="190" y2="200" stroke="#e8a33d" stroke-width="2.2"/>
+        <text x="110" y="112" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">L</text>
+        <path d="M190,200 Q215,150 250,120 Q225,165 190,200 Z" fill="#9c82d8" fill-opacity="0.4" stroke="#9c82d8" stroke-width="1.5"/>
+        <text x="255" y="110" font-family="IBM Plex Mono" font-size="10.5" fill="#9c82d8">lob przy idealnym odbiciu</text>
+
+        <line x1="440" y1="200" x2="700" y2="200" stroke="#8b909b" stroke-width="2"/>
+        <line x1="510" y1="120" x2="570" y2="200" stroke="#e8a33d" stroke-width="2.2"/>
+        <text x="490" y="112" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">L</text>
+        <path d="M570,200 Q545,150 510,120 Q535,165 570,200 Z" fill="#4fc3c0" fill-opacity="0.4" stroke="#4fc3c0" stroke-width="1.5"/>
+        <text x="500" y="108" font-family="IBM Plex Mono" font-size="10.5" fill="#4fc3c0">garb z powrotem do L</text>
+      </svg>
+      <div class="diagram-caption">Ten sam kierunek światła L — GGX zawsze celuje w kierunek idealnego odbicia, zmierzony aksamit ma dodatkowy garb wracający do źródła.</div>
+    </div>
+
+    <p>To nie jest błąd GGX — to po prostu materiał spoza założeń, na których GGX został wyprowadzony (losowo zorientowane, nieprzezroczyste mikrofasetki). Stąd osobne, wyspecjalizowane modele „sheen” dla tkanin (m.in. w rozszerzeniu <em>KHR_materials_sheen</em> standardu glTF i w Principled BSDF), doklejane obok zwykłego GGX właśnie po to, żeby złapać ten dodatkowy garb.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Dlaczego analityczny wygrywa</div>
+    <h2>Czemu produkcja i tak używa głównie modeli, nie danych</h2>
+    <p>Skoro dane zmierzone są dokładniejsze, dlaczego nie używać ich zawsze? Trzy powody, każdy praktyczny:</p>
+    <ul class="compact">
+      <li><strong>Brak kontroli.</strong> Tabela liczb nie ma slidera „Roughness”. Chcesz materiał odrobinę bardziej matowy? Nie ma parametru do przesunięcia — musiałbyś zmierzyć inną próbkę.</li>
+      <li><strong>Rozmiar.</strong> Nawet skompresowana parametryzacją Rusinkiewicza tabela to megabajty na materiał; analityczny model to garść liczb (roughness, F0, metallic).</li>
+      <li><strong>Brak generalizacji.</strong> Zmierzyłeś 100 materiałów z MERL — a co z materiałem numer 101, którego jeszcze nikt nie zmierzył? Model analityczny ekstrapoluje (ustaw dowolny roughness); dane zmierzone tylko interpolują między tym, co już masz.</li>
+    </ul>
+    <p>W praktyce dane zmierzone służą głównie jako <em>punkt odniesienia</em> — sprawdzasz nimi, jak bardzo Twój analityczny model się myli dla danej klasy materiałów, i albo akceptujesz różnicę, albo dokładasz wyspecjalizowany człon (jak sheen dla tkanin wyżej).</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Parametryzacja</div>
+    <h2>„Roughness = 0,3” nie zawsze znaczy to samo</h2>
+    <p>Rozdział 11 wprowadził α = roughness² — kwadrat, nie sam roughness, żeby slider czuł się bardziej liniowo percepcyjnie. To jedna, konkretna konwencja remapowania, nie fizyczne prawo. Równie ważny wzór D(H) da się podłączyć bezpośrednio pod α = roughness (bez kwadratu) — matematycznie to wciąż poprawna, energooszczędna BRDF, tylko inaczej wyskalowana. Problem: te dwie konwencje dają <em>zupełnie inny wygląd</em> przy tej samej liczbie na sliderze.</p>
+
+    <div class="formula">Konwencja A (liniowa): α = roughness&nbsp;&nbsp;&nbsp;Konwencja B (kwadratowa, z Rozdziału 11): α = roughness²<span class="sub">obie są wewnętrznie spójne i energooszczędne — różnią się tylko tym, co dokładnie oznacza liczba na sliderze</span></div>
+
+    <div class="worked">
+      <div class="wlabel">Policzone: ta sama liczba, dwie konwencje</div>
+      <div class="step">roughness = 0,3, patrzymy dokładnie w kierunku idealnego odbicia (N·H=1), więc D(H) = 1/(π·α²) — uproszczenie wzoru z Rozdziału 11 przy N·H=1</div>
+      <div class="step">Konwencja A: α = 0,3 → D(H) = 1/(π·0,09) = <span class="v">3,54</span></div>
+      <div class="step">Konwencja B: α = 0,3² = 0,09 → D(H) = 1/(π·0,0081) = <span class="v">39,3</span></div>
+      <div class="result">Ta sama liczba „0,3” na sliderze — ponad 11× różnica w szczytowej jasności błysku, zależnie wyłącznie od konwencji remapowania.</div>
+      <div class="check">To nie błąd żadnej ze stron — obie konwencje są matematycznie poprawne. Problem pojawia się, gdy przenosisz wartość liczbową między dwoma narzędziami, które milcząco zakładają różne konwencje.</div>
+    </div>
+
+    <p>W praktyce dochodzi jeszcze druga oś rozjazdu: parametr „Specular” (nie mylić z roughness) bywa wystawiony jako bezpośredni IOR, jako F0 wprost (0–8% typowe dla dielektryków), albo jako skalar 0–1 przemnożony przez stały zakres (konwencja glTF/Disney: F0 = 0,08 · specular, więc domyślne specular=0,5 daje dokładnie F0≈0,04 z Rozdziału 11). Żadna z tych konwencji nie jest „poprawniejsza” — ale przenoszenie materiału między silnikami bez świadomości, która konwencja obowiązuje po drugiej stronie, jest jednym z najczęstszych źródeł „ten sam materiał wygląda inaczej po imporcie”.</p>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Gdy przenosisz materiał między silnikami (albo porównujesz referencyjne zdjęcie z renderem), pierwsze pytanie do zadania nie brzmi „czy roughness jest za wysoki”, tylko „czy w ogóle porównuję jabłka z jabłkami” — sprawdź w dokumentacji obu narzędzi, jaką dokładnie konwencję remapowania roughness i jaką konwencję Specular/F0 stosują, zanim zaczniesz dostrajać liczby na oko.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Słowniczek</div>
+    <dl>
+      <dt>MERL BRDF Database</dt><dd>Zbiór realnie zmierzonych BRDF ze 100 materiałów, publicznie dostępny.</dd>
+      <dt>Gonioreflektometr</dt><dd>Urządzenie mierzące odbicie światła próbki po wielu kombinacjach kątów.</dd>
+      <dt>Parametryzacja Rusinkiewicza</dt><dd>Zapis BRDF przez kąt half-vector i kąt różnicowy zamiast wprost L, V — mocno kompresowalny dla materiałów izotropowych.</dd>
+      <dt>Retroreflection</dt><dd>Silne odbicie z powrotem w stronę źródła światła — charakterystyczne dla tkanin jak aksamit.</dd>
+      <dt>Remapowanie roughness</dt><dd>Konwencja przeliczania wartości slidera na α użyte we wzorze D(H) — różna między narzędziami.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Dodatek AC idzie w głąb tematu, który Dodatek A tylko musnął: co dokładnie dzieje się między warstwami materiału wielowarstwowego — nie tylko prosty clearcoat, ale pełna matematyka światła odbijającego się między warstwami.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-11-pbr-ggx.html">↑ Rozdział 11: PBR, rozkład GGX</a>
+</div>
+</div>
+</body>
+</html>

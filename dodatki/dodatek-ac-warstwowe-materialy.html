@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek AC — Głębiej: warstwowe materiały, pełna matematyka</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>MODEL · random walk</span><span>PUŁAPKA · energia uwięziona</span><span>Σ · seria geometryczna</span><span>EXT OF · R.10–11 · Dodatek A</span>
+  </div>
+
+  <div class="eyebrow">Dodatek AC / Głębiej: BRDF</div>
+  <h1>Warstwowe materiały: pełna matematyka</h1>
+  <p class="subtitle">Dodatek A pokazał clearcoat jako dwa niezależne loby, dodane do siebie. To działa wizualnie zaskakująco dobrze — ale ignoruje coś realnego: światło, które wpada pod warstwę lakieru, odbija się od bazy, i zamiast wyjść od razu, odbija się jeszcze raz od <em>spodu</em> lakieru, wraca w dół, i próbuje jeszcze raz. Ten dodatek liczy, ile energii to naprawdę znaczy.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Prosty model (Dodatek A) sumuje dwa niezależne loby Fresnela — nie śledzi, co dzieje się między warstwami.</li>
+      <li>Prawdziwe warstwy „więżą" część światła — odbija się ono tam i z powrotem między spodem górnej warstwy a bazą, zanim ucieknie.</li>
+      <li>Suma tej uwięzionej energii to szereg geometryczny — policzalny wprost dla uproszczonego przypadku skalarnego.</li>
+      <li>Efekt jest mały przy patrzeniu na wprost, ale drastycznie rośnie pod kątem stycznym — dokładnie tam, gdzie Fresnel z Rozdziału 7 rośnie do prawie 100%.</li>
+      <li>Produkcyjne renderery liczą to Monte Carlo (losowy spacer), nie zamkniętym wzorem — bo prawdziwe BRDF nie są pojedynczą liczbą, tylko funkcją kąta.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Problem</div>
+    <h2>Dlaczego jedna BRDF nie wystarcza</h2>
+    <p>Lakier na drewnie, pot na skórze, powłoka ochronna na metalu, warstwa wosku na owocu — w każdym z tych przypadków masz fizycznie dwa (albo więcej) niezależnych ośrodków, każdy ze swoim IOR i roughness, ułożonych jeden na drugim. Światło, zanim dotrze do „prawdziwego" materiału pod spodem, musi najpierw przejść przez warstwę wierzchnią — a to, co odbije się od bazy, musi przejść przez nią jeszcze raz, w drugą stronę, żeby w ogóle do Ciebie dotrzeć.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Prosty model</div>
+    <h2>Co dziś robi Dodatek A — i gdzie się kończy</h2>
+    <p>Model z Dodatku A liczy dwa niezależne loby: jeden Fresnel-ważony odbity wprost od górnej warstwy (clearcoat), drugi — zwykła BRDF bazy, przyciemniona o to, ile światła w ogóle przeszło przez górną warstwę. To dobre przybliżenie, bo <em>ignoruje</em> wszystko, co dzieje się światłu, które przeszło w dół, odbiło się od bazy, i próbuje wrócić w górę: zakłada, że po prostu wychodzi, za pierwszym podejściem, bez strat.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Simple.vs.trapped</span><span>1 pass vs multi-bounce</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="lw1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+        </defs>
+        <line x1="380" y1="20" x2="380" y2="240" stroke="#2a2f38"/>
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">PROSTY MODEL</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">CO SIĘ NAPRAWDĘ DZIEJE</text>
+
+        <rect x="80" y="80" width="240" height="20" fill="#20242c" stroke="#4fc3c0" stroke-width="1.3"/>
+        <text x="330" y="95" font-family="IBM Plex Mono" font-size="9.5" fill="#4fc3c0">górna warstwa</text>
+        <rect x="80" y="100" width="240" height="60" fill="#20242c" stroke="#9c82d8" stroke-width="1.3"/>
+        <text x="330" y="135" font-family="IBM Plex Mono" font-size="9.5" fill="#9c82d8">baza</text>
+        <line x1="120" y1="60" x2="180" y2="100" stroke="#e8a33d" stroke-width="2" marker-end="url(#lw1)"/>
+        <line x1="180" y1="100" x2="220" y2="130" stroke="#e8a33d" stroke-width="1.6" stroke-dasharray="4 3"/>
+        <line x1="220" y1="130" x2="280" y2="70" stroke="#e8a33d" stroke-width="2" marker-end="url(#lw1)"/>
+        <text x="200" y="200" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">jedno przejście, zero strat po drodze w dół i z powrotem</text>
+
+        <rect x="460" y="80" width="240" height="20" fill="#20242c" stroke="#4fc3c0" stroke-width="1.3"/>
+        <rect x="460" y="100" width="240" height="60" fill="#20242c" stroke="#9c82d8" stroke-width="1.3"/>
+        <line x1="500" y1="60" x2="560" y2="100" stroke="#e8a33d" stroke-width="2" marker-end="url(#lw1)"/>
+        <line x1="560" y1="100" x2="600" y2="130" stroke="#e8a33d" stroke-width="1.6" stroke-dasharray="4 3"/>
+        <line x1="600" y1="130" x2="640" y2="98" stroke="#e8a33d" stroke-width="1.4" stroke-dasharray="4 3"/>
+        <line x1="640" y1="98" x2="610" y2="125" stroke="#9c82d8" stroke-width="1.4" stroke-dasharray="3 3"/>
+        <line x1="610" y1="125" x2="660" y2="70" stroke="#e8a33d" stroke-width="2" marker-end="url(#lw1)"/>
+        <text x="580" y="200" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">czasem odbija się od spodu górnej warstwy — wraca, próbuje znów</text>
+      </svg>
+      <div class="diagram-caption">Ten sam materiał — po prawej jedna z wielu możliwych ścieżek, które prosty model po lewej całkowicie pomija.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Seria geometryczna</div>
+    <h2>Ile energii naprawdę zostaje uwięzione</h2>
+    <p>Uprośćmy do skrajności: udawajmy, że górna warstwa ma jedną liczbę opisującą, ile światła odbija z powrotem w dół, patrząc od <em>spodu</em> (R_góra), a baza ma jedną liczbę opisującą, ile ze światła, które do niej dotrze, odbija z powrotem w górę (R_baza). Każdy „obieg” (w dół, odbicie od bazy, próba ucieczki w górę, odbicie od spodu górnej warstwy z powrotem w dół) mnoży pozostałą energię przez r = R_góra · R_baza. To dokładnie ta sama struktura co Σ ze strony <a href="../matematyka/podstawy-matematyczne.html">Podstawy matematyczne</a> — tylko licząca nieskończenie wiele coraz słabszych powtórzeń tego samego zdarzenia:</p>
+
+    <div class="formula">energia_całkowita = energia_1_przejście · (1 + r + r² + r³ + ...) = energia_1_przejście / (1 − r)<span class="sub">r = R_góra · R_baza; suma nieskończonego szeregu geometrycznego 1+r+r²+... = 1/(1−r), o ile r &lt; 1 — to zawsze prawda dla fizycznych, energooszczędnych warstw</span></div>
+
+    <div class="worked">
+      <div class="wlabel">Policzone: patrząc na wprost kontra pod kątem stycznym</div>
+      <div class="step">Patrząc na wprost: R_góra ≈ 0,05 (niski Fresnel z Rozdziału 7, blisko normalnej), R_baza = 0,6</div>
+      <div class="step">r = 0,05 · 0,6 = <span class="v">0,03</span> → mnożnik = 1/(1−0,03) = <span class="result">1,031</span> — tylko 3% więcej energii niż prosty model</div>
+      <div class="step">Pod kątem stycznym: Fresnel rośnie gwałtownie (Rozdział 7 — „nawet szkło o niskim R0 przy kącie stycznym odbija praktycznie 100%"), więc R_góra ≈ 0,5</div>
+      <div class="step">r = 0,5 · 0,6 = <span class="v">0,3</span> → mnożnik = 1/(1−0,3) = <span class="result">1,429</span> — 43% więcej energii niż prosty model</div>
+      <div class="check">Ten sam materiał, ten sam wzór — tylko kąt patrzenia decyduje, czy pominięcie warstwowej pułapki energii to niezauważalny błąd czy zauważalnie zbyt ciemna krawędź obiektu.</div>
+    </div>
+
+    <p>To dlatego prosty model z Dodatku A wygląda dobrze na wprost, ale bywa zauważalnie za ciemny na krawędziach zaokrąglonych, lakierowanych obiektów (błotnik samochodu, polerowana podłoga) — dokładnie tam, gdzie kąt patrzenia zbliża się do stycznego.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Produkcja</div>
+    <h2>Stochastyczne warstwowanie: jak liczy się to naprawdę</h2>
+    <p>Wzór z poprzedniej sekcji działa tylko dlatego, że skurczyliśmy każdą warstwę do jednej liczby. Prawdziwa BRDF bazy i prawdziwy Fresnel górnej warstwy zależą od kąta — nie ma jednego r, tylko r(θ), inny dla każdego kierunku. Zamkniętego wzoru na sumę takiej serii zwykle nie da się już wyprowadzić. Produkcyjne renderery (Arnold, RenderMan) rozwiązują to <strong>losowym spacerem (random walk)</strong>: promień wchodzący w stos warstw jest symulowany krok po kroku — na każdej granicy między warstwami losujesz, zgodnie z lokalnym Fresnelem, czy się odbija, czy przechodzi — dokładnie tak jak w path tracingu z Rozdziału 15, tylko warstwy stosu pełnią rolę „sceny", a przejścia między nimi rolę odbić. Promień kończy wędrówkę, gdy ucieknie z powrotem w stronę kamery, ucieknie w głąb bazy (zaabsorbowany), albo ruletka rosyjska z Rozdziału 15 go zatrzyma.</p>
+    <p>To podejście automatycznie liczy dokładnie tę samą serię geometryczną co wyżej — tylko metodą Monte Carlo, próbka po próbce, zamiast jednym zamkniętym wzorem — i działa dla dowolnej liczby warstw, dowolnych BRDF na każdej granicy, bez żadnych uproszczeń skalarnych.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Koszt</div>
+    <h2>Cena dodatkowych warstw</h2>
+    <p>Każda dodatkowa warstwa to potencjalnie więcej odbić/załamań do prześledzenia na jedno trafienie — dla stosu N warstw, w najgorszym razie promień może odbijać się między nimi wielokrotnie, zanim ucieknie. W praktyce ten sam mechanizm ruletki rosyjskiej z Rozdziału 15, który ogranicza głębokość rekurencji w zwykłym path tracingu, ogranicza też długość spaceru między warstwami — bez niego koszt teoretycznie nie miałby górnej granicy.</p>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>„Coat Weight” i „Coat IOR” w Standard Surface (Arnoldzie) czy „Clearcoat” w Principled BSDF to interfejs do dokładnie tego, co opisuje ten dodatek — artysta ustawia grubość/IOR/roughness każdej warstwy, a stochastyczne warstwowanie w tle liczy resztę. Widoczny efekt „ciemnych krawędzi” na źle ustawionym coat to najczęściej znak, że silnik <em>nie</em> liczy energii uwięzionej między warstwami (starszy, uproszczony model) — warto to sprawdzić w dokumentacji, zanim zaczniesz kompensować to ręcznie podbitą jasnością bazy.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Słowniczek</div>
+    <dl>
+      <dt>Warstwowy materiał (layered material)</dt><dd>Materiał zbudowany z dwóch lub więcej fizycznie niezależnych warstw ośrodka.</dd>
+      <dt>Energia uwięziona</dt><dd>Światło odbijające się wielokrotnie między warstwami przed ucieczką.</dd>
+      <dt>Szereg geometryczny</dt><dd>Suma 1+r+r²+r³+... = 1/(1−r) dla r&lt;1 — opisuje sumaryczny efekt nieskończonych powtórzeń tego samego zdarzenia.</dd>
+      <dt>Stochastyczne warstwowanie</dt><dd>Symulacja Monte Carlo losowego spaceru promienia między warstwami, zamiast zamkniętego wzoru.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Dodatek AD zamyka wątek BRDF pytaniem praktycznym: skoro znasz już kształt loba GGX, jak losować kierunki próbek tak, żeby trafiać tam, gdzie lob faktycznie ma wartość, zamiast marnować próbki na kierunki niemal zerowe.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-11-pbr-ggx.html">↑ Rozdział 11: PBR, rozkład GGX</a>
+</div>
+</div>
+</body>
+</html>

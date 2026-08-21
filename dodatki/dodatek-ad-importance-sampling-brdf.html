@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Dodatek AD — Głębiej: importance sampling dla BRDF</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>DIFFUSE · cosine-weighted</span><span>GGX · naiwne vs VNDF</span><span>ROK · Heitz 2018</span><span>EXT OF · R.11 · Dodatek B</span>
+  </div>
+
+  <div class="eyebrow">Dodatek AD / Głębiej: BRDF</div>
+  <h1>Importance sampling dla BRDF</h1>
+  <p class="subtitle">Dodatek B nauczył Cię ogólnej idei importance sampling — próbkuj częściej tam, gdzie wkład i tak jest większy. Ten dodatek stosuje to wprost do kształtu konkretnego loba: jak losować kierunek L tak, żeby prawie każda próbka trafiała tam, gdzie dana BRDF faktycznie coś zwraca, zamiast marnować próbki na kierunki bliskie zeru.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Dla Lamberta próbkowanie ważone cosinusem (N·L) jest na tyle dopasowane do wzoru, że cosinus i π znikają z estymatora — zostaje sam kd.</li>
+      <li>Naiwne próbkowanie GGX po rozkładzie D(H) marnuje próbki na mikrofasetki, które i tak są samo-zasłonięte i niewidoczne z kierunku V.</li>
+      <li>VNDF (Visible Normal Distribution Function, Heitz 2018) próbkuje tylko spośród faktycznie widocznych fasetek — mniej zmarnowanych próbek, ten sam, wciąż nieobciążony wynik.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Diffuse</div>
+    <h2>Cosine-weighted sampling: idealne dopasowanie do Lamberta</h2>
+    <p>Estymator Monte Carlo z Rozdziału 15 dzieli wkład każdej próbki przez jej gęstość prawdopodobieństwa (pdf), z której ją wylosowano. Jeśli wylosujesz kierunek L z gęstością <em>proporcjonalną do samego cosinusa</em> N·L — zamiast równomiernie po całej hemisferze — cosinus w liczniku równania renderowania i cosinus w mianowniku pdf skracają się do zera roboty:</p>
+
+    <div class="formula">pdf(L) = (N·L) / π&nbsp;&nbsp;&nbsp;→&nbsp;&nbsp;&nbsp;f(L,V)·(N·L)/pdf(L) = (kd/π)·(N·L) / ((N·L)/π) = kd<span class="sub">dla stałej BRDF Lamberta f=kd/π — po skróceniu zostaje sama stała kd, bez cosinusa i bez π w kodzie</span></div>
+
+    <p>Praktyczna konstrukcja (Malley's method): weź dwie liczby losowe ξ₁, ξ₂ ∈ [0,1), rzuć punkt równomiernie na dysk jednostkowy, podnieś go prostopadle na hemisferę:</p>
+
+    <div class="formula">r = √ξ₁&nbsp;&nbsp;&nbsp;φ = 2π·ξ₂&nbsp;&nbsp;&nbsp;L = (r·cos φ, r·sin φ, √(1−ξ₁))<span class="sub">L w lokalnym układzie, gdzie oś z pokrywa się z N; trzecia współrzędna √(1−ξ₁) to właśnie N·L tej próbki</span></div>
+
+    <p>Dlaczego rzut na dysk, a nie coś bardziej „bezpośredniego"? Bo równomierny rozkład punktów na dysku, podniesiony prostopadle na hemisferę, <em>automatycznie</em> gęstnieje bliżej bieguna (N·L blisko 1) i rzednie bliżej równika — dokładnie rozkład proporcjonalny do cosinusa, bez żadnej dodatkowej wagi do policzenia.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: GGX naiwnie</div>
+    <h2>Naiwne próbkowanie D(H): gdzie marnujesz próbki</h2>
+    <p>Najprostszy sposób próbkowania GGX z Rozdziału 11: losuj H bezpośrednio z rozkładu D(H), potem odbij V względem H, żeby dostać L. Gęstość prawdopodobieństwa w przestrzeni H to pdf_H(H) = D(H)·(N·H); po przejściu przez operację odbicia (jakobian tej transformacji) gęstość w przestrzeni L wynosi:</p>
+
+    <div class="formula">pdf(L) = D(H)·(N·H) / (4·(V·H))<span class="sub">dzielenie przez 4·(V·H) to jakobian odbicia V względem H — bez niego gęstość byłaby policzona dla złej przestrzeni kierunków</span></div>
+
+    <p>Problem: D(H) opisuje <em>wszystkie</em> mikrofasetki o normalnej H, łącznie z tymi, które są samo-zasłonięte przez sąsiednie fasetki i z kierunku V w ogóle niewidoczne (dokładnie ten człon G z Rozdziału 11, który potem i tak wyzeruje ich wkład). Naiwne próbkowanie losuje z pełnego D(H), nieświadome G — część wylosowanych kierunków to więc próbki „z góry skazane" na wkład bliski zeru, ale i tak kosztujące pełny test przecięcia i ocenę BRDF.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: VNDF</div>
+    <h2>Sampling widocznych fasetek</h2>
+    <p>VNDF (Heitz, 2018) próbkuje nie z D(H), tylko z rozkładu fasetek <em>faktycznie widocznych</em> z kierunku V — czyli D(H) przemnożone przez to, jaka część nich nie jest samo-zasłonięta:</p>
+
+    <div class="formula">D_V(H) = G1(V) · max(0, V·H) · D(H) / (N·V)<span class="sub">G1(V) — ten sam człon geometryczny Smitha z Rozdziału 11; ta wersja rozkładu z definicji nigdy nie generuje fasetki niewidocznej z V</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Naive.vs.VNDF</span><span>wasted samples</span></div>
+      <svg viewBox="0 0 760 240" xmlns="http://www.w3.org/2000/svg">
+        <line x1="380" y1="20" x2="380" y2="220" stroke="#2a2f38"/>
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">NAIWNE D(H)</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">VNDF</text>
+
+        <path d="M 60,180 Q 90,90 200,80 Q 310,90 340,180 Z" fill="none" stroke="#8b909b" stroke-width="1.5"/>
+        <circle cx="120" cy="140" r="4" fill="#4fc3c0"/><circle cx="150" cy="110" r="4" fill="#4fc3c0"/><circle cx="180" cy="95" r="4" fill="#4fc3c0"/>
+        <circle cx="210" cy="93" r="4" fill="#4fc3c0"/><circle cx="240" cy="105" r="4" fill="#4fc3c0"/>
+        <circle cx="90" cy="165" r="4" fill="#9c82d8"/><circle cx="270" cy="150" r="4" fill="#9c82d8"/><circle cx="300" cy="170" r="4" fill="#9c82d8"/>
+        <text x="200" y="205" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#9c82d8">fioletowe = samo-zasłonięte, wkład ≈ 0</text>
+
+        <path d="M 440,180 Q 470,90 580,80 Q 690,90 720,180 Z" fill="none" stroke="#8b909b" stroke-width="1.5"/>
+        <circle cx="500" cy="140" r="4" fill="#4fc3c0"/><circle cx="530" cy="110" r="4" fill="#4fc3c0"/><circle cx="560" cy="95" r="4" fill="#4fc3c0"/>
+        <circle cx="590" cy="93" r="4" fill="#4fc3c0"/><circle cx="620" cy="105" r="4" fill="#4fc3c0"/><circle cx="650" cy="130" r="4" fill="#4fc3c0"/><circle cx="480" cy="155" r="4" fill="#4fc3c0"/><circle cx="670" cy="150" r="4" fill="#4fc3c0"/>
+        <text x="580" y="205" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#4fc3c0"># wszystkie widoczne, żadna zmarnowana</text>
+      </svg>
+      <div class="diagram-caption">Ta sama liczba próbek — po lewej część ląduje na fasetkach, których G i tak wyzeruje; po prawej żadna.</div>
+    </div>
+
+    <div class="worked">
+      <div class="wlabel">Ilustracyjnie: ile próbek marnuje naiwne podejście</div>
+      <div class="step">Bardzo chropowata powierzchnia, patrzona pod ostrym kątem: G1(V) ≈ <span class="v">0,3</span> (tylko 30% mikrofasetek widocznych z V, reszta samo-zasłonięta)</div>
+      <div class="step">Naiwne D(H): z każdych 100 wylosowanych H średnio ~70 trafia w fasetki niewidoczne z V — ich wkład po pomnożeniu przez G jest bliski zeru, próbka „stracona"</div>
+      <div class="step">VNDF: ta sama liczba próbek, ale wszystkie 100 pochodzą z fasetek, które i tak są widoczne — zero z góry straconych</div>
+      <div class="check">To ilustracyjne G1(V)=0,3 to skrajny przypadek (bardzo chropowata powierzchnia, płytki kąt) — dla gładkich materiałów i patrzenia na wprost różnica jest dużo mniejsza, bo prawie wszystkie fasetki i tak są widoczne.</div>
+    </div>
+
+    <p>VNDF jest droższe do policzenia per próbka (dodatkowa transformacja geometryczna: „ściśnij" kierunek widzenia przez roughness, próbkuj równomiernie na rzucie dysku, „rozciągnij" z powrotem) — ale ponieważ każda próbka faktycznie coś wnosi, tej samej jakości obrazu dochodzisz mniejszą liczbą próbek niż naiwnym D(H). To ten sam bilans koszt-per-próbka kontra liczba-potrzebnych-próbek, co przy sekwencjach niskiej dyskrepancji z Rozdziału 8 i przy denoiserze z Rozdziału 19 — droższy pojedynczy krok, tańszy cały render.</p>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>„GGX sampling" albo „VNDF sampling" jako nazwa techniczna raczej nie pojawia się bezpośrednio w interfejsie DCC — to szczegół implementacyjny silnika, nie parametr artysty. Widzisz jego efekt pośrednio: nowoczesne silniki (Arnold, Cycles, RenderMan) od kilku lat domyślnie używają VNDF, co jest jednym z powodów, dla których identyczna scena z identyczną liczbą próbek renderuje się dziś wyraźniej mniej szumiąco niż w silnikach sprzed ~2018 roku, bez żadnej zmiany ustawień ze strony artysty.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Słowniczek</div>
+    <dl>
+      <dt>Cosine-weighted sampling</dt><dd>Losowanie kierunków z gęstością proporcjonalną do N·L — naturalne dla Lamberta.</dd>
+      <dt>Malley's method</dt><dd>Konstrukcja próbki cosine-weighted przez rzut punktu z dysku na hemisferę.</dd>
+      <dt>Naiwne próbkowanie D(H)</dt><dd>Losowanie normalnej mikrofasetki wprost z rozkładu D, bez uwzględnienia widoczności.</dd>
+      <dt>VNDF</dt><dd>Visible Normal Distribution Function — próbkowanie tylko spośród fasetek widocznych z V.</dd>
+      <dt>Jakobian odbicia</dt><dd>Czynnik 4·(V·H) przeliczający gęstość z przestrzeni H na przestrzeń L.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>To zamyka cztery dodatki rozwijające temat BRDF od strony lookdev — od danych zmierzonych, przez warstwy, po to, jak silnik faktycznie losuje kierunki próbek. Razem z Rozdziałami 10–11 i Dodatkiem A masz teraz pełny obraz, od koncepcji po implementację.</p>
+  </div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-11-pbr-ggx.html">↑ Rozdział 11: PBR, rozkład GGX</a>
+</div>
+</div>
+</body>
+</html>
