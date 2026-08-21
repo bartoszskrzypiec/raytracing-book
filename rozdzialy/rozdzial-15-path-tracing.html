@@ -94,36 +94,59 @@
     <p>Uśrednienie wielu takich pojedynczych „ścieżek” na piksel zbiega do prawidłowej odpowiedzi — to dosłownie ten sam supersampling z Rozdziału 8, tylko teraz próbkujemy nie pozycję w pikselu, a całą ścieżkę światła przez scenę.</p>
 
     <div class="diagram-frame">
-      <div class="diagram-hud"><span>Path.averaging</span><span>1 vs 1000+ paths</span></div>
+      <div class="diagram-hud"><span>Path.averaging</span><span>1 vs N paths</span></div>
+      <div class="diagram-controls">
+        <label for="pathN">liczba ścieżek (N)</label>
+        <input type="range" id="pathN" min="1" max="60" step="1" value="1">
+        <span class="value-readout" id="pathReadout">N=1 ścieżka · szum ∝ 1/√N ≈ 100%</span>
+      </div>
       <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
-        <line x1="380" y1="20" x2="380" y2="280" stroke="#2a2f38"/>
-        <text x="190" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">1 ŚCIEŻKA (SZUM)</text>
-        <text x="570" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">TYSIĄCE ŚCIEŻEK (ŚREDNIA)</text>
-
+        <text x="380" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">TA SAMA SCENA, ROSNĄCA LICZBA LOSOWYCH ŚCIEŻEK</text>
         <polygon points="60,240 60,260 78,250" fill="#8b909b"/>
-        <path d="M78,250 L162,178 L122,110 L212,80" fill="none" stroke="#e8a33d" stroke-width="1.8"/>
-        <circle cx="162" cy="178" r="3.5" fill="#ecebe4"/>
-        <circle cx="122" cy="110" r="3.5" fill="#ecebe4"/>
-        <circle cx="212" cy="80" r="6" fill="#f0c880"/>
-        <circle cx="90" cy="200" r="1.4" fill="#4fc3c0" fill-opacity="0.5"/>
-        <circle cx="250" cy="140" r="1.4" fill="#4fc3c0" fill-opacity="0.5"/>
-        <circle cx="140" cy="240" r="1.4" fill="#4fc3c0" fill-opacity="0.5"/>
-        <circle cx="270" cy="200" r="1.4" fill="#4fc3c0" fill-opacity="0.5"/>
-
-        <polygon points="460,240 460,260 478,250" fill="#8b909b"/>
-        <path d="M 480,250 L 558,178 L 519,110 L 627,77" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-opacity="0.22"/>
-        <path d="M 480,250 L 564,154 L 537,119 L 623,71" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-opacity="0.22"/>
-        <path d="M 480,250 L 567,156 L 537,97 L 621,74" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-opacity="0.22"/>
-        <path d="M 480,250 L 574,142 L 522,108 L 621,80" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-opacity="0.22"/>
-        <path d="M 480,250 L 557,149 L 530,110 L 614,78" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-opacity="0.22"/>
-        <path d="M 480,250 L 567,152 L 540,84 L 629,64" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-opacity="0.22"/>
-        <path d="M 480,250 L 566,148 L 529,114 L 614,72" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-opacity="0.22"/>
-        <path d="M 480,250 L 568,152 L 519,108 L 618,69" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-opacity="0.22"/>
-        <path d="M 480,250 L 573,144 L 540,116 L 615,79" fill="none" stroke="#e8a33d" stroke-width="1.3" stroke-opacity="0.22"/>
-        <circle cx="622" cy="74" r="6" fill="#f0c880"/>
+        <g id="pathBundle"></g>
+        <circle cx="620" cy="74" r="6" fill="#f0c880"/>
       </svg>
-      <div class="diagram-caption">Jedna ścieżka to szum. Tysiące, uśrednione piksel po pikselu, dają gładki, prawidłowy obraz.</div>
+      <div class="diagram-caption">Przesuń N — jedna ścieżka to czysty szum, więcej ścieżek (każda coraz słabiej widoczna) sumuje się do gładkiego, prawidłowego wyniku. Szum spada jak 1/√N — żeby zmniejszyć go o połowę, potrzeba 4× więcej próbek.</div>
     </div>
+    <script>
+    (function(){
+      var svgNS = 'http://www.w3.org/2000/svg';
+      var slider = document.getElementById('pathN');
+      var readout = document.getElementById('pathReadout');
+      var group = document.getElementById('pathBundle');
+      var origin = {x: 80, y: 250}, light = {x: 620, y: 74};
+      var maxPaths = 60;
+      function pseudoRandom(seed){
+        var x = Math.sin(seed * 12.9898) * 43758.5453;
+        return x - Math.floor(x);
+      }
+      function lerp(a, b, t){ return a + (b - a) * t; }
+      var paths = [];
+      for (var i = 0; i < maxPaths; i++) {
+        var p1 = {x: lerp(110, 250, pseudoRandom(i * 4 + 1)), y: lerp(90, 220, pseudoRandom(i * 4 + 2))};
+        var p2 = {x: lerp(250, 450, pseudoRandom(i * 4 + 3)), y: lerp(60, 180, pseudoRandom(i * 4 + 4))};
+        var d = 'M ' + origin.x + ',' + origin.y + ' L ' + p1.x.toFixed(1) + ',' + p1.y.toFixed(1) + ' L ' + p2.x.toFixed(1) + ',' + p2.y.toFixed(1) + ' L ' + light.x + ',' + light.y;
+        var el = document.createElementNS(svgNS, 'path');
+        el.setAttribute('d', d);
+        el.setAttribute('fill', 'none');
+        el.setAttribute('stroke', '#e8a33d');
+        el.setAttribute('stroke-width', '1.5');
+        group.appendChild(el);
+        paths.push(el);
+      }
+      function update(){
+        var N = parseInt(slider.value, 10);
+        var op = Math.max(0.06, 1 / N);
+        paths.forEach(function(el, i){
+          el.setAttribute('opacity', i < N ? op : 0);
+        });
+        var noisePct = (100 / Math.sqrt(N)).toFixed(0);
+        readout.textContent = 'N=' + N + (N === 1 ? ' ścieżka' : ' ścieżek') + ' · szum ∝ 1/√N ≈ ' + noisePct + '%';
+      }
+      slider.addEventListener('input', update);
+      update();
+    })();
+    </script>
   </div>
 
   <div class="section">
