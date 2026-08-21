@@ -119,6 +119,58 @@
     </div>
 
     <p>Osobny problem to <strong>wrapping</strong>: co zrobić, gdy u albo v wychodzi poza [0,1]? „Repeat” zawija wzór (u mod 1) — standard dla tekstur kaflowych. „Clamp” przycina do koloru z krawędzi. „Mirror” odbija naprzemiennie. To dokładnie te opcje, które widzisz jako Wrap Mode w Unity czy Unreal.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Wrap.modes</span><span>repeat / clamp / mirror</span></div>
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+        <line x1="255" y1="20" x2="255" y2="270" stroke="#2a2f38"/>
+        <line x1="505" y1="20" x2="505" y2="270" stroke="#2a2f38"/>
+        <text x="130" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">REPEAT</text>
+        <text x="380" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">CLAMP</text>
+        <text x="630" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">MIRROR</text>
+
+        <!-- REPEAT: all 5 cells identical -->
+        <g>
+          <rect x="22" y="150" width="40" height="60" fill="#3a4048"/><rect x="22" y="150" width="20" height="60" fill="#4fc3c0"/>
+          <rect x="66" y="150" width="40" height="60" fill="#3a4048"/><rect x="66" y="150" width="20" height="60" fill="#4fc3c0"/>
+          <rect x="110" y="150" width="40" height="60" fill="#3a4048"/><rect x="110" y="150" width="20" height="60" fill="#4fc3c0"/>
+          <rect x="154" y="150" width="40" height="60" fill="#3a4048"/><rect x="154" y="150" width="20" height="60" fill="#4fc3c0"/>
+          <rect x="198" y="150" width="40" height="60" fill="#3a4048"/><rect x="198" y="150" width="20" height="60" fill="#4fc3c0"/>
+          <rect x="110" y="150" width="40" height="60" fill="none" stroke="#e8a33d" stroke-width="2"/>
+        </g>
+        <line x1="10" y1="220" x2="250" y2="220" stroke="#8b909b" stroke-width="1.5"/>
+        <text x="130" y="238" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">wzór powtórzony identycznie</text>
+
+        <!-- CLAMP: only base cell has the texture, rest are flat smeared edge color -->
+        <g>
+          <rect x="272" y="150" width="40" height="60" fill="#4fc3c0"/>
+          <rect x="316" y="150" width="40" height="60" fill="#4fc3c0"/>
+          <rect x="360" y="150" width="40" height="60" fill="#3a4048"/><rect x="360" y="150" width="20" height="60" fill="#4fc3c0"/>
+          <rect x="404" y="150" width="40" height="60" fill="#3a4048"/>
+          <rect x="448" y="150" width="40" height="60" fill="#3a4048"/>
+          <rect x="360" y="150" width="40" height="60" fill="none" stroke="#e8a33d" stroke-width="2"/>
+        </g>
+        <line x1="260" y1="220" x2="500" y2="220" stroke="#8b909b" stroke-width="1.5"/>
+        <text x="380" y="238" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">poza [0,1]: rozmazany kolor krawędzi</text>
+
+        <!-- MIRROR: alternating flipped orientation each step -->
+        <g>
+          <rect x="522" y="150" width="40" height="60" fill="#3a4048"/><rect x="522" y="150" width="20" height="60" fill="#4fc3c0"/>
+          <rect x="566" y="150" width="40" height="60" fill="#3a4048"/><rect x="586" y="150" width="20" height="60" fill="#4fc3c0"/>
+          <rect x="610" y="150" width="40" height="60" fill="#3a4048"/><rect x="610" y="150" width="20" height="60" fill="#4fc3c0"/>
+          <rect x="654" y="150" width="40" height="60" fill="#3a4048"/><rect x="674" y="150" width="20" height="60" fill="#4fc3c0"/>
+          <rect x="698" y="150" width="40" height="60" fill="#3a4048"/><rect x="698" y="150" width="20" height="60" fill="#4fc3c0"/>
+          <rect x="610" y="150" width="40" height="60" fill="none" stroke="#e8a33d" stroke-width="2"/>
+        </g>
+        <line x1="510" y1="220" x2="750" y2="220" stroke="#8b909b" stroke-width="1.5"/>
+        <text x="630" y="238" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">wzór odbity naprzemiennie</text>
+
+        <text x="130" y="252" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#e8a33d">[0,1] — bazowy tekst</text>
+        <text x="380" y="252" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#e8a33d">[0,1] — bazowy tekst</text>
+        <text x="630" y="252" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#e8a33d">[0,1] — bazowy tekst</text>
+      </svg>
+      <div class="diagram-caption">Ten sam kafelek poza zakresem [0,1], trzy różne odpowiedzi: Repeat kopiuje wzór bez zmian, Clamp rozmazuje ostatni piksel krawędzi, Mirror odwraca wzór przy każdej granicy — dlatego szew w Mirror jest niewidoczny, a w Repeat czasem widać powtórzenie.</div>
+    </div>
   </div>
 
   <div class="section">
