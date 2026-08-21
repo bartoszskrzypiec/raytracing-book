@@ -36,7 +36,12 @@
     <p>W południe światło słońca przebija atmosferę praktycznie na wprost — krótka droga przez ośrodek rozpraszający. O zachodzie słońce jest niemal na wysokości horyzontu, więc to samo światło przebywa dużo dłuższą drogę przez tę samą atmosferę, zanim dotrze do Twojego oka.</p>
 
     <div class="diagram-frame">
-      <div class="diagram-hud"><span>Atmosphere.path.length</span><span>noon vs sunset</span></div>
+      <div class="diagram-hud"><span>Atmosphere.path.length</span><span>sun elevation</span></div>
+      <div class="diagram-controls">
+        <label for="sunElevation">Wysokość słońca</label>
+        <input type="range" id="sunElevation" min="3" max="90" step="1" value="45">
+        <span class="value-readout" id="sunReadout">45° · droga ≈ 1,4×</span>
+      </div>
       <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <marker id="at1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
@@ -49,16 +54,41 @@
         <circle cx="380" cy="253" r="4.5" fill="#ecebe4"/>
         <text x="392" y="272" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">obserwator</text>
 
-        <line x1="380" y1="30" x2="380" y2="253" stroke="#e8a33d" stroke-width="2.3" marker-end="url(#at1)"/>
-        <text x="392" y="45" font-family="IBM Plex Mono" font-size="10.5" fill="#e8a33d">południe</text>
-        <text x="392" y="60" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">krótka droga</text>
-
-        <line x1="30" y1="148" x2="380" y2="253" stroke="#e8a33d" stroke-width="2.3" marker-end="url(#at1)"/>
-        <text x="45" y="135" font-family="IBM Plex Mono" font-size="10.5" fill="#e8a33d">zachód</text>
-        <text x="45" y="120" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">długa droga</text>
+        <line id="sunRay" x1="205" y1="89" x2="380" y2="253" stroke="#e8a33d" stroke-width="2.3" marker-end="url(#at1)"/>
+        <text id="sunLabel1" x="217" y="84" font-family="IBM Plex Mono" font-size="10.5" fill="#e8a33d">45°</text>
+        <text id="sunLabel2" x="217" y="99" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">droga ≈ 1,4×</text>
       </svg>
-      <div class="diagram-caption">Ta sama grubość atmosfery — inny kąt wejścia oznacza wielokrotnie dłuższą drogę do przebycia.</div>
+      <div class="diagram-caption">Ta sama grubość atmosfery — inny kąt wejścia oznacza wielokrotnie dłuższą drogę do przebycia. To dokładnie suwak „Sun Angle” z Twojego silnika.</div>
     </div>
+    <script>
+    (function(){
+      var slider = document.getElementById('sunElevation');
+      var readout = document.getElementById('sunReadout');
+      var ray = document.getElementById('sunRay');
+      var label1 = document.getElementById('sunLabel1');
+      var label2 = document.getElementById('sunLabel2');
+      var x0 = 30, y0 = 148, x1 = 380, y1 = 30;
+      function update(){
+        var elevation = parseFloat(slider.value);
+        var t = elevation / 90;
+        var sx = x0 + t * (x1 - x0);
+        var sy = y0 + t * (y1 - y0);
+        ray.setAttribute('x1', sx.toFixed(1));
+        ray.setAttribute('y1', sy.toFixed(1));
+        var pathLength = 1 / Math.sin(elevation * Math.PI / 180);
+        var labelX = (sx + 12).toFixed(1);
+        label1.setAttribute('x', labelX);
+        label1.setAttribute('y', (sy - 5).toFixed(1));
+        label1.textContent = elevation.toFixed(0) + '°';
+        label2.setAttribute('x', labelX);
+        label2.setAttribute('y', (sy + 10).toFixed(1));
+        label2.textContent = 'droga ≈ ' + pathLength.toFixed(1).replace('.', ',') + '×';
+        readout.textContent = elevation.toFixed(0) + '° · droga ≈ ' + pathLength.toFixed(1).replace('.', ',') + '×';
+      }
+      slider.addEventListener('input', update);
+      update();
+    })();
+    </script>
   </div>
 
   <div class="section">
