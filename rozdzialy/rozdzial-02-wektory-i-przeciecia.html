@@ -116,6 +116,11 @@
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Ray.parametrize</span><span>P(t) = O + t·D</span></div>
+      <div class="diagram-controls">
+        <label for="rayT">t</label>
+        <input type="range" id="rayT" min="-0.5" max="4.5" step="0.1" value="2">
+        <span class="value-readout" id="rayTReadout">t = 2,00 · P(t) leży 2,00 wzdłuż D od O</span>
+      </div>
       <svg viewBox="0 0 760 200" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <marker id="b1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
@@ -144,9 +149,37 @@
           <line x1="500" y1="88" x2="500" y2="102" stroke="#8b909b"/>
           <text x="500" y="122" text-anchor="middle" fill="#8b909b">t=3</text>
         </g>
+
+        <circle id="rayPoint" cx="370" cy="95" r="6" fill="#ecebe4" stroke="#0d0f12" stroke-width="1.5"/>
       </svg>
-      <div class="diagram-caption">Ten sam wzór — im większe t, tym dalej wzdłuż D od kamery.</div>
+      <div class="diagram-caption">Przesuń t — punkt jedzie wzdłuż promienia; dla t&lt;0 szarzeje, bo taki punkt fizycznie nie istnieje.</div>
     </div>
+    <script>
+    (function(){
+      var slider = document.getElementById('rayT');
+      var readout = document.getElementById('rayTReadout');
+      var point = document.getElementById('rayPoint');
+      var originX = 110, y = 95, pxPerT = 130;
+      function fmt(n, d){ return n.toFixed(d).replace('.', ','); }
+      function update(){
+        var t = parseFloat(slider.value);
+        var x = originX + t * pxPerT;
+        point.setAttribute('cx', x.toFixed(1));
+        point.setAttribute('cy', y);
+        if (t < 0) {
+          point.setAttribute('fill', '#3a4048');
+          point.setAttribute('opacity', '0.55');
+          readout.textContent = 't = ' + fmt(t, 2) + ' · ODRZUCONE — punkt leży przed kamerą (t<0)';
+        } else {
+          point.setAttribute('fill', '#ecebe4');
+          point.setAttribute('opacity', '1');
+          readout.textContent = 't = ' + fmt(t, 2) + ' · P(t) leży ' + fmt(t, 2) + ' wzdłuż D od O';
+        }
+      }
+      slider.addEventListener('input', update);
+      update();
+    })();
+    </script>
   </div>
 
   <div class="section">
@@ -171,39 +204,87 @@
     </ul>
 
     <div class="diagram-frame">
-      <div class="diagram-hud"><span>Discriminant.cases</span><span>Δ = b²−4ac</span></div>
+      <div class="diagram-hud"><span>Discriminant.cases</span><span>Δ = 4(r²−d²)</span></div>
+      <div class="diagram-controls">
+        <label for="discOffset">d (odległość promienia od C)</label>
+        <input type="range" id="discOffset" min="0" max="3" step="0.05" value="1">
+        <span class="value-readout" id="discReadout">d = 1,00 · r = 2,00 · Δ = 12,00 · HIT · Δ&gt;0</span>
+      </div>
       <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
-        <line x1="257" y1="20" x2="257" y2="260" stroke="#2a2f38"/>
-        <line x1="502" y1="20" x2="502" y2="260" stroke="#2a2f38"/>
+        <text id="discStatusLabel" x="380" y="45" text-anchor="middle" font-family="IBM Plex Mono" font-size="13" letter-spacing="0.5" fill="#e8a33d">HIT · Δ&gt;0</text>
 
-        <text x="135" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" letter-spacing="0.5" fill="#8b909b">MISS · Δ&lt;0</text>
-        <text x="380" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" letter-spacing="0.5" fill="#8b909b">TANGENTNY · Δ=0</text>
-        <text x="625" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" letter-spacing="0.5" fill="#8b909b">HIT · Δ&gt;0</text>
+        <circle cx="380" cy="170" r="70" fill="#20242c" stroke="#2a2f38" stroke-width="1.5"/>
+        <circle cx="380" cy="170" r="2.5" fill="#8b909b"/>
+        <text x="380" y="195" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">C</text>
 
-        <!-- miss -->
-        <circle cx="135" cy="190" r="45" fill="#20242c" stroke="#2a2f38" stroke-width="1.5"/>
-        <line x1="40" y1="120" x2="240" y2="90" stroke="#8b909b" stroke-width="2" stroke-dasharray="6 5"/>
+        <line id="discRay" x1="40" y1="135" x2="720" y2="135" stroke="#e8a33d" stroke-width="2.2"/>
+        <line id="discOffsetLine" x1="380" y1="170" x2="380" y2="135" stroke="#9c82d8" stroke-width="1.3" stroke-dasharray="3 3"/>
+        <text id="discOffsetLabel" x="392" y="152" font-family="IBM Plex Mono" font-size="10.5" fill="#9c82d8">d</text>
 
-        <!-- tangent -->
-        <circle cx="380" cy="190" r="45" fill="#20242c" stroke="#2a2f38" stroke-width="1.5"/>
-        <line x1="285" y1="145" x2="475" y2="145" stroke="#4fc3c0" stroke-width="2.2"/>
-        <circle cx="380" cy="145" r="4.5" fill="#4fc3c0"/>
-        <text x="380" y="130" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">t (jedyne)</text>
+        <circle id="discT0" cx="315" cy="135" r="5" fill="#e8a33d"/>
+        <text id="discT0Label" x="315" y="118" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">t₀</text>
+        <circle id="discT1" cx="445" cy="135" r="4" fill="none" stroke="#8b909b" stroke-width="1.5"/>
+        <text id="discT1Label" x="445" y="118" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">t₁</text>
 
-        <!-- hit -->
-        <circle cx="625" cy="190" r="45" fill="#20242c" stroke="#2a2f38" stroke-width="1.5"/>
-        <line x1="530" y1="150" x2="720" y2="150" stroke="#e8a33d" stroke-width="2.2"/>
-        <circle cx="604" cy="150" r="5" fill="#e8a33d"/>
-        <circle cx="646" cy="150" r="4" fill="none" stroke="#8b909b" stroke-width="1.5"/>
-        <text x="600" y="133" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">t₀</text>
-        <text x="650" y="133" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">t₁</text>
-
-        <text x="135" y="280" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">brak trafienia</text>
-        <text x="380" y="280" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">krawędź sylwetki</text>
-        <text x="625" y="280" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">t₀ = to, co widzimy</text>
+        <text x="380" y="280" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">przesuń d — ten sam promień, ten sam wyróżnik, teraz na żywo</text>
       </svg>
-      <div class="diagram-caption">Ten sam ray tracer, trzy różne wyniki jednego testu — czysto na podstawie znaku Δ.</div>
+      <div class="diagram-caption">d — odległość promienia od środka sfery po prostopadłej. Δ zmienia znak dokładnie przy d = r — dokładnie ten sam wyróżnik co we wzorze wyżej, tylko przepisany geometrycznie.</div>
     </div>
+    <script>
+    (function(){
+      var slider = document.getElementById('discOffset');
+      var readout = document.getElementById('discReadout');
+      var ray = document.getElementById('discRay');
+      var offLine = document.getElementById('discOffsetLine');
+      var offLabel = document.getElementById('discOffsetLabel');
+      var t0 = document.getElementById('discT0');
+      var t1 = document.getElementById('discT1');
+      var t0Label = document.getElementById('discT0Label');
+      var t1Label = document.getElementById('discT1Label');
+      var status = document.getElementById('discStatusLabel');
+      var cx = 380, cy = 170, r = 70, rWorld = 2, scale = 35, eps = 0.05;
+      function fmt(n, d){ return n.toFixed(d).replace('.', ','); }
+      function update(){
+        var d = parseFloat(slider.value);
+        var dpx = d * scale;
+        var rayY = cy - dpx;
+        ray.setAttribute('y1', rayY); ray.setAttribute('y2', rayY);
+        offLine.setAttribute('y2', rayY);
+        offLabel.setAttribute('y', (cy + rayY) / 2 - 6);
+        var delta = 4 * (rWorld * rWorld - d * d);
+        var word, color;
+        if (delta > eps) {
+          var halfChord = Math.sqrt(Math.max(0, r * r - dpx * dpx));
+          var xA = cx - halfChord, xB = cx + halfChord;
+          t0.setAttribute('cx', xA); t0.setAttribute('cy', rayY); t0.setAttribute('opacity', 1);
+          t1.setAttribute('cx', xB); t1.setAttribute('cy', rayY); t1.setAttribute('opacity', 1);
+          t0Label.setAttribute('x', xA); t0Label.setAttribute('y', rayY - 17); t0Label.setAttribute('opacity', 1);
+          t0Label.textContent = 't₀';
+          t1Label.setAttribute('x', xB); t1Label.setAttribute('y', rayY - 17); t1Label.setAttribute('opacity', 1);
+          ray.setAttribute('stroke', '#e8a33d'); ray.setAttribute('stroke-dasharray', 'none');
+          word = 'HIT · Δ>0'; color = '#e8a33d';
+        } else if (delta > -eps) {
+          t0.setAttribute('cx', cx); t0.setAttribute('cy', rayY); t0.setAttribute('opacity', 1);
+          t1.setAttribute('opacity', 0);
+          t0Label.setAttribute('x', cx); t0Label.setAttribute('y', rayY - 17); t0Label.setAttribute('opacity', 1);
+          t0Label.textContent = 't (jedyne)';
+          t1Label.setAttribute('opacity', 0);
+          ray.setAttribute('stroke', '#4fc3c0'); ray.setAttribute('stroke-dasharray', 'none');
+          word = 'TANGENTNY · Δ=0'; color = '#4fc3c0';
+        } else {
+          t0.setAttribute('opacity', 0); t1.setAttribute('opacity', 0);
+          t0Label.setAttribute('opacity', 0); t1Label.setAttribute('opacity', 0);
+          ray.setAttribute('stroke', '#8b909b'); ray.setAttribute('stroke-dasharray', '6 5');
+          word = 'MISS · Δ<0'; color = '#9c82d8';
+        }
+        status.textContent = word;
+        status.setAttribute('fill', color);
+        readout.textContent = 'd = ' + fmt(d, 2) + ' · r = ' + fmt(rWorld, 2) + ' · Δ = ' + fmt(delta, 2) + ' · ' + word;
+      }
+      slider.addEventListener('input', update);
+      update();
+    })();
+    </script>
   </div>
 
   <div class="section">
