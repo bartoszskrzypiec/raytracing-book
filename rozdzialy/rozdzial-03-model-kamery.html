@@ -84,6 +84,13 @@
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Fov.aspect</span><span>2 views</span></div>
+      <div class="diagram-controls">
+        <label for="fovSlider">FOV</label>
+        <input type="range" id="fovSlider" min="20" max="120" step="1" value="50">
+        <label for="aspectSlider">Aspect</label>
+        <input type="range" id="aspectSlider" min="0.5" max="2.5" step="0.01" value="1.57">
+        <span class="value-readout" id="fovAspectReadout">FOV=50° · h=2·tan(FOV/2)=1,86 · aspect=1,57 · w=aspect·h=2,93</span>
+      </div>
       <svg viewBox="0 0 760 340" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <marker id="m1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
@@ -97,26 +104,85 @@
         <!-- left: FOV side view -->
         <polygon points="40,160 40,180 60,170" fill="#8b909b"/>
         <line x1="60" y1="170" x2="230" y2="170" stroke="#8b909b" stroke-width="1.2" stroke-dasharray="3 4"/>
-        <line x1="60" y1="170" x2="230" y2="110" stroke="#e8a33d" stroke-width="2"/>
-        <line x1="60" y1="170" x2="230" y2="230" stroke="#e8a33d" stroke-width="2"/>
-        <path d="M 86.4,160.7 A 28,28 0 0,1 86.4,179.3" fill="none" stroke="#e8a33d" stroke-width="1.5"/>
+        <line id="fovRayTop" x1="60" y1="170" x2="230" y2="110" stroke="#e8a33d" stroke-width="2"/>
+        <line id="fovRayBottom" x1="60" y1="170" x2="230" y2="230" stroke="#e8a33d" stroke-width="2"/>
+        <path id="fovArc" d="M 86.4,160.7 A 28,28 0 0,1 86.4,179.3" fill="none" stroke="#e8a33d" stroke-width="1.5"/>
         <text x="100" y="176" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">FOV</text>
-        <line x1="230" y1="110" x2="230" y2="230" stroke="#4fc3c0" stroke-width="2.5"/>
-        <line x1="222" y1="110" x2="238" y2="110" stroke="#4fc3c0" stroke-width="1.5"/>
-        <line x1="222" y1="230" x2="238" y2="230" stroke="#4fc3c0" stroke-width="1.5"/>
-        <line x1="252" y1="112" x2="252" y2="228" stroke="#9c82d8" stroke-width="1.2" marker-start="url(#m2)" marker-end="url(#m2)"/>
-        <text x="262" y="174" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">h</text>
+        <line id="fovVpLine" x1="230" y1="110" x2="230" y2="230" stroke="#4fc3c0" stroke-width="2.5"/>
+        <line id="fovVpTickTop" x1="222" y1="110" x2="238" y2="110" stroke="#4fc3c0" stroke-width="1.5"/>
+        <line id="fovVpTickBottom" x1="222" y1="230" x2="238" y2="230" stroke="#4fc3c0" stroke-width="1.5"/>
+        <line id="fovHBracket" x1="252" y1="112" x2="252" y2="228" stroke="#9c82d8" stroke-width="1.2" marker-start="url(#m2)" marker-end="url(#m2)"/>
+        <text id="fovHLabel" x="262" y="174" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">h</text>
 
         <!-- right: aspect front view -->
-        <rect x="460" y="110" width="220" height="140" fill="#20242c" stroke="#4fc3c0" stroke-width="2"/>
-        <line x1="460" y1="95" x2="680" y2="95" stroke="#e8a33d" stroke-width="1.5" marker-start="url(#m1)" marker-end="url(#m1)"/>
-        <text x="570" y="88" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">w</text>
+        <rect id="aspectRect" x="460" y="110" width="220" height="140" fill="#20242c" stroke="#4fc3c0" stroke-width="2"/>
+        <line id="aspectWArrow" x1="460" y1="95" x2="680" y2="95" stroke="#e8a33d" stroke-width="1.5" marker-start="url(#m1)" marker-end="url(#m1)"/>
+        <text id="aspectWLabel" x="570" y="88" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">w</text>
         <line x1="445" y1="110" x2="445" y2="250" stroke="#9c82d8" stroke-width="1.5" marker-start="url(#m2)" marker-end="url(#m2)"/>
         <text x="428" y="184" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">h</text>
-        <circle cx="570" cy="180" r="3" fill="#8b909b"/>
+        <circle id="aspectDot" cx="570" cy="180" r="3" fill="#8b909b"/>
       </svg>
-      <div class="diagram-caption">h = viewport_height, w = viewport_width. Ten sam kąt FOV z boku daje konkretny prostokąt z przodu.</div>
+      <div class="diagram-caption">h = viewport_height, w = viewport_width. Ten sam kąt FOV z boku daje konkretny prostokąt z przodu — przesuń oba suwaki niezależnie.</div>
     </div>
+    <script>
+    (function(){
+      var fovSlider = document.getElementById('fovSlider');
+      var aspectSlider = document.getElementById('aspectSlider');
+      var readout = document.getElementById('fovAspectReadout');
+      var rayTop = document.getElementById('fovRayTop');
+      var rayBottom = document.getElementById('fovRayBottom');
+      var arc = document.getElementById('fovArc');
+      var vpLine = document.getElementById('fovVpLine');
+      var vpTickTop = document.getElementById('fovVpTickTop');
+      var vpTickBottom = document.getElementById('fovVpTickBottom');
+      var hBracket = document.getElementById('fovHBracket');
+      var hLabel = document.getElementById('fovHLabel');
+      var aspRect = document.getElementById('aspectRect');
+      var aspWArrow = document.getElementById('aspectWArrow');
+      var aspWLabel = document.getElementById('aspectWLabel');
+      var aspDot = document.getElementById('aspectDot');
+      var eyeX = 60, eyeY = 170, dist = 170, arcR = 28;
+      var rectCx = 570, rectH = 140;
+      function fmt(n, d){ return n.toFixed(d).replace('.', ','); }
+      function update(){
+        var fov = parseFloat(fovSlider.value);
+        var aspect = parseFloat(aspectSlider.value);
+        var halfRad = (fov / 2) * Math.PI / 180;
+        var vh = 2 * Math.tan(halfRad);
+        var vpX = eyeX + dist;
+        var halfH = Math.min(140, Math.max(15, dist * Math.tan(halfRad)));
+
+        rayTop.setAttribute('y2', (eyeY - halfH).toFixed(1));
+        rayBottom.setAttribute('y2', (eyeY + halfH).toFixed(1));
+
+        var ax = eyeX + arcR * Math.cos(halfRad);
+        var ayTop = eyeY - arcR * Math.sin(halfRad);
+        var ayBottom = eyeY + arcR * Math.sin(halfRad);
+        arc.setAttribute('d', 'M ' + ax.toFixed(1) + ',' + ayTop.toFixed(1) + ' A ' + arcR + ',' + arcR + ' 0 0,1 ' + ax.toFixed(1) + ',' + ayBottom.toFixed(1));
+
+        vpLine.setAttribute('y1', (eyeY - halfH).toFixed(1));
+        vpLine.setAttribute('y2', (eyeY + halfH).toFixed(1));
+        vpTickTop.setAttribute('y1', (eyeY - halfH).toFixed(1)); vpTickTop.setAttribute('y2', (eyeY - halfH).toFixed(1));
+        vpTickBottom.setAttribute('y1', (eyeY + halfH).toFixed(1)); vpTickBottom.setAttribute('y2', (eyeY + halfH).toFixed(1));
+        hBracket.setAttribute('y1', (eyeY - halfH + 2).toFixed(1));
+        hBracket.setAttribute('y2', (eyeY + halfH - 2).toFixed(1));
+        hLabel.setAttribute('y', (eyeY + 4).toFixed(1));
+
+        var rectWpx = rectH * aspect;
+        var rectX = rectCx - rectWpx / 2;
+        aspRect.setAttribute('x', rectX.toFixed(1));
+        aspRect.setAttribute('width', rectWpx.toFixed(1));
+        aspWArrow.setAttribute('x1', rectX.toFixed(1));
+        aspWArrow.setAttribute('x2', (rectX + rectWpx).toFixed(1));
+        aspDot.setAttribute('cx', rectCx.toFixed(1));
+
+        readout.textContent = 'FOV=' + fov.toFixed(0) + '° · h=2·tan(FOV/2)=' + fmt(vh, 2) + ' · aspect=' + fmt(aspect, 2) + ' · w=aspect·h=' + fmt(aspect * vh, 2);
+      }
+      fovSlider.addEventListener('input', update);
+      aspectSlider.addEventListener('input', update);
+      update();
+    })();
+    </script>
   </div>
 
   <div class="section">
