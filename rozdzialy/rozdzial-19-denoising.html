@@ -37,6 +37,11 @@
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>AOV.buffers</span><span>noisy vs clean</span></div>
+      <div class="diagram-controls">
+        <label for="beautySamples">próbki na piksel (beauty)</label>
+        <input type="range" id="beautySamples" min="1" max="100" step="1" value="1">
+        <span class="value-readout" id="beautyReadout">N=1 próbka · szum ∝ 1/√N ≈ 100%</span>
+      </div>
       <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <filter id="beautyNoise" x="0%" y="0%" width="100%" height="100%">
@@ -48,17 +53,33 @@
             <stop offset="100%" stop-color="#4a3f73"/>
           </linearGradient>
         </defs>
-        <text x="130" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">BEAUTY (szum)</text>
+        <text x="130" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">BEAUTY (szum → zbiega się)</text>
         <rect x="30" y="45" width="200" height="160" filter="url(#beautyNoise)" stroke="#2a2f38" stroke-width="1.5"/>
+        <rect id="beautyClean" x="30" y="45" width="200" height="160" fill="#c9963f" opacity="0" stroke="#2a2f38" stroke-width="1.5"/>
 
-        <text x="380" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">ALBEDO (czysty)</text>
+        <text x="380" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">ALBEDO (czysty od razu)</text>
         <rect x="280" y="45" width="200" height="160" fill="#e8a33d" stroke="#2a2f38" stroke-width="1.5"/>
 
-        <text x="630" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">NORMAL (czysty)</text>
+        <text x="630" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">NORMAL (czysty od razu)</text>
         <rect x="530" y="45" width="200" height="160" fill="url(#normalGrad)" stroke="#2a2f38" stroke-width="1.5"/>
       </svg>
-      <div class="diagram-caption">Ten sam kadr, ten sam moment renderu — tylko jeden z trzech buforów jest zaszumiony.</div>
+      <div class="diagram-caption">Przesuń liczbę próbek — beauty stopniowo wygładza się do jednolitego koloru, dokładnie jak w Rozdziale 15, podczas gdy albedo i normal są czyste niezależnie od N.</div>
     </div>
+    <script>
+    (function(){
+      var slider = document.getElementById('beautySamples');
+      var readout = document.getElementById('beautyReadout');
+      var overlay = document.getElementById('beautyClean');
+      function update(){
+        var N = parseInt(slider.value, 10);
+        var op = Math.max(0, 1 - 1 / Math.sqrt(N));
+        overlay.setAttribute('opacity', op.toFixed(3));
+        readout.textContent = 'N=' + N + (N === 1 ? ' próbka' : ' próbek') + ' · szum ∝ 1/√N ≈ ' + (100 / Math.sqrt(N)).toFixed(0) + '% · albedo/normal bez zmian';
+      }
+      slider.addEventListener('input', update);
+      update();
+    })();
+    </script>
   </div>
 
   <div class="section">
