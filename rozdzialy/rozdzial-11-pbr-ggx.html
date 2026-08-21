@@ -33,6 +33,25 @@
     <p>Standardem od połowy 2010. jest rozkład GGX (Trowbridge-Reitz), spopularyzowany przez kursy Disneya o PBR. Mówi, jaka część mikrofasetek ma normalną wystarczająco bliską H, żeby wziąć udział w odbiciu:</p>
 
     <div class="formula">D(H) = α² / (π · ((N·H)²·(α²−1) + 1)²)<span class="sub">α = roughness² — artyści ustawiają „roughness”, ale wzór używa jego kwadratu; to sprawia, że slider czuje się bardziej liniowy percepcyjnie</span></div>
+    <button class="reveal-btn" data-modal-target="explain-ggx-d">Wyjaśnij ten wzór</button>
+    <template id="explain-ggx-d">
+      <h3>D(H) — rozkład GGX, krok po kroku</h3>
+      <p><strong>Co ten wzór w ogóle liczy.</strong> D(H) to nie kolor ani jasność — to „gęstość”: jaka część mikroskopijnych fasetek na powierzchni ma normalną skierowaną dokładnie w stronę H (wektora „w pół drogi” między światłem a kamerą, z Rozdziału 5). Im więcej fasetek tak zwróconych, tym jaśniejszy błysk w tym miejscu.</p>
+      <p><strong>Rozbijamy wzór na kawałki:</strong></p>
+      <ul>
+        <li><strong>α</strong> = roughness² — kwadrat, nie sam roughness. To dlatego przesuwanie slidera „Roughness” od 0 do 1 nie skacze gwałtownie: kwadrat rozciąga skalę tak, że zmiana czuje się liniowo.</li>
+        <li><strong>(N·H)²</strong> — cosinus kąta między normalną makro-powierzchni a H, podniesiony do kwadratu. Bliżej 1, gdy H prawie pokrywa się z N (patrzysz prosto w kierunku idealnego odbicia).</li>
+        <li><strong>(α²−1)</strong> — to jest serce wzoru. Dla bardzo gładkiej powierzchni (α blisko 0) ten człon jest mocno ujemny, więc mianownik rośnie błyskawicznie, gdy (N·H)² choć trochę spada poniżej 1 — stąd wąski, ostry błysk. Dla bardzo chropowatej powierzchni (α blisko 1) człon zbliża się do zera, mianownik prawie się nie zmienia z kątem — stąd szeroki, rozmyty błysk.</li>
+        <li><strong>+1</strong> i <strong>π</strong> w mianowniku — stałe normalizujące, które gwarantują, że D(H) scałkowane po całej hemisferze da sensowną, fizyczną wartość (nie więcej energii niż padło — dokładnie warunek energooszczędności z Rozdziału 10).</li>
+      </ul>
+      <p><strong>Podstawmy liczby.</strong> Patrzymy dokładnie w kierunku idealnego odbicia, więc N·H = 1:</p>
+      <ul>
+        <li>Gładki materiał, α = 0,05: D(H) = 0,0025 / (π · (1·(0,0025−1)+1)²) = 0,0025 / (π·0,0025²) ≈ <strong>127</strong> — bardzo wysoka wartość, skupiona w wąskim stożku kątów. Ostry, mały błysk.</li>
+        <li>Chropowaty materiał, α = 0,5: D(H) = 0,25 / (π·(1·(0,25−1)+1)²) = 0,25 / (π·0,25²) ≈ <strong>1,27</strong> — sto razy mniejsza wartość szczytowa, ale rozłożona na dużo szerszy zakres kątów. Szeroki, przygaszony błysk.</li>
+      </ul>
+      <p>Ten sam wzór, ta sama liczba wejściowa (N·H=1) — tylko jeden parametr α decyduje, czy dostajesz igłę światła czy szeroką, miękką plamę. Dokładnie to widzisz, przesuwając „Roughness” w Blenderze czy Arnoldzie.</p>
+      <p><em>Nie pamiętasz, skąd bierze się α = roughness²? Zobacz akapit wyżej w tym rozdziale, albo <a href="../matematyka/podstawy-matematyczne.html">Podstawy matematyczne</a> po ogólne przypomnienie notacji.</em></p>
+    </template>
 
     <p>GGX wyróżnia się na tle starszych rozkładów (jak wykładnik Blinn-Phonga z Rozdziału 5) długim „ogonem” — nawet bardzo gładkie materiały zachowują subtelną, miękką poświatę wokół ostrego jądra błysku. To właśnie ten ogon dał GGX-owi przewagę: fotografie realnych materiałów też mają taką poświatę, a starsze modele jej nie miały.</p>
 
@@ -151,6 +170,15 @@
     <a href="rozdzial-10-materialy.html">← Poprzedni</a>
     <a href="rozdzial-12-efekty-kamery.html">Następny →</a>
 </div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-panel">
+    <button class="modal-close" data-modal-close aria-label="Zamknij">×</button>
+    <div id="modal-body"></div>
+  </div>
 </div>
+
+</div>
+<script src="../assets/interactive.js"></script>
 </body>
 </html>

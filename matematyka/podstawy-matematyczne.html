@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Podstawy matematyczne — suma, całka i notacja tej książki</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>Σ · suma skończona</span><span>∫ · suma ciągła</span><span>Ω · hemisfera</span><span>MC · przybliżenie próbkami</span>
+  </div>
+
+  <div class="eyebrow">Zanim zaczniesz</div>
+  <h1>Podstawy matematyczne</h1>
+  <p class="subtitle">Kilka rozdziałów dalej trafisz na wzory z Σ i ∫, które mogą wyglądać przytłaczająco, jeśli nie liczyłeś całek od lat (albo nigdy). Ta strona nie jest kursem analizy matematycznej — to piętnaście minut, które wystarczą, żeby te symbole przestały być magią i stały się tym, czym naprawdę są: bardzo prostą ideą, tylko zapisaną gęstym językiem.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Σ (suma) to dodanie wartości dla każdego elementu skończonej listy — nic więcej.</li>
+      <li>∫ (całka) to dokładnie to samo, tylko lista nie jest skończona — jest ciągła (np. „wszystkie kierunki hemisfery”), więc zamiast dodawać pozycje z listy, dodajesz nieskończenie wiele nieskończenie małych kawałków.</li>
+      <li>Renderer nigdy nie liczy całki dokładnie — przybliża ją skończoną sumą losowych próbek. To dosłownie to, co robi slider „Samples” w Twoim silniku.</li>
+      <li>Każdy trudniejszy wzór w tej książce ma przycisk „Wyjaśnij ten wzór”, który rozkłada go krok po kroku w miejscu, w którym się pojawia.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Suma</div>
+    <h2>Σ to tylko pętla</h2>
+    <p>Zacznijmy od czegoś, co już znasz z Rozdziału 8: uśredniasz N próbek na piksel, żeby wygładzić krawędzie. Gdybyś to zapisał tak, jak zapisałbyś kod, wyglądałoby to tak:</p>
+    <div class="formula">wynik = (próbka_1 + próbka_2 + próbka_3 + ... + próbka_N) / N</div>
+    <p>Matematycy piszą dokładnie to samo krócej — zamiast wypisywać wszystkie składniki, piszą jeden ogólny wzór na „składnik numer i” i mówią, dla jakiego zakresu i go dodawać:</p>
+    <div class="formula">wynik = (1/N) · Σᵢ₌₁ᴺ próbkaᵢ<span class="sub">Σᵢ₌₁ᴺ czytaj: „zsumuj to, co następuje, dla i od 1 do N” — to dokładnie ta sama pętla for, tylko zapisana symbolem zamiast słowem kodu</span></div>
+    <p>To wszystko. Σ nie robi nic, czego nie robi zwykła pętla sumująca w kodzie — to skrót notacyjny, nie nowa operacja matematyczna. Zobaczysz ją w tej postaci w kilku miejscach książki (m.in. w składaniu modelu oświetlenia w Rozdziale 5 i w importance sampling w Dodatku B).</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Całka</div>
+    <h2>∫ to Σ dla listy, która nie ma końca</h2>
+    <p>Σ dodaje skończoną listę — próbkę 1, 2, 3, ..., N. Ale niektóre pytania w renderingu nie mają skończonej listy do zsumowania. „Ile światła dociera do tego punktu ze wszystkich kierunków hemisfery nad nim?” — kierunków w hemisferze jest nieskończenie wiele, każdy nieskończenie „wąski”. Nie da się ich ponumerować od 1 do N i dodać jak próbek na piksel.</p>
+    <p>Całka to odpowiedź na dokładnie ten problem: sumowanie po zakresie <em>ciągłym</em>, nie liście dyskretnych elementów. Zamiast „dodaj wartość dla każdego i od 1 do N”, całka mówi „dodaj wkład z każdego nieskończenie małego kawałka zakresu”:</p>
+    <div class="formula">∫_Ω f(ω) dω<span class="sub">Ω — cały zakres, po którym sumujemy (tu: hemisfera kierunków); ω — konkretny kierunek w tym zakresie; dω — jeden nieskończenie mały „kawałek” tego zakresu; f(ω) — wartość, którą sumujemy dla tego kawałka</span></div>
+    <p>Czytaj to dosłownie jak Σ z poprzedniej sekcji, tylko z trzema różnicami: indeks i zamienia się w ciągłą zmienną ω, zakres „od 1 do N” zamienia się w „cały obszar Ω”, a krok sumowania (dawniej po prostu „1 kolejny element”) zamienia się w dω — nieskończenie mały kawałek tego obszaru. To jest dokładnie to ∫_Ω ... dω_i, które zobaczysz w równaniu renderowania w Rozdziale 15 — i dokładnie dlatego ma przycisk „Wyjaśnij ten wzór” bezpośrednio pod sobą.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Jak to się liczy naprawdę</div>
+    <h2>Renderer nie liczy całek — zgaduje je</h2>
+    <p>Tu jest sedno, które łączy tę stronę z resztą książki: dla prawdziwej sceny nie istnieje wzór, który dałby dokładną wartość całki z poprzedniej sekcji — jest zbyt skomplikowana (zależy od geometrii, materiałów, świateł, wszystkiego naraz). Więc renderer robi coś sprytnego: <strong>przybliża całkę skończoną sumą losowych próbek</strong> — czyli wraca do Σ, tylko próbki są losowe, a nie kompletną listą.</p>
+    <p>Żeby to zobaczyć na liczbach: udawajmy, że hemisfera ma tylko 4 możliwe kierunki (w rzeczywistości jest ich nieskończenie wiele, ale zasada się nie zmienia), a każdy niesie inną ilość światła:</p>
+    <div class="formula">kierunek 1: wkład = 0,10&nbsp;&nbsp;&nbsp;kierunek 2: wkład = 0,40&nbsp;&nbsp;&nbsp;kierunek 3: wkład = 0,05&nbsp;&nbsp;&nbsp;kierunek 4: wkład = 0,25<span class="sub">średnia (czyli przybliżenie całki) = (0,10+0,40+0,05+0,25) / 4 = 0,20</span></div>
+    <p>Jedna próbka (np. tylko kierunek 2) dałaby 0,40 — daleko od prawdziwej średniej 0,20. Cztery próbki dają dokładnie 0,20. W prawdziwej scenie kierunków jest nieskończenie wiele, więc żadna skończona liczba próbek nie da wyniku idealnie dokładnego — ale im więcej próbek, tym bliżej. To jest dosłownie to, co dzieje się, gdy podnosisz „Samples” w Arnoldzie, Cyclesie czy V-Rayu: więcej próbek = przybliżenie całki bliższe prawdzie = mniej szumu na obrazie. Pełną wersję tej historii — dlaczego próbki są losowe, nie równomiernie rozstawione, i jak wybrać je mądrzej — znajdziesz w Rozdziale 15 i Dodatku B.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Ściągawka notacji</div>
+    <dl>
+      <dt>Σ</dt><dd>Suma po skończonej liście elementów.</dd>
+      <dt>∫</dt><dd>Suma po ciągłym zakresie — nieskończenie wiele nieskończenie małych wkładów.</dd>
+      <dt>Ω</dt><dd>Cała hemisfera kierunków nad punktem powierzchni.</dd>
+      <dt>ω (omega)</dt><dd>Jeden konkretny kierunek; dω — nieskończenie mały „kawałek” kierunku wokół niego.</dd>
+      <dt>Indeksy i / o / e</dt><dd>przychodzące (incoming) / wychodzące (outgoing) / emitowane (emitted) — np. L_i, L_o, L_e w Rozdziale 15.</dd>
+      <dt>α (alfa)</dt><dd>W tej książce prawie zawsze: roughness² — zobacz Rozdział 11.</dd>
+      <dt>θ (theta)</dt><dd>Kąt, najczęściej mierzony od normalnej powierzchni.</dd>
+      <dt>σ (sigma)</dt><dd>Współczynnik — np. ekstynkcji ośrodka w Rozdziale 18.</dd>
+      <dt>η (eta)</dt><dd>Stosunek współczynników załamania (IOR) dwóch materiałów — Rozdział 7.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>To wszystko, co potrzebujesz, żeby żaden wzór z Σ czy ∫ w tej książce nie był już czarną skrzynką. Nie musisz tego pamiętać na pamięć — każdy trudniejszy wzór ma przycisk „Wyjaśnij ten wzór”, który rozkłada go krok po kroku dokładnie w miejscu, w którym się pojawia, w kontekście tego, co akurat liczysz.</p>
+  </div>
+
+  <div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-01-wprowadzenie-do-renderowania.html">Rozdział 1 →</a>
+  </div>
+
+</div>
+</body>
+</html>

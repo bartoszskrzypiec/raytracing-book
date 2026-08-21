@@ -33,7 +33,23 @@
     <p>James Kajiya sformalizował w 1986 roku jedno równanie, które opisuje absolutnie każdy efekt świetlny z tej książki:</p>
 
     <div class="formula">L_o(p,ω_o) = L_e(p,ω_o) + ∫_Ω f(p,ω_i,ω_o) · L_i(p,ω_i) · (N·ω_i) dω_i<span class="sub">L_o — światło wychodzące; L_e — światło emitowane (źródła); f — BRDF z Rozdziałów 10–11; L_i — światło przychodzące z kierunku ω_i; Ω — cała hemisfera nad punktem</span></div>
-    <a class="inline-deeper" href="../dodatki/dodatek-u-kat-brylowy.html">↓ Dodatek U — czym dokładnie jest dω_i i Ω</a>
+    <button class="reveal-btn" data-modal-target="explain-rendering-eq">Wyjaśnij ten wzór</button>
+    <template id="explain-rendering-eq">
+      <h3>Równanie renderowania — krok po kroku</h3>
+      <p><strong>Co to znaczy fizycznie.</strong> L_o(p,ω_o) to ilość światła wychodzącego z punktu p w stronę kamery (kierunek ω_o). To suma dwóch rzeczy: światła, które ten punkt sam emituje (L_e — zero dla większości powierzchni, coś więcej dla źródeł światła), plus całego światła, które dotarło do niego z <em>każdego</em> kierunku hemisfery nad nim, odpowiednio przefiltrowanego przez materiał i kąt padania.</p>
+      <p><strong>Rozbijamy prawą stronę, kawałek po kawałku:</strong></p>
+      <ul>
+        <li><strong>∫_Ω ... dω_i</strong> — „dla każdego kierunku ω_i w całej hemisferze Ω, zsumuj to, co następuje”. Dokładnie to Σ z <a href="../matematyka/podstawy-matematyczne.html">Podstaw matematycznych</a>, tylko po zakresie ciągłym, nie skończonej liście.</li>
+        <li><strong>f(p,ω_i,ω_o)</strong> — BRDF z Rozdziałów 10–11: ile z tego, co przyszło z kierunku ω_i, w ogóle odbija się w stronę ω_o w tym konkretnym punkcie.</li>
+        <li><strong>L_i(p,ω_i)</strong> — ile światła przyszło z kierunku ω_i w pierwszej kolejności. To jest rekurencyjne — patrz akapit niżej.</li>
+        <li><strong>(N·ω_i)</strong> — ten sam cosinus co w prawie Lamberta z Rozdziału 5: światło padające pod kątem „rozmazuje się” na większej powierzchni, więc wnosi mniej na jednostkę powierzchni.</li>
+        <li><strong>dω_i</strong> — nieskończenie mały „kawałek” kierunku, dokładnie jak w definicji całki na stronie Podstaw matematycznych.</li>
+      </ul>
+      <p><strong>Podstawmy (uproszczone) liczby.</strong> Prawdziwa hemisfera ma nieskończenie wiele kierunków, ale zasadę widać już na czterech przykładowych, każdy z innym wkładem f·L_i·(N·ω_i):</p>
+      <div class="formula" style="font-size:14px;">kierunek 1 → 0,02&nbsp;&nbsp;&nbsp;kierunek 2 → 0,31&nbsp;&nbsp;&nbsp;kierunek 3 → 0,08&nbsp;&nbsp;&nbsp;kierunek 4 → 0,15<span class="sub">średnia (czyli przybliżenie całki) = (0,02+0,31+0,08+0,15) / 4 = 0,14</span></div>
+      <p>Jedna próbka (np. tylko kierunek 2) dałaby 0,31 — daleko od średniej 0,14. To dokładnie to, co robi path tracing z tego rozdziału: zamiast policzyć ∫_Ω dokładnie (niemożliwe dla prawdziwej sceny), losuje kierunki ω_i, liczy wkład każdego i uśrednia. Kolejny wzór w tym rozdziale (estymator Monte Carlo) to formalny zapis dokładnie tego kroku. Więcej próbek = bliżej prawdziwej całki = mniej szumu na obrazie.</p>
+      <p><em>Dodatek B pokazuje, jak losować te kierunki mądrzej niż równomiernie, żeby dojść do tego samego wyniku mniejszą liczbą próbek. <a href="../matematyka/podstawy-matematyczne.html">Podstawy matematyczne</a> — ogólne przypomnienie, czym jest ∫.</em></p>
+    </template>
 
     <p>To równanie jest rekurencyjne: L_i w punkcie p, z kierunku ω_i, to po prostu L_o jakiejś <em>innej</em> powierzchni — tej, w którą trafia promień wysłany z p w kierunku ω_i. Diffuse i shadow rays z Rozdziału 6 to ta całka policzona tylko dla świateł punktowych (delta, bez integracji). Odbicia i załamania z Rozdziału 7 to ta całka policzona tylko wzdłuż jednego, idealnie zwierciadlanego kierunku. Czego wciąż brakuje: światła odbitego od <em>innych rozproszonych powierzchni</em> — czerwona ściana barwiąca sufit różowym blaskiem, klasyczne bounce light, które każdy widział na żywym renderze.</p>
 
@@ -185,6 +201,15 @@
     <a href="rozdzial-14-optymalizacja.html">← Poprzedni</a>
     <a href="rozdzial-16-bdpt-photon-mapping.html">Następny →</a>
 </div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-panel">
+    <button class="modal-close" data-modal-close aria-label="Zamknij">×</button>
+    <div id="modal-body"></div>
+  </div>
 </div>
+
+</div>
+<script src="../assets/interactive.js"></script>
 </body>
 </html>
