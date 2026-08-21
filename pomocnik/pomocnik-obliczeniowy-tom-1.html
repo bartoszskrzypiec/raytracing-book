@@ -54,7 +54,7 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
 
   <div class="subsection">
     <h3>Odejmowanie punktów, długość, normalizacja</h3>
-    <div class="formula">V = A − B<br>|V| = √(Vx² + Vy² + Vz²)<br>V̂ = V / |V|</div>
+    <div class="formula"><span class="vec">V</span> = <span class="vec">A</span> − <span class="vec">B</span><br>|<span class="vec">V</span>| = √(Vx² + Vy² + Vz²)<br><span class="vec">V̂</span> = <span class="vec">V</span> / |<span class="vec">V</span>|</div>
 
     <div class="worked">
       <div class="wlabel">Przykład</div>
@@ -69,7 +69,7 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
 
   <div class="subsection">
     <h3>Iloczyn skalarny i kąt między wektorami</h3>
-    <div class="formula">A·B = Ax·Bx + Ay·By + Az·Bz = |A||B|·cosθ<br>θ = arccos( A·B / (|A||B|) )</div>
+    <div class="formula"><span class="vec">A</span>·<span class="vec">B</span> = Ax·Bx + Ay·By + Az·Bz = |<span class="vec">A</span>||<span class="vec">B</span>|·cosθ<br>θ = arccos( <span class="vec">A</span>·<span class="vec">B</span> / (|<span class="vec">A</span>||<span class="vec">B</span>|) )</div>
 
     <div class="worked">
       <div class="wlabel">Przykład</div>
@@ -85,7 +85,7 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
 
   <div class="subsection">
     <h3>Iloczyn wektorowy</h3>
-    <div class="formula">A × B = (Ay·Bz − Az·By,  Az·Bx − Ax·Bz,  Ax·By − Ay·Bx)</div>
+    <div class="formula"><span class="vec">A</span> × <span class="vec">B</span> = (Ay·Bz − Az·By,  Az·Bx − Ax·Bz,  Ax·By − Ay·Bx)</div>
     <p>Zapamiętaj schemat: każda współrzędna wyniku „pomija” tę samą współrzędną wejściową i mnoży na krzyż pozostałe dwie, w cyklicznej kolejności x→y→z→x.</p>
   </div>
 
@@ -97,7 +97,7 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
 
   <div class="subsection">
     <h3>Wzór</h3>
-    <div class="formula">P(t) = O + t·D<br>a = D·D,  b = 2·D·L,  c = L·L − r²,  gdzie L = O − C<br>Δ = b² − 4ac</div>
+    <div class="formula">P(t) = O + t·<span class="vec">D</span><br>a = <span class="vec">D</span>·<span class="vec">D</span>,  b = 2·<span class="vec">D</span>·<span class="vec">L</span>,  c = <span class="vec">L</span>·<span class="vec">L</span> − r²,  gdzie <span class="vec">L</span> = O − C<br>Δ = b² − 4ac</div>
   </div>
 
   <div class="subsection">
@@ -166,7 +166,7 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
 
   <div class="subsection">
     <h3>Wzór</h3>
-    <div class="formula">forward = normalize(target − eye)<br>right = normalize(forward × up_world)<br>up = right × forward</div>
+    <div class="formula"><span class="vec">forward</span> = normalize(target − eye)<br><span class="vec">right</span> = normalize(<span class="vec">forward</span> × <span class="vec">up_world</span>)<br><span class="vec">up</span> = <span class="vec">right</span> × <span class="vec">forward</span></div>
   </div>
 
   <div class="subsection">
@@ -197,7 +197,7 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
 
   <div class="subsection">
     <h3>Przykład: viewport i promień dla konkretnego piksela</h3>
-    <div class="formula">viewport_height = 2·tan(FOV/2)<br>viewport_width = aspect · viewport_height<br>s = (2(i+0,5)/W − 1)·(vw/2),  t = (1 − 2(j+0,5)/H)·(vh/2)<br>D_final = normalize(eye + forward + s·right + t·up − eye)</div>
+    <div class="formula">viewport_height = 2·tan(FOV/2)<br>viewport_width = aspect · viewport_height<br>s = (2(i+0,5)/W − 1)·(vw/2),  t = (1 − 2(j+0,5)/H)·(vh/2)<br><span class="vec">D_final</span> = normalize(eye + <span class="vec">forward</span> + s·<span class="vec">right</span> + t·<span class="vec">up</span> − eye)</div>
 
     <div class="worked">
       <div class="wlabel">Dane wejściowe</div>
@@ -242,7 +242,7 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
 
   <div class="subsection">
     <h3>Wzór — płaszczyzna</h3>
-    <div class="formula">t = N·(Q−O) / (N·D)</div>
+    <div class="formula">t = <span class="vec">N</span>·(Q−O) / (<span class="vec">N</span>·<span class="vec">D</span>)</div>
 
     <div class="worked">
       <div class="wlabel">Przykład</div>
@@ -259,7 +259,7 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
 
   <div class="subsection">
     <h3>Wzór — Möller–Trumbore</h3>
-    <div class="formula">edge1=B−A, edge2=C−A, h=D×edge2, det=edge1·h<br>s=O−A, u=(s·h)/det, q=s×edge1, v=(D·q)/det, t=(edge2·q)/det</div>
+    <div class="formula"><span class="vec">edge1</span>=B−A, <span class="vec">edge2</span>=C−A, <span class="vec">h</span>=<span class="vec">D</span>×<span class="vec">edge2</span>, det=<span class="vec">edge1</span>·<span class="vec">h</span><br><span class="vec">s</span>=O−A, u=(<span class="vec">s</span>·<span class="vec">h</span>)/det, <span class="vec">q</span>=<span class="vec">s</span>×<span class="vec">edge1</span>, v=(<span class="vec">D</span>·<span class="vec">q</span>)/det, t=(<span class="vec">edge2</span>·<span class="vec">q</span>)/det</div>
 
     <div class="worked">
       <div class="wlabel">Przykład</div>
@@ -307,7 +307,7 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
 
   <div class="subsection">
     <h3>Wzór</h3>
-    <div class="formula">diffuse = kd·I·max(0,N·L)<br>H = normalize(L+V),  specular = ks·I·max(0,N·H)^shininess<br>color = ka·Ia + diffuse + specular</div>
+    <div class="formula">diffuse = kd·I·max(0,<span class="vec">N</span>·<span class="vec">L</span>)<br><span class="vec">H</span> = normalize(<span class="vec">L</span>+<span class="vec">V</span>),  specular = ks·I·max(0,<span class="vec">N</span>·<span class="vec">H</span>)^shininess<br>color = ka·Ia + diffuse + specular</div>
   </div>
 
   <div class="subsection">
