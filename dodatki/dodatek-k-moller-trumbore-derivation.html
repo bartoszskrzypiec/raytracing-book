@@ -35,11 +35,11 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
     <h2>Punkt wspólny: promień = punkt na trójkącie</h2>
     <p>Promień z Rozdziału 2 to P(t) = O + t·D. Punkt na trójkącie z Rozdziału 4, zapisany przez wierzchołek A i wektory krawędzi, to P = A + u·edge1 + v·edge2 (to dosłownie te same u, v co wagi barycentryczne — tylko wyrażone przez edge’e, nie przez A, B, C wprost). Trafienie to sytuacja, w której obie strony opisują ten sam punkt:</p>
 
-    <div class="formula">O + t·D = A + u·edge1 + v·edge2</div>
+    <div class="formula">O + t·<span class="vec">D</span> = A + u·<span class="vec">edge1</span> + v·<span class="vec">edge2</span></div>
 
     <p>Przegrupuj tak, żeby wszystkie niewiadome (t, u, v) były po jednej stronie, a znane wektory po drugiej. Oznacz s = O − A:</p>
 
-    <div class="formula">−t·D + u·edge1 + v·edge2 = s</div>
+    <div class="formula">−t·<span class="vec">D</span> + u·<span class="vec">edge1</span> + v·<span class="vec">edge2</span> = <span class="vec">s</span></div>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Vector.setup</span><span>3 unknowns hidden in plain sight</span></div>
@@ -75,7 +75,7 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
     <h2>Układ trzech równań, trzech niewiadomych</h2>
     <p>Powyższe równanie wektorowe to w rzeczywistości trzy zwykłe równania skalarne — jedno na współrzędną x, jedno na y, jedno na z. Zapisane jako macierz razy wektor niewiadomych:</p>
 
-    <div class="formula">[ −D | edge1 | edge2 ] · [t, u, v]ᵗ = s<span class="sub">macierz 3×3, której kolumnami są wektory −D, edge1, edge2; standardowy układ liniowy, żadnej specjalnej struktury geometrycznej</span></div>
+    <div class="formula">[ −<span class="vec">D</span> | <span class="vec">edge1</span> | <span class="vec">edge2</span> ] · [t, u, v]ᵗ = <span class="vec">s</span><span class="sub">macierz 3×3, której kolumnami są wektory −D, edge1, edge2; standardowy układ liniowy, żadnej specjalnej struktury geometrycznej</span></div>
 
     <p>To jest dokładnie taki układ, jaki rozwiązywałeś na studiach metodą eliminacji Gaussa albo wzorem Cramera. Möller i Trumbore po prostu zauważyli, że dla układów 3×3 wzór Cramera można zapisać wyłącznie przez iloczyny wektorowe i skalarne — bez jawnego wypisywania wyznacznika 3×3 ze wzoru rozwinięcia Laplace’a.</p>
   </div>
@@ -89,7 +89,7 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
 
     <p>Kluczowa sztuczka: wyznacznik macierzy 3×3 zbudowanej z trzech wektorów jako kolumn to <strong>iloczyn potrójny</strong> (triple product) tych wektorów — a iloczyn potrójny ma cykliczną symetrię, którą można przestawiać bez zmiany wartości:</p>
 
-    <div class="formula">det([a|b|c]) = a·(b×c) = b·(c×a) = c·(a×b)<span class="sub">te trzy wyrażenia są sobie równe — możesz wybrać tę wersję, która wygodniej się liczy</span></div>
+    <div class="formula">det([<span class="vec">a</span>|<span class="vec">b</span>|<span class="vec">c</span>]) = <span class="vec">a</span>·(<span class="vec">b</span>×<span class="vec">c</span>) = <span class="vec">b</span>·(<span class="vec">c</span>×<span class="vec">a</span>) = <span class="vec">c</span>·(<span class="vec">a</span>×<span class="vec">b</span>)<span class="sub">te trzy wyrażenia są sobie równe — możesz wybrać tę wersję, która wygodniej się liczy</span></div>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Cyclic.triple.product</span><span>a·(b×c)=b·(c×a)=c·(a×b)</span></div>
@@ -116,13 +116,13 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
     <h2>Skąd się biorą h, det, s, q</h2>
     <p>Zastosuj wzór Cramera do naszego układu, kolumna po kolumnie, i za każdym razem użyj cyklicznej symetrii, żeby zapisać wynik przez to, co już masz policzone:</p>
 
-    <div class="formula">det(M) = det([−D | edge1 | edge2]) = −D·(edge1×edge2) = edge1·(D×edge2) = edge1·h<span class="sub">gdzie h = D×edge2 — to dosłownie krok 2 z diagramu pipeline’u w Rozdziale 4</span></div>
+    <div class="formula">det(M) = det([−<span class="vec">D</span> | <span class="vec">edge1</span> | <span class="vec">edge2</span>]) = −<span class="vec">D</span>·(<span class="vec">edge1</span>×<span class="vec">edge2</span>) = <span class="vec">edge1</span>·(<span class="vec">D</span>×<span class="vec">edge2</span>) = <span class="vec">edge1</span>·<span class="vec">h</span><span class="sub">gdzie h = D×edge2 — to dosłownie krok 2 z diagramu pipeline’u w Rozdziale 4</span></div>
 
-    <div class="formula">det(Mᵤ) = det([−D | s | edge2]) = −D·(s×edge2) = s·(D×edge2) = s·h<br>→ u = (s·h) / det</div>
+    <div class="formula">det(Mᵤ) = det([−<span class="vec">D</span> | <span class="vec">s</span> | <span class="vec">edge2</span>]) = −<span class="vec">D</span>·(<span class="vec">s</span>×<span class="vec">edge2</span>) = <span class="vec">s</span>·(<span class="vec">D</span>×<span class="vec">edge2</span>) = <span class="vec">s</span>·<span class="vec">h</span><br>→ u = (<span class="vec">s</span>·<span class="vec">h</span>) / det</div>
 
-    <div class="formula">det(Mᵥ) = det([−D | edge1 | s]) = −D·(edge1×s) = D·(s×edge1) = D·q<br>→ v = (D·q) / det,  gdzie q = s×edge1</div>
+    <div class="formula">det(Mᵥ) = det([−<span class="vec">D</span> | <span class="vec">edge1</span> | <span class="vec">s</span>]) = −<span class="vec">D</span>·(<span class="vec">edge1</span>×<span class="vec">s</span>) = <span class="vec">D</span>·(<span class="vec">s</span>×<span class="vec">edge1</span>) = <span class="vec">D</span>·<span class="vec">q</span><br>→ v = (<span class="vec">D</span>·<span class="vec">q</span>) / det,  gdzie q = s×edge1</div>
 
-    <div class="formula">det(M_t) = det([s | edge1 | edge2]) = s·(edge1×edge2) = edge2·(s×edge1) = edge2·q<br>→ t = (edge2·q) / det</div>
+    <div class="formula">det(M_t) = det([<span class="vec">s</span> | <span class="vec">edge1</span> | <span class="vec">edge2</span>]) = <span class="vec">s</span>·(<span class="vec">edge1</span>×<span class="vec">edge2</span>) = <span class="vec">edge2</span>·(<span class="vec">s</span>×<span class="vec">edge1</span>) = <span class="vec">edge2</span>·<span class="vec">q</span><br>→ t = (<span class="vec">edge2</span>·<span class="vec">q</span>) / det</div>
 
     <p>To wszystko. Każda linia algorytmu z Rozdziału 4 — h, det, s, q, u, v, t — to jeden konkretny wyznacznik z Cramera, przepisany przez cykliczną symetrię triple product tak, żeby dało się go policzyć dwoma iloczynami wektorowymi i kilkoma iloczynami skalarnymi, bez rozpisywania macierzy 3×3 wprost.</p>
   </div>

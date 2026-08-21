@@ -32,11 +32,11 @@
     <h2>Cosine-weighted sampling: idealne dopasowanie do Lamberta</h2>
     <p>Estymator Monte Carlo z Rozdziału 15 dzieli wkład każdej próbki przez jej gęstość prawdopodobieństwa (pdf), z której ją wylosowano. Jeśli wylosujesz kierunek L z gęstością <em>proporcjonalną do samego cosinusa</em> N·L — zamiast równomiernie po całej hemisferze — cosinus w liczniku równania renderowania i cosinus w mianowniku pdf skracają się do zera roboty:</p>
 
-    <div class="formula">pdf(L) = (N·L) / π&nbsp;&nbsp;&nbsp;→&nbsp;&nbsp;&nbsp;f(L,V)·(N·L)/pdf(L) = (kd/π)·(N·L) / ((N·L)/π) = kd<span class="sub">dla stałej BRDF Lamberta f=kd/π — po skróceniu zostaje sama stała kd, bez cosinusa i bez π w kodzie</span></div>
+    <div class="formula">pdf(<span class="vec">L</span>) = (<span class="vec">N</span>·<span class="vec">L</span>) / π&nbsp;&nbsp;&nbsp;→&nbsp;&nbsp;&nbsp;f(<span class="vec">L</span>,<span class="vec">V</span>)·(<span class="vec">N</span>·<span class="vec">L</span>)/pdf(<span class="vec">L</span>) = (kd/π)·(<span class="vec">N</span>·<span class="vec">L</span>) / ((<span class="vec">N</span>·<span class="vec">L</span>)/π) = kd<span class="sub">dla stałej BRDF Lamberta f=kd/π — po skróceniu zostaje sama stała kd, bez cosinusa i bez π w kodzie</span></div>
 
     <p>Praktyczna konstrukcja (Malley's method): weź dwie liczby losowe ξ₁, ξ₂ ∈ [0,1), rzuć punkt równomiernie na dysk jednostkowy, podnieś go prostopadle na hemisferę:</p>
 
-    <div class="formula">r = √ξ₁&nbsp;&nbsp;&nbsp;φ = 2π·ξ₂&nbsp;&nbsp;&nbsp;L = (r·cos φ, r·sin φ, √(1−ξ₁))<span class="sub">L w lokalnym układzie, gdzie oś z pokrywa się z N; trzecia współrzędna √(1−ξ₁) to właśnie N·L tej próbki</span></div>
+    <div class="formula">r = √ξ₁&nbsp;&nbsp;&nbsp;φ = 2π·ξ₂&nbsp;&nbsp;&nbsp;<span class="vec">L</span> = (r·cos φ, r·sin φ, √(1−ξ₁))<span class="sub">L w lokalnym układzie, gdzie oś z pokrywa się z N; trzecia współrzędna √(1−ξ₁) to właśnie N·L tej próbki</span></div>
 
     <p>Dlaczego rzut na dysk, a nie coś bardziej „bezpośredniego"? Bo równomierny rozkład punktów na dysku, podniesiony prostopadle na hemisferę, <em>automatycznie</em> gęstnieje bliżej bieguna (N·L blisko 1) i rzednie bliżej równika — dokładnie rozkład proporcjonalny do cosinusa, bez żadnej dodatkowej wagi do policzenia.</p>
   </div>
@@ -46,7 +46,7 @@
     <h2>Naiwne próbkowanie D(H): gdzie marnujesz próbki</h2>
     <p>Najprostszy sposób próbkowania GGX z Rozdziału 11: losuj H bezpośrednio z rozkładu D(H), potem odbij V względem H, żeby dostać L. Gęstość prawdopodobieństwa w przestrzeni H to pdf_H(H) = D(H)·(N·H); po przejściu przez operację odbicia (jakobian tej transformacji) gęstość w przestrzeni L wynosi:</p>
 
-    <div class="formula">pdf(L) = D(H)·(N·H) / (4·(V·H))<span class="sub">dzielenie przez 4·(V·H) to jakobian odbicia V względem H — bez niego gęstość byłaby policzona dla złej przestrzeni kierunków</span></div>
+    <div class="formula">pdf(<span class="vec">L</span>) = D(<span class="vec">H</span>)·(<span class="vec">N</span>·<span class="vec">H</span>) / (4·(<span class="vec">V</span>·<span class="vec">H</span>))<span class="sub">dzielenie przez 4·(V·H) to jakobian odbicia V względem H — bez niego gęstość byłaby policzona dla złej przestrzeni kierunków</span></div>
 
     <p>Problem: D(H) opisuje <em>wszystkie</em> mikrofasetki o normalnej H, łącznie z tymi, które są samo-zasłonięte przez sąsiednie fasetki i z kierunku V w ogóle niewidoczne (dokładnie ten człon G z Rozdziału 11, który potem i tak wyzeruje ich wkład). Naiwne próbkowanie losuje z pełnego D(H), nieświadome G — część wylosowanych kierunków to więc próbki „z góry skazane" na wkład bliski zeru, ale i tak kosztujące pełny test przecięcia i ocenę BRDF.</p>
   </div>
@@ -56,7 +56,7 @@
     <h2>Sampling widocznych fasetek</h2>
     <p>VNDF (Heitz, 2018) próbkuje nie z D(H), tylko z rozkładu fasetek <em>faktycznie widocznych</em> z kierunku V — czyli D(H) przemnożone przez to, jaka część nich nie jest samo-zasłonięta:</p>
 
-    <div class="formula">D_V(H) = G1(V) · max(0, V·H) · D(H) / (N·V)<span class="sub">G1(V) — ten sam człon geometryczny Smitha z Rozdziału 11; ta wersja rozkładu z definicji nigdy nie generuje fasetki niewidocznej z V</span></div>
+    <div class="formula">D_V(<span class="vec">H</span>) = G1(<span class="vec">V</span>) · max(0, <span class="vec">V</span>·<span class="vec">H</span>) · D(<span class="vec">H</span>) / (<span class="vec">N</span>·<span class="vec">V</span>)<span class="sub">G1(V) — ten sam człon geometryczny Smitha z Rozdziału 11; ta wersja rozkładu z definicji nigdy nie generuje fasetki niewidocznej z V</span></div>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Naive.vs.VNDF</span><span>wasted samples</span></div>

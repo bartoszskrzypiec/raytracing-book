@@ -94,7 +94,7 @@
     <h2>Odwrotna transponowana: pułapka nierównomiernego skalowania</h2>
     <p>Sztuczka z Rozdziału 17 — transformuj promień odwrotną macierzą instancji — ma jeden wyjątek. Normalne (Rozdział 4) transformowane <em>tą samą</em> macierzą co pozycje wychodzą źle, gdy skalowanie nie jest równomierne: kula rozciągnięta w elipsoidę wzdłuż jednej osi ma normalne, które przestają być prostopadłe do nowej powierzchni.</p>
 
-    <div class="formula">N_world = normalize( (M⁻¹)ᵗ · N_local )<span class="sub">odwrotna transponowana, nie sama M — dla samej rotacji (bez skalowania) to i tak wychodzi to samo co M</span></div>
+    <div class="formula"><span class="vec">N_world</span> = normalize( (M⁻¹)ᵗ · <span class="vec">N_local</span> )<span class="sub">odwrotna transponowana, nie sama M — dla samej rotacji (bez skalowania) to i tak wychodzi to samo co M</span></div>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Non-uniform.scale.normals</span><span>wrong vs correct</span></div>
