@@ -70,23 +70,52 @@
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Ray.marching</span><span>step samples</span></div>
+      <div class="diagram-controls">
+        <label for="marchStep">krok Δt (px)</label>
+        <input type="range" id="marchStep" min="15" max="100" step="5" value="50">
+        <span class="value-readout" id="marchReadout">Δt=50px · 9 kroków w wolumenie</span>
+      </div>
       <svg viewBox="0 0 760 200" xmlns="http://www.w3.org/2000/svg">
         <rect x="120" y="60" width="480" height="90" fill="#20242c" stroke="#4fc3c0" stroke-width="1.5" stroke-dasharray="4 4"/>
         <line x1="60" y1="105" x2="700" y2="105" stroke="#e8a33d" stroke-width="2"/>
-        <circle cx="150" cy="105" r="4" fill="#e8a33d" fill-opacity="0.95"/>
-        <circle cx="200" cy="105" r="4" fill="#e8a33d" fill-opacity="0.82"/>
-        <circle cx="250" cy="105" r="4" fill="#e8a33d" fill-opacity="0.7"/>
-        <circle cx="300" cy="105" r="4" fill="#e8a33d" fill-opacity="0.58"/>
-        <circle cx="350" cy="105" r="4" fill="#e8a33d" fill-opacity="0.48"/>
-        <circle cx="400" cy="105" r="4" fill="#e8a33d" fill-opacity="0.39"/>
-        <circle cx="450" cy="105" r="4" fill="#e8a33d" fill-opacity="0.32"/>
-        <circle cx="500" cy="105" r="4" fill="#e8a33d" fill-opacity="0.26"/>
-        <circle cx="550" cy="105" r="4" fill="#e8a33d" fill-opacity="0.21"/>
-        <text x="150" y="80" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">Δt</text>
+        <g id="marchDots"></g>
         <text x="360" y="170" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">transmitancja spada z każdym krokiem</text>
       </svg>
-      <div class="diagram-caption">Im głębiej w mgłę, tym mniej światła przetrwało — malejąca opacity to malejąca transmitancja.</div>
+      <div class="diagram-caption">Przesuń Δt — mniejszy krok daje więcej, gęściej rozstawionych próbek (dokładniej, drożej); większy krok mniej próbek (taniej, grubiej).</div>
     </div>
+    <script>
+    (function(){
+      var svgNS = 'http://www.w3.org/2000/svg';
+      var slider = document.getElementById('marchStep');
+      var readout = document.getElementById('marchReadout');
+      var group = document.getElementById('marchDots');
+      var startX = 130, boxWidth = 460, sigma = 0.004, maxDots = 32;
+      var dots = [];
+      for (var i = 0; i < maxDots; i++) {
+        var c = document.createElementNS(svgNS, 'circle');
+        c.setAttribute('r', '4'); c.setAttribute('fill', '#e8a33d'); c.setAttribute('cy', '105');
+        group.appendChild(c);
+        dots.push(c);
+      }
+      function update(){
+        var step = parseFloat(slider.value);
+        var numSteps = Math.max(2, Math.min(maxDots, Math.floor(boxWidth / step)));
+        for (var i = 0; i < maxDots; i++) {
+          if (i < numSteps) {
+            var d = i * step;
+            dots[i].setAttribute('cx', (startX + d).toFixed(1));
+            dots[i].setAttribute('fill-opacity', Math.exp(-sigma * d).toFixed(3));
+            dots[i].setAttribute('opacity', '1');
+          } else {
+            dots[i].setAttribute('opacity', '0');
+          }
+        }
+        readout.textContent = 'Δt=' + step.toFixed(0) + 'px · ' + numSteps + ' kroków w wolumenie';
+      }
+      slider.addEventListener('input', update);
+      update();
+    })();
+    </script>
 
     <p>Tempo tego spadku opisuje prawo Beera-Lamberta — ten sam wzór, który tłumaczy, czemu głębsza woda jest ciemniejsza, a gęstsza mgła szybciej gubi widoczność:</p>
 
@@ -94,6 +123,11 @@
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Beer-Lambert</span><span>exponential decay</span></div>
+      <div class="diagram-controls">
+        <label for="beerSigma">σ_t (ekstynkcja)</label>
+        <input type="range" id="beerSigma" min="0.1" max="2" step="0.05" value="0.7">
+        <span class="value-readout" id="beerReadout">σ_t=0,70 · T spada do 0,5 przy d≈0,99</span>
+      </div>
       <svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg">
         <line x1="60" y1="230" x2="680" y2="230" stroke="#8b909b" stroke-width="1.5"/>
         <line x1="60" y1="230" x2="60" y2="40" stroke="#8b909b" stroke-width="1.5"/>
@@ -104,10 +138,35 @@
           <text x="48" y="44" text-anchor="end">1,0</text>
         </g>
         <text x="20" y="140" font-family="IBM Plex Mono" font-size="11" fill="#8b909b" transform="rotate(-90 20 140)">T(d)</text>
-        <path d="M 60,40 C 140,80 180,130 230,160 C 300,200 380,218 460,225 C 540,229 610,230 680,230" fill="none" stroke="#e8a33d" stroke-width="2.5"/>
+        <path id="beerCurve" d="M 60,40 C 140,80 180,130 230,160 C 300,200 380,218 460,225 C 540,229 610,230 680,230" fill="none" stroke="#e8a33d" stroke-width="2.5"/>
       </svg>
-      <div class="diagram-caption">Klasyczny wykładniczy spadek — dwa razy większe σ_t albo dwa razy większe d, ten sam kwadrat mniej światła.</div>
+      <div class="diagram-caption">Przesuń σ_t — klasyczny wykładniczy spadek: dwa razy większe σ_t albo dwa razy większe d, ten sam kwadrat mniej światła.</div>
     </div>
+    <script>
+    (function(){
+      var slider = document.getElementById('beerSigma');
+      var readout = document.getElementById('beerReadout');
+      var curve = document.getElementById('beerCurve');
+      var dMax = 8;
+      function fmt(n, d){ return n.toFixed(d).replace('.', ','); }
+      function update(){
+        var sigma = parseFloat(slider.value);
+        var pts = [];
+        for (var i = 0; i <= 60; i++) {
+          var d = dMax * i / 60;
+          var T = Math.exp(-sigma * d);
+          var x = 60 + (d / dMax) * 620;
+          var y = 230 - T * 190;
+          pts.push(x.toFixed(1) + ',' + y.toFixed(1));
+        }
+        curve.setAttribute('d', 'M ' + pts.join(' L '));
+        var halfLifeD = Math.log(2) / sigma;
+        readout.textContent = 'σ_t=' + fmt(sigma, 2) + ' · T spada do 0,5 przy d≈' + fmt(halfLifeD, 2);
+      }
+      slider.addEventListener('input', update);
+      update();
+    })();
+    </script>
   </div>
 
   <div class="panel practice">
