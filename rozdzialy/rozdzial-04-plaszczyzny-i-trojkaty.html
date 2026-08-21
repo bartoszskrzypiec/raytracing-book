@@ -43,33 +43,82 @@
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Plane.hit</span><span>linear · 1 root</span></div>
+      <div class="diagram-controls">
+        <label for="planeBeta">kąt D od płaszczyzny (β)</label>
+        <input type="range" id="planeBeta" min="2" max="44" step="0.5" value="15">
+        <span class="value-readout" id="planeReadout">N·D = 0,267 · t ≈ 6,2</span>
+      </div>
       <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <marker id="p1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
         </defs>
 
-        <line x1="380" y1="20" x2="380" y2="280" stroke="#2a2f38"/>
-        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" letter-spacing="0.5" fill="#8b909b">PRZECIĘCIE</text>
-        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" letter-spacing="0.5" fill="#8b909b">RÓWNOLEGŁY · N·D ≈ 0</text>
-
-        <!-- left: hit case -->
         <polygon points="40,220 220,190 220,110 40,140" fill="#20242c" stroke="#4fc3c0" stroke-width="2"/>
         <text x="60" y="205" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">płaszczyzna</text>
         <circle cx="150" cy="165" r="4" fill="#4fc3c0"/>
         <text x="158" y="158" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">Q</text>
         <line x1="150" y1="165" x2="115" y2="95" stroke="#e8a33d" stroke-width="2.2" marker-end="url(#p1)"/>
         <text x="95" y="85" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">N</text>
-        <polygon points="300,255 300,275 320,265" fill="#8b909b"/>
-        <line x1="300" y1="265" x2="152" y2="167" stroke="#e8a33d" stroke-width="2.2" marker-end="url(#p1)"/>
-        <text x="255" y="248" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">P(t)</text>
 
-        <!-- right: parallel case -->
-        <polygon points="420,220 600,190 600,110 420,140" fill="#20242c" stroke="#4fc3c0" stroke-width="2"/>
-        <line x1="450" y1="95" x2="650" y2="65" stroke="#8b909b" stroke-width="2" stroke-dasharray="6 5"/>
-        <text x="470" y="55" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">D ∥ płaszczyzna</text>
+        <rect x="650" y="237" width="34" height="26" rx="3" fill="#8b909b"/>
+        <polygon points="650,241 616,223 616,277 650,259" fill="#8b909b"/>
+
+        <line id="planeRayLine" x1="616" y1="250" x2="160" y2="163" stroke="#e8a33d" stroke-width="2.2" marker-end="url(#p1)"/>
+        <circle id="planeHitPoint" cx="160" cy="163" r="5" fill="#ecebe4"/>
+        <text id="planeHitLabel" x="160" y="149" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#ecebe4">P(t)</text>
+        <text id="planeWarnLabel" x="380" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" letter-spacing="0.5" fill="#9c82d8" opacity="0">RÓWNOLEGŁY · N·D ≈ 0 · brak jednoznacznego t</text>
       </svg>
-      <div class="diagram-caption">Jedno t rozwiązuje przecięcie z płaszczyzną — problem zaczyna się, dopiero gdy trzeba sprawdzić, czy P(t) leży w granicach trójkąta.</div>
+      <div class="diagram-caption">Przesuń β — im bliżej równoległości D do płaszczyzny, tym mniejsze N·D i tym dalej (większe t) leży P(t).</div>
     </div>
+    <script>
+    (function(){
+      var slider = document.getElementById('planeBeta');
+      var readout = document.getElementById('planeReadout');
+      var rayLine = document.getElementById('planeRayLine');
+      var hitPoint = document.getElementById('planeHitPoint');
+      var hitLabel = document.getElementById('planeHitLabel');
+      var warnLabel = document.getElementById('planeWarnLabel');
+      var camX = 616, camY = 250;
+      var Q = {x: 150, y: 165};
+      var P1 = {x: 40, y: 220}, P2 = {x: 220, y: 190};
+      var dx = P2.x - P1.x, dy = P2.y - P1.y, dlen = Math.sqrt(dx*dx + dy*dy);
+      var dirVec = {x: dx / dlen, y: dy / dlen};
+      var degenerateAngle = Math.atan2(dirVec.y, dirVec.x) + Math.PI;
+      function fmt(n, d){ return n.toFixed(d).replace('.', ','); }
+      function update(){
+        var betaDeg = parseFloat(slider.value);
+        var rayAngle = degenerateAngle + betaDeg * Math.PI / 180;
+        var D = {x: Math.cos(rayAngle), y: Math.sin(rayAngle)};
+        var qMinusO = {x: Q.x - camX, y: Q.y - camY};
+        var crossQD = qMinusO.x * dirVec.y - qMinusO.y * dirVec.x;
+        var crossRD = D.x * dirVec.y - D.y * dirVec.x;
+        var t = crossQD / crossRD;
+        var NdotD = crossRD;
+        var hx = camX + t * D.x, hy = camY + t * D.y;
+        var cx = Math.max(10, Math.min(750, hx));
+        var cy = Math.max(10, Math.min(290, hy));
+        var clamped = (Math.abs(cx - hx) > 0.5) || (Math.abs(cy - hy) > 0.5);
+
+        rayLine.setAttribute('x2', cx.toFixed(1));
+        rayLine.setAttribute('y2', cy.toFixed(1));
+        rayLine.setAttribute('stroke-dasharray', clamped ? '6 5' : 'none');
+        hitPoint.setAttribute('cx', cx.toFixed(1));
+        hitPoint.setAttribute('cy', cy.toFixed(1));
+        hitPoint.setAttribute('opacity', clamped ? 0.5 : 1);
+        hitLabel.setAttribute('x', cx.toFixed(1));
+        hitLabel.setAttribute('y', (cy - 14).toFixed(1));
+        hitLabel.textContent = clamped ? 'P(t) → poza kadrem' : 'P(t)';
+
+        var tWorld = t / 100;
+        var nearParallel = Math.abs(NdotD) < 0.06;
+        warnLabel.setAttribute('opacity', nearParallel ? 1 : 0);
+
+        readout.textContent = 'N·D = ' + fmt(NdotD, 3) + ' · t ≈ ' + fmt(tWorld, 1) + (nearParallel ? ' · PRAWIE RÓWNOLEGŁE' : '');
+      }
+      slider.addEventListener('input', update);
+      update();
+    })();
+    </script>
   </div>
 
   <div class="section">
