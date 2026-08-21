@@ -70,6 +70,11 @@
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>BVH.tree</span><span>space ↔ graph</span></div>
+      <div class="diagram-controls">
+        <label for="bvhRayX">pozycja promienia (x)</label>
+        <input type="range" id="bvhRayX" min="60" max="320" step="5" value="270">
+        <span class="value-readout" id="bvhReadout">x=270 · promień w R</span>
+      </div>
       <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <marker id="bv1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
@@ -81,10 +86,10 @@
         <!-- left: nested boxes -->
         <rect x="30" y="50" width="320" height="210" fill="none" stroke="#9c82d8" stroke-width="2"/>
         <text x="35" y="45" font-family="IBM Plex Mono" font-size="10.5" fill="#9c82d8">ROOT</text>
-        <rect x="40" y="65" width="140" height="180" fill="none" stroke="#6b7280" stroke-width="1.6" stroke-dasharray="5 4"/>
-        <text x="45" y="255" font-family="IBM Plex Mono" font-size="10" fill="#6b7280">L (odrzucone)</text>
-        <rect x="200" y="65" width="140" height="180" fill="none" stroke="#4fc3c0" stroke-width="1.8"/>
-        <text x="205" y="255" font-family="IBM Plex Mono" font-size="10" fill="#4fc3c0">R (testowane)</text>
+        <rect id="bvhLeftBox" x="40" y="65" width="140" height="180" fill="none" stroke="#6b7280" stroke-width="1.6" stroke-dasharray="5 4"/>
+        <text id="bvhLeftBoxLabel" x="45" y="255" font-family="IBM Plex Mono" font-size="10" fill="#6b7280">L (odrzucone)</text>
+        <rect id="bvhRightBox" x="200" y="65" width="140" height="180" fill="none" stroke="#4fc3c0" stroke-width="1.8"/>
+        <text id="bvhRightBoxLabel" x="205" y="255" font-family="IBM Plex Mono" font-size="10" fill="#4fc3c0">R (testowane)</text>
 
         <polygon points="75,110 61,135 89,135" fill="#3a4048" stroke="#3a4048" stroke-width="1"/>
         <polygon points="115,170 101,195 129,195" fill="#3a4048" stroke="#3a4048" stroke-width="1"/>
@@ -94,18 +99,18 @@
         <polygon points="270,170 256,195 284,195" fill="#e8a33d" stroke="#ecebe4" stroke-width="1.5"/>
         <polygon points="305,95 291,120 319,120" fill="#e8a33d" fill-opacity="0.6" stroke="#e8a33d" stroke-width="1"/>
 
-        <line x1="270" y1="280" x2="270" y2="30" stroke="#e8a33d" stroke-width="2" marker-end="url(#bv1)"/>
+        <line id="bvhRay" x1="270" y1="280" x2="270" y2="30" stroke="#e8a33d" stroke-width="2" marker-end="url(#bv1)"/>
 
         <!-- right: tree graph -->
         <circle cx="580" cy="60" r="14" fill="#20242c" stroke="#9c82d8" stroke-width="2"/>
         <text x="580" y="42" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#9c82d8">ROOT</text>
 
-        <line x1="580" y1="72" x2="490" y2="140" stroke="#6b7280" stroke-width="1.6" stroke-dasharray="4 4"/>
-        <circle cx="490" cy="150" r="11" fill="#20242c" stroke="#6b7280" stroke-width="1.6"/>
+        <line id="bvhLeftEdge" x1="580" y1="72" x2="490" y2="140" stroke="#6b7280" stroke-width="1.6" stroke-dasharray="4 4"/>
+        <circle id="bvhLeftNode" cx="490" cy="150" r="11" fill="#20242c" stroke="#6b7280" stroke-width="1.6"/>
         <text x="490" y="132" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#6b7280">L</text>
 
-        <line x1="580" y1="72" x2="670" y2="140" stroke="#4fc3c0" stroke-width="1.8"/>
-        <circle cx="670" cy="150" r="11" fill="#20242c" stroke="#4fc3c0" stroke-width="1.8"/>
+        <line id="bvhRightEdge" x1="580" y1="72" x2="670" y2="140" stroke="#4fc3c0" stroke-width="1.8"/>
+        <circle id="bvhRightNode" cx="670" cy="150" r="11" fill="#20242c" stroke="#4fc3c0" stroke-width="1.8"/>
         <text x="670" y="132" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#4fc3c0">R</text>
 
         <line x1="490" y1="160" x2="450" y2="230" stroke="#6b7280" stroke-width="1.2" stroke-dasharray="3 3"/>
@@ -122,11 +127,63 @@
         <circle cx="670" cy="235" r="7" fill="#e8a33d" stroke="#ecebe4" stroke-width="1.5"/>
         <circle cx="710" cy="235" r="6" fill="#e8a33d" fill-opacity="0.6"/>
 
-        <text x="490" y="270" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#6b7280">odcięte za darmo</text>
-        <text x="670" y="270" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#4fc3c0">sprawdzone pojedynczo</text>
+        <text id="bvhBottomLeftLabel" x="490" y="270" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#6b7280">odcięte za darmo</text>
+        <text id="bvhBottomRightLabel" x="670" y="270" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#4fc3c0">sprawdzone pojedynczo</text>
       </svg>
-      <div class="diagram-caption">Ten sam podział widziany dwa razy: jako pudełka w scenie i jako drzewo. Gałąź L nigdy nie jest odwiedzana.</div>
+      <div class="diagram-caption">Przesuń pozycję promienia — ten sam podział widziany dwa razy: jako pudełka w scenie i jako drzewo. Gałąź, której promień nie dotyka, nigdy nie jest odwiedzana.</div>
     </div>
+    <script>
+    (function(){
+      var slider = document.getElementById('bvhRayX');
+      var readout = document.getElementById('bvhReadout');
+      var ray = document.getElementById('bvhRay');
+      var leftBox = document.getElementById('bvhLeftBox'), rightBox = document.getElementById('bvhRightBox');
+      var leftBoxLabel = document.getElementById('bvhLeftBoxLabel'), rightBoxLabel = document.getElementById('bvhRightBoxLabel');
+      var leftEdge = document.getElementById('bvhLeftEdge'), rightEdge = document.getElementById('bvhRightEdge');
+      var leftNode = document.getElementById('bvhLeftNode'), rightNode = document.getElementById('bvhRightNode');
+      var bottomLeft = document.getElementById('bvhBottomLeftLabel'), bottomRight = document.getElementById('bvhBottomRightLabel');
+      function applyTested(box, edge, node){
+        box.setAttribute('stroke', '#4fc3c0'); box.setAttribute('stroke-width', '1.8'); box.setAttribute('stroke-dasharray', 'none');
+        edge.setAttribute('stroke', '#4fc3c0'); edge.setAttribute('stroke-width', '1.8'); edge.setAttribute('stroke-dasharray', 'none');
+        node.setAttribute('stroke', '#4fc3c0'); node.setAttribute('stroke-width', '1.8');
+      }
+      function applyPruned(box, edge, node){
+        box.setAttribute('stroke', '#6b7280'); box.setAttribute('stroke-width', '1.6'); box.setAttribute('stroke-dasharray', '5 4');
+        edge.setAttribute('stroke', '#6b7280'); edge.setAttribute('stroke-width', '1.6'); edge.setAttribute('stroke-dasharray', '4 4');
+        node.setAttribute('stroke', '#6b7280'); node.setAttribute('stroke-width', '1.6');
+      }
+      function update(){
+        var rayX = parseFloat(slider.value);
+        ray.setAttribute('x1', rayX); ray.setAttribute('x2', rayX);
+        var status;
+        if (rayX > 200) {
+          applyTested(rightBox, rightEdge, rightNode);
+          applyPruned(leftBox, leftEdge, leftNode);
+          leftBoxLabel.textContent = 'L (odrzucone)'; rightBoxLabel.textContent = 'R (testowane)';
+          bottomLeft.textContent = 'odcięte za darmo'; bottomRight.textContent = 'sprawdzone pojedynczo';
+          bottomLeft.setAttribute('fill', '#6b7280'); bottomRight.setAttribute('fill', '#4fc3c0');
+          status = 'promień w R';
+        } else if (rayX < 180) {
+          applyTested(leftBox, leftEdge, leftNode);
+          applyPruned(rightBox, rightEdge, rightNode);
+          leftBoxLabel.textContent = 'L (testowane)'; rightBoxLabel.textContent = 'R (odrzucone)';
+          bottomLeft.textContent = 'sprawdzone pojedynczo'; bottomRight.textContent = 'odcięte za darmo';
+          bottomLeft.setAttribute('fill', '#4fc3c0'); bottomRight.setAttribute('fill', '#6b7280');
+          status = 'promień w L';
+        } else {
+          applyPruned(leftBox, leftEdge, leftNode);
+          applyPruned(rightBox, rightEdge, rightNode);
+          leftBoxLabel.textContent = 'L (odrzucone)'; rightBoxLabel.textContent = 'R (odrzucone)';
+          bottomLeft.textContent = 'odcięte za darmo'; bottomRight.textContent = 'odcięte za darmo';
+          bottomLeft.setAttribute('fill', '#6b7280'); bottomRight.setAttribute('fill', '#6b7280');
+          status = 'promień w szczelinie — oba dzieci odcięte';
+        }
+        readout.textContent = 'x=' + rayX.toFixed(0) + ' · ' + status;
+      }
+      slider.addEventListener('input', update);
+      update();
+    })();
+    </script>
   </div>
 
   <div class="section">
@@ -138,31 +195,93 @@
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Slab.test.2D</span><span>x-slab ∩ y-slab</span></div>
+      <div class="diagram-controls">
+        <label for="slabTheta">kąt promienia θ</label>
+        <input type="range" id="slabTheta" min="10" max="80" step="1" value="25">
+        <span class="value-readout" id="slabReadout">θ=25° · t_near≈312 (x-slab) → t_far≈533 (x-slab)</span>
+      </div>
       <svg viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <marker id="sl1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8b909b"/></marker>
-        </defs>
         <rect x="200" y="80" width="200" height="140" fill="#20242c" stroke="#2a2f38" stroke-width="1"/>
         <line x1="200" y1="0" x2="200" y2="300" stroke="#4fc3c0" stroke-width="1.2" stroke-dasharray="4 4"/>
         <line x1="400" y1="0" x2="400" y2="300" stroke="#4fc3c0" stroke-width="1.2" stroke-dasharray="4 4"/>
         <line x1="0" y1="80" x2="600" y2="80" stroke="#9c82d8" stroke-width="1.2" stroke-dasharray="4 4"/>
         <line x1="0" y1="220" x2="600" y2="220" stroke="#9c82d8" stroke-width="1.2" stroke-dasharray="4 4"/>
 
-        <line x1="50" y1="260" x2="550" y2="40" stroke="#8b909b" stroke-width="1.6" marker-end="url(#sl1)"/>
-        <line x1="200" y1="194" x2="400" y2="106" stroke="#e8a33d" stroke-width="3"/>
+        <line id="slabRay" x1="50" y1="260" x2="550" y2="40" stroke="#8b909b" stroke-width="1.6"/>
+        <line id="slabSegment" x1="200" y1="194" x2="400" y2="106" stroke="#e8a33d" stroke-width="3"/>
 
-        <circle cx="141" cy="220" r="4" fill="#9c82d8"/>
-        <circle cx="200" cy="194" r="4.5" fill="#4fc3c0"/>
-        <circle cx="400" cy="106" r="4.5" fill="#4fc3c0"/>
-        <circle cx="459" cy="80" r="4" fill="#9c82d8"/>
+        <circle id="slabSecNear" cx="141" cy="220" r="4" fill="#9c82d8"/>
+        <circle id="slabNear" cx="200" cy="194" r="4.5" fill="#4fc3c0"/>
+        <circle id="slabFar" cx="400" cy="106" r="4.5" fill="#4fc3c0"/>
+        <circle id="slabSecFar" cx="459" cy="80" r="4" fill="#9c82d8"/>
 
-        <text x="200" y="180" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#4fc3c0">t_near</text>
-        <text x="400" y="92" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#4fc3c0">t_far</text>
-        <text x="141" y="238" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#9c82d8">y-slab</text>
-        <text x="459" y="66" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#9c82d8">y-slab</text>
+        <text id="slabNearLabel" x="200" y="180" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#4fc3c0">t_near</text>
+        <text id="slabFarLabel" x="400" y="92" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#4fc3c0">t_far</text>
+        <text id="slabSecNearLabel" x="141" y="238" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#9c82d8">y-slab</text>
+        <text id="slabSecFarLabel" x="459" y="66" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#9c82d8">y-slab</text>
       </svg>
-      <div class="diagram-caption">Pogrubiony odcinek to prawdziwe przecięcie z pudełkiem — tam, gdzie x-slab i y-slab nakładają się jednocześnie.</div>
+      <div class="diagram-caption">Przesuń θ — pogrubiony odcinek to prawdziwe przecięcie z pudełkiem, liczone dokładnie wzorem t_near/t_far z formuły wyżej.</div>
     </div>
+    <script>
+    (function(){
+      var slider = document.getElementById('slabTheta');
+      var readout = document.getElementById('slabReadout');
+      var ray = document.getElementById('slabRay');
+      var segment = document.getElementById('slabSegment');
+      var nearDot = document.getElementById('slabNear'), farDot = document.getElementById('slabFar');
+      var secNearDot = document.getElementById('slabSecNear'), secFarDot = document.getElementById('slabSecFar');
+      var nearLabel = document.getElementById('slabNearLabel'), farLabel = document.getElementById('slabFarLabel');
+      var secNearLabel = document.getElementById('slabSecNearLabel'), secFarLabel = document.getElementById('slabSecFarLabel');
+      var boxMin = {x: 200, y: 80}, boxMax = {x: 400, y: 220};
+      var pivot = {x: 280, y: 170}, halfLen = 400;
+      function fmt(n, d){ return n.toFixed(d).replace('.', ','); }
+      function pointAt(O, D, t){ return {x: O.x + t * D.x, y: O.y + t * D.y}; }
+      function update(){
+        var thetaDeg = parseFloat(slider.value);
+        var rad = thetaDeg * Math.PI / 180;
+        var D = {x: Math.cos(rad), y: -Math.sin(rad)};
+        var O = {x: pivot.x - halfLen * D.x, y: pivot.y - halfLen * D.y};
+        var E = {x: pivot.x + halfLen * D.x, y: pivot.y + halfLen * D.y};
+        ray.setAttribute('x1', O.x.toFixed(1)); ray.setAttribute('y1', O.y.toFixed(1));
+        ray.setAttribute('x2', E.x.toFixed(1)); ray.setAttribute('y2', E.y.toFixed(1));
+
+        var tx1 = (boxMin.x - O.x) / D.x, tx2 = (boxMax.x - O.x) / D.x;
+        var ty1 = (boxMin.y - O.y) / D.y, ty2 = (boxMax.y - O.y) / D.y;
+        var txMin = Math.min(tx1, tx2), txMax = Math.max(tx1, tx2);
+        var tyMin = Math.min(ty1, ty2), tyMax = Math.max(ty1, ty2);
+
+        var nearAxis = txMin >= tyMin ? 'x' : 'y';
+        var tNear = Math.max(txMin, tyMin);
+        var farAxis = txMax <= tyMax ? 'x' : 'y';
+        var tFar = Math.min(txMax, tyMax);
+        var tSecNear = nearAxis === 'x' ? tyMin : txMin;
+        var tSecFar = farAxis === 'x' ? tyMax : txMax;
+        var secNearAxis = nearAxis === 'x' ? 'y' : 'x';
+        var secFarAxis = farAxis === 'x' ? 'y' : 'x';
+
+        var pNear = pointAt(O, D, tNear), pFar = pointAt(O, D, tFar);
+        var pSecNear = pointAt(O, D, tSecNear), pSecFar = pointAt(O, D, tSecFar);
+
+        segment.setAttribute('x1', pNear.x.toFixed(1)); segment.setAttribute('y1', pNear.y.toFixed(1));
+        segment.setAttribute('x2', pFar.x.toFixed(1)); segment.setAttribute('y2', pFar.y.toFixed(1));
+        nearDot.setAttribute('cx', pNear.x.toFixed(1)); nearDot.setAttribute('cy', pNear.y.toFixed(1));
+        farDot.setAttribute('cx', pFar.x.toFixed(1)); farDot.setAttribute('cy', pFar.y.toFixed(1));
+        secNearDot.setAttribute('cx', pSecNear.x.toFixed(1)); secNearDot.setAttribute('cy', pSecNear.y.toFixed(1));
+        secFarDot.setAttribute('cx', pSecFar.x.toFixed(1)); secFarDot.setAttribute('cy', pSecFar.y.toFixed(1));
+
+        nearLabel.setAttribute('x', pNear.x.toFixed(1)); nearLabel.setAttribute('y', (pNear.y - 14).toFixed(1));
+        farLabel.setAttribute('x', pFar.x.toFixed(1)); farLabel.setAttribute('y', (pFar.y - 14).toFixed(1));
+        secNearLabel.setAttribute('x', pSecNear.x.toFixed(1)); secNearLabel.setAttribute('y', (pSecNear.y + 18).toFixed(1));
+        secNearLabel.textContent = secNearAxis + '-slab';
+        secFarLabel.setAttribute('x', pSecFar.x.toFixed(1)); secFarLabel.setAttribute('y', (pSecFar.y - 14).toFixed(1));
+        secFarLabel.textContent = secFarAxis + '-slab';
+
+        readout.textContent = 'θ=' + thetaDeg.toFixed(0) + '° · t_near≈' + fmt(tNear, 0) + ' (' + nearAxis + '-slab) → t_far≈' + fmt(tFar, 0) + ' (' + farAxis + '-slab)';
+      }
+      slider.addEventListener('input', update);
+      update();
+    })();
+    </script>
   </div>
 
   <div class="panel practice">
