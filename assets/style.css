@@ -147,6 +147,10 @@ h1{font-family:var(--display);font-weight:600;font-size:clamp(30px,5vw,50px);lin
 .site-nav{border-top:1px solid var(--border);margin-top:70px;padding-top:24px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;}
 .site-nav a{color:var(--text-dim);text-decoration:none;transition:color .15s;}
 .site-nav a:hover{color:var(--amber);}
+.site-nav.chapter-nav{display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;}
+.site-nav.chapter-nav a.nav-prev{grid-column:1;text-align:left;}
+.site-nav.chapter-nav a.nav-toc{grid-column:2;text-align:center;}
+.site-nav.chapter-nav a.nav-next{grid-column:3;text-align:right;}
 
 /* MODAL (wyjaśnienie trudnych wzorów krok po kroku) */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(10,11,13,.75);z-index:100;padding:24px;align-items:center;justify-content:center;}
