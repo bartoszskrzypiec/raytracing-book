@@ -57,6 +57,11 @@
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>GGX.vs.BlinnPhong</span><span>tail comparison</span></div>
+      <div class="diagram-controls">
+        <label for="ggxRoughness">Roughness</label>
+        <input type="range" id="ggxRoughness" min="0.05" max="1" step="0.01" value="0.3">
+        <span class="value-readout" id="ggxReadout">roughness = 0,30 · α = 0,090 · D(H=0) ≈ 39,3</span>
+      </div>
       <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
         <line x1="60" y1="250" x2="680" y2="250" stroke="#8b909b" stroke-width="1.5"/>
         <line x1="60" y1="250" x2="60" y2="40" stroke="#8b909b" stroke-width="1.5"/>
@@ -72,15 +77,43 @@
         <text x="20" y="150" font-family="IBM Plex Mono" font-size="11" fill="#8b909b" transform="rotate(-90 20 150)">D(H)</text>
 
         <path d="M 60,40 C 90,70 120,115 143,145 C 170,180 195,205 215,219 C 245,232 265,238 287,244 C 320,248 350,249 370,249 C 420,250 480,250 525,250" fill="none" stroke="#4fc3c0" stroke-width="2.3"/>
-        <path d="M 60,40 C 110,70 145,110 163,135 C 200,175 240,195 267,204 C 310,215 340,222 370,229 C 430,236 480,239 525,242 C 580,244 630,246 680,247" fill="none" stroke="#e8a33d" stroke-width="2.6"/>
+        <path id="ggxCurve" d="M 60,40 L 680,247" fill="none" stroke="#e8a33d" stroke-width="2.6"/>
 
         <circle cx="600" cy="55" r="5" fill="#e8a33d"/>
         <text x="612" y="59" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">GGX</text>
         <circle cx="600" cy="75" r="5" fill="#4fc3c0"/>
         <text x="612" y="79" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">Blinn-Phong</text>
       </svg>
-      <div class="diagram-caption">Ten sam szczyt, inny ogon — GGX zostaje widoczny daleko poza kątem, gdzie Blinn-Phong już spadł do zera.</div>
+      <div class="diagram-caption">Przesuń Roughness: to dokładnie ten sam parametr α = roughness² z wzoru wyżej — węższy szczyt (mały α) oznacza dużo wyższe D(H=0), nie tylko inny kształt.</div>
     </div>
+    <script>
+    (function(){
+      var slider = document.getElementById('ggxRoughness');
+      var readout = document.getElementById('ggxReadout');
+      var curve = document.getElementById('ggxCurve');
+      function fmt(n, d){ return n.toFixed(d).replace('.', ','); }
+      function update(){
+        var roughness = parseFloat(slider.value);
+        var alpha = roughness * roughness;
+        var alpha2 = alpha * alpha;
+        var pts = [];
+        for (var deg = 0; deg <= 60; deg += 2) {
+          var rad = deg * Math.PI / 180;
+          var cosT = Math.cos(rad);
+          var X = cosT * cosT * (alpha2 - 1) + 1;
+          var Dn = (alpha2 / X) * (alpha2 / X);
+          var x = 60 + deg * (620 / 60);
+          var y = 250 - Dn * 210;
+          pts.push(x.toFixed(1) + ',' + y.toFixed(1));
+        }
+        curve.setAttribute('d', 'M ' + pts.join(' L '));
+        var D0 = 1 / (Math.PI * alpha2);
+        readout.textContent = 'roughness = ' + fmt(roughness, 2) + ' · α = ' + fmt(alpha, 3) + ' · D(H=0) ≈ ' + fmt(D0, 1);
+      }
+      slider.addEventListener('input', update);
+      update();
+    })();
+    </script>
   </div>
 
   <div class="section">
