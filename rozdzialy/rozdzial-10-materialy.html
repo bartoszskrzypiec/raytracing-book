@@ -145,7 +145,7 @@
       <div class="diagram-caption">Każda krótka linia to normalna jednej mikrofasetki — po lewej prawie równoległe, po prawej wskazują wszędzie.</div>
     </div>
 
-    <p>Model Cook-Torrance'a (1982) łączy trzy składniki, korzystając z wektorów, które już masz: rozkład orientacji fasetek D (względem H z Rozdziału 5), samo-zasłanianie fasetek G, i Fresnel F (Schlick z Rozdziału 7):</p>
+    <p>Model Cook-Torrance'a (1982) łączy trzy składniki, korzystając z wektorów, które już masz. Ważne rozróżnienie: N, L, V i H to <strong>wektory</strong> — kierunki. D, G i F to zwykłe <strong>liczby z zakresu 0–1</strong>, policzone na podstawie tych kierunków — same w sobie nie mają kierunku ani nie „są" żadną normalną. Konkretnie: rozkład orientacji fasetek D (jaki ułamek ma normalną blisko H z Rozdziału 5), samo-zasłanianie fasetek G (jaki ułamek z nich nie jest zasłonięty przez sąsiednie), i Fresnel F (Schlick z Rozdziału 7, jaki ułamek światła się odbija):</p>
 
     <div class="formula">specular = (D · G · F) / (4 · (N·L) · (N·V))<span class="sub">to dosłownie wszystkie wektory i wzory z Rozdziałów 5 i 7, złożone w jedną, fizycznie spójną BRDF; pełny rozkład D (GGX) czeka w Rozdziale 11</span></div>
 
@@ -178,15 +178,15 @@
         <text x="410" y="72" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">fasetek wokół H</text>
         <line x1="404" y1="78" x2="384" y2="163" stroke="#5a5f6b" stroke-width="1" stroke-dasharray="2 3"/>
 
-        <text x="90" y="258" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">G — samo-zasłanianie</text>
-        <text x="90" y="272" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">sąsiednich fasetek</text>
+        <text x="90" y="258" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">G — ułamek fasetek</text>
+        <text x="90" y="272" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">nie zasłoniętych sąsiadami</text>
         <line x1="170" y1="250" x2="250" y2="232" stroke="#5a5f6b" stroke-width="1" stroke-dasharray="2 3"/>
 
         <text x="540" y="258" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">F — Fresnel (Schlick,</text>
         <text x="540" y="272" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">Rozdział 7): % odbicia</text>
         <line x1="545" y1="250" x2="400" y2="228" stroke="#5a5f6b" stroke-width="1" stroke-dasharray="2 3"/>
       </svg>
-      <div class="diagram-caption">H leży w połowie drogi między L i V. D mierzy, ile mikrofasetek ma normalną blisko H, G — ile z nich naraz widzi L i V bez wzajemnego zasłaniania, a F — jaki procent światła odbija się pod tym kątem padania.</div>
+      <div class="diagram-caption">N to kierunek — jeden wektor, ten sam co wszędzie indziej w książce. D, G i F to nie kierunki, tylko liczby 0–1: H leży w połowie drogi między L i V, D mierzy, jaki ułamek mikrofasetek ma normalną blisko H, G — jaki ich ułamek naraz widzi L i V bez wzajemnego zasłaniania, a F — jaki ułamek światła odbija się pod tym kątem padania.</div>
     </div>
   </div>
 
