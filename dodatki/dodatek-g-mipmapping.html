@@ -11,7 +11,7 @@
 <div class="page">
 
   <div class="viewport-readout">
-    <span>MIP · log2(footprint)</span><span>FILTER · tri/aniso</span><span>FIX · minification aliasing</span><span>EXT OF · R.9</span>
+    <span>MIP · log2(footprint)</span><span>FILTER · tri/aniso/EWA</span><span>DIFF · ray differentials</span><span>EXT OF · R.9</span>
   </div>
 
   <div class="eyebrow">Dodatek G / Głębiej: Tekstury</div>
@@ -96,9 +96,54 @@
     </div>
   </div>
 
+  <div class="section">
+    <div class="section-eyebrow">Pass: Ray differentials</div>
+    <h2>Skąd ray tracer w ogóle zna wielkość odcisku</h2>
+    <p>Wzór na poziom mip z poprzedniej sekcji zakłada, że masz gotowe ∂uv/∂x i ∂uv/∂y — jak szybko UV zmienia się między sąsiednimi pikselami ekranu. W rasteryzacji to dosłownie gratis: GPU liczy piksele w kwadracikach 2×2 i sprzętowo porównuje UV sąsiadów. Ray tracer nie ma sąsiadów za darmo — każdy promień jest niezależny, a po odbiciu czy załamaniu może polecieć w zupełnie inną stronę niż promień z piksela obok.</p>
+    <p>Rozwiązanie (Igehy, 1999): <strong>ray differentials</strong>. Obok promienia głównego śledzisz dwa dodatkowe, „bliźniacze” promienie — jeden wystrzelony tak, jakby wyszedł z piksela o jeden w prawo, drugi jakby o jeden w górę. Wszystkie trzy zaczynają nieskończenie blisko siebie. Po każdym odbiciu czy załamaniu propagujesz różnicę między promieniem głównym a bliźniaczymi analitycznie — z lokalnej krzywizny powierzchni i kąta padania, bez faktycznego śledzenia trzech pełnych promieni (to byłoby 3× drożej). W punkcie trafienia porównujesz UV promienia głównego z UV, które dałyby promienie bliźniacze — ta różnica <em>jest</em> ∂uv/∂x i ∂uv/∂y.</p>
+
+    <div class="formula">∂uv/∂x ≈ uv(promień_x) − uv(promień_główny)<span class="sub">promień_x — bliźniaczy promień odpowiadający przesunięciu o jeden piksel w osi x; analogicznie ∂uv/∂y z promienia_y</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Ray.differentials</span><span>3 rays, 1 hit test</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="rd1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+        </defs>
+        <rect x="500" y="60" width="200" height="140" fill="#20242c" stroke="#2a2f38" stroke-width="1.5"/>
+        <text x="600" y="50" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">POWIERZCHNIA / TEKSTURA</text>
+
+        <circle cx="60" cy="130" r="3.5" fill="#8b909b"/>
+        <text x="45" y="150" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">kamera</text>
+
+        <line x1="60" y1="130" x2="590" y2="130" stroke="#e8a33d" stroke-width="2.2" marker-end="url(#rd1)"/>
+        <text x="300" y="122" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#e8a33d">promień główny</text>
+        <circle cx="590" cy="130" r="4" fill="#ecebe4"/>
+        <text x="596" y="118" font-family="IBM Plex Mono" font-size="10.5" fill="#ecebe4">uv(główny)</text>
+
+        <line x1="61" y1="129" x2="640" y2="80" stroke="#4fc3c0" stroke-width="1.4" stroke-dasharray="4 3"/>
+        <circle cx="640" cy="80" r="3.5" fill="#4fc3c0"/>
+        <text x="646" y="76" font-family="IBM Plex Mono" font-size="10" fill="#4fc3c0">uv(promień_x)</text>
+
+        <line x1="61" y1="131" x2="615" y2="185" stroke="#9c82d8" stroke-width="1.4" stroke-dasharray="4 3"/>
+        <circle cx="615" cy="185" r="3.5" fill="#9c82d8"/>
+        <text x="621" y="198" font-family="IBM Plex Mono" font-size="10" fill="#9c82d8">uv(promień_y)</text>
+      </svg>
+      <div class="diagram-caption">Trzy promienie zaczynają nieskończenie blisko siebie — różnica ich UV w punkcie trafienia daje rozmiar odcisku.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: EWA</div>
+    <h2>EWA: produkcyjny standard</h2>
+    <p>Zwykłe filtrowanie anizotropowe z poprzedniej sekcji zakłada, że odcisk piksela to prosty prostokąt wyrównany z osiami tekstury — w praktyce, gdy tekstura jest jeszcze do tego obrócona względem ekranu, odcisk jest elipsą pod dowolnym kątem, nie prostokątem. <strong>EWA (Elliptically Weighted Average, Greene i Heckbert, 1986)</strong> bierze tę elipsę wprost z ray differentials, próbkuje teksele wewnątrz niej z wagą gaussowską (środek elipsy waży najmocniej, brzegi najsłabiej) — i, żeby nie próbkować setek tekseli dla bardzo dużych, rozciągniętych odcisków, robi to na odpowiednio dobranym poziomie mipmapy, nie na pełnej rozdzielczości.</p>
+    <p>To dokładnie dlatego EWA (albo bardzo bliski wariant) jest domyślnym filtrem w RenderManie, Arnoldzie i PBRT: jedyny z opisanych tu filtrów, który poprawnie obsługuje odcisk dowolnie rozciągnięty <em>i</em> dowolnie obrócony naraz, nie tylko rozciągnięty wzdłuż osi UV.</p>
+  </div>
+
   <div class="panel practice">
     <div class="panel-label">Z praktyki</div>
     <p>„Anisotropic Filtering: 2×/4×/8×/16×” to ustawienie karty graficznej i gry kontrolujące, ile próbek wzdłuż rozciągnięcia pozwala wziąć filtr. Mipmapy generują się automatycznie przy imporcie tekstury w Unity/Unrealu — ale bardzo drobne wzory (tekst, tonkie linie) potrafią migotać nawet z dobrym filtrowaniem, stąd wytyczne dla artystów tekstur o unikaniu ekstremalnie wysokich częstotliwości w powtarzalnych wzorach.</p>
+    <p>Koszt ray differentials i EWA to realne dodatkowe operacje na każdym promieniu — ale to inwestycja, która się zwraca: nieodfiltrowana, aliasująca tekstura wygląda jak szum, a szum kosztuje znacznie więcej próbek na piksel do wygładzenia (Rozdział 8, Rozdział 19), niż kosztowałoby jej poprawne odfiltrowanie za pierwszym razem. Płacisz trochę więcej na promień, żeby zapłacić dużo mniej próbek na piksel.</p>
   </div>
 
   <div class="panel glossary">
@@ -109,6 +154,8 @@
       <dt>Poziom mip</dt><dd>Wybrany stopień piramidy, szacowany z pochodnych UV względem ekranu.</dd>
       <dt>Filtrowanie trójliniowe</dt><dd>Interpolacja między dwoma sąsiednimi poziomami mip.</dd>
       <dt>Filtrowanie anizotropowe</dt><dd>Wielopróbkowe filtrowanie wzdłuż rozciągniętego odcisku piksela.</dd>
+      <dt>Ray differentials</dt><dd>Dwa dodatkowe, nieskończenie bliskie promienie śledzone obok głównego, dające ∂uv/∂x i ∂uv/∂y.</dd>
+      <dt>EWA (Elliptically Weighted Average)</dt><dd>Filtrowanie eliptyczne z wagą gaussowską — obsługuje odcisk rozciągnięty i obrócony naraz.</dd>
     </dl>
   </div>
 
