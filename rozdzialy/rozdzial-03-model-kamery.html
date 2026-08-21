@@ -42,7 +42,7 @@
     <a class="inline-deeper" href="../dodatki/dodatek-f-macierze.html">↓ Dodatek F — macierze i współrzędne jednorodne</a>
     <p>Skąd wziąć right i up, mając tylko forward i globalny „up świata” (najczęściej (0, 1, 0))? Tu wchodzi nowa operacja: <strong>iloczyn wektorowy (cross product)</strong>. W przeciwieństwie do iloczynu skalarnego z Rozdziału 2, który zwracał liczbę, A × B zwraca <em>wektor</em> — prostopadły jednocześnie do A i do B, zgodnie z regułą prawej ręki.</p>
 
-    <div class="formula"><span class="vec">right</span> = normalize(<span class="vec">forward</span> × <span class="vec">up_world</span>)<br><span class="vec">up</span> = <span class="vec">right</span> × <span class="vec">forward</span><span class="sub">cross product: wektor prostopadły do obu wejściowych; drugie użycie gwarantuje, że up jest już idealnie prostopadły do forward</span></div>
+    <div class="formula"><span class="vec" data-tip="Wektor bazowy kamery: w prawo">right</span> = normalize(<span class="vec" data-tip="Wektor bazowy kamery: kierunek patrzenia">forward</span> × <span class="vec" data-tip="Świat-referencyjny wektor „w górę” (zwykle (0,1,0))">up_world</span>)<br><span class="vec" data-tip="Wektor bazowy kamery: w górę">up</span> = <span class="vec" data-tip="Wektor bazowy kamery: w prawo">right</span> × <span class="vec" data-tip="Wektor bazowy kamery: kierunek patrzenia">forward</span><span class="sub">cross product: wektor prostopadły do obu wejściowych; drugie użycie gwarantuje, że up jest już idealnie prostopadły do forward</span></div>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Camera.basis</span><span>u, v, w</span></div>
@@ -128,7 +128,7 @@
 
     <p>Następnie łączymy to z bazą kamery, żeby dostać punkt na viewporcie w przestrzeni świata, i wyciągamy z niego kierunek:</p>
 
-    <div class="formula">P = eye + <span class="vec">forward</span> + s · <span class="vec">right</span> + t · <span class="vec">up</span><br><span class="vec">D</span> = normalize(P − eye)<span class="sub">P — punkt na viewporcie dla danego piksela; D — gotowy, znormalizowany kierunek promienia</span></div>
+    <div class="formula">P = eye + <span class="vec" data-tip="Wektor bazowy kamery: kierunek patrzenia">forward</span> + s · <span class="vec" data-tip="Wektor bazowy kamery: w prawo">right</span> + t · <span class="vec" data-tip="Wektor bazowy kamery: w górę">up</span><br><span class="vec" data-tip="Kierunek promienia (znormalizowany)">D</span> = normalize(P − eye)<span class="sub">P — punkt na viewporcie dla danego piksela; D — gotowy, znormalizowany kierunek promienia</span></div>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Pixel.to.ray</span><span>3 samples</span></div>
@@ -204,5 +204,6 @@
     <a class="nav-next" href="rozdzial-04-plaszczyzny-i-trojkaty.html">Następny →</a>
 </div>
 </div>
+<script src="../assets/interactive.js"></script>
 </body>
 </html>

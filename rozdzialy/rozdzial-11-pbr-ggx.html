@@ -32,7 +32,7 @@
     <h2>GGX: ile fasetek jest zwróconych w stronę H</h2>
     <p>Standardem od połowy 2010. jest rozkład GGX (Trowbridge-Reitz), spopularyzowany przez kursy Disneya o PBR. Mówi, jaka część mikrofasetek ma normalną wystarczająco bliską H, żeby wziąć udział w odbiciu:</p>
 
-    <div class="formula">D(<span class="vec">H</span>) = α² / (π · ((<span class="vec">N</span>·<span class="vec">H</span>)²·(α²−1) + 1)²)<span class="sub">α = roughness² — artyści ustawiają „roughness”, ale wzór używa jego kwadratu; to sprawia, że slider czuje się bardziej liniowy percepcyjnie</span></div>
+    <div class="formula">D(<span class="vec" data-tip="Wektor w pół drogi między L i V: normalize(L+V)">H</span>) = α² / (π · ((<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Wektor w pół drogi między L i V: normalize(L+V)">H</span>)²·(α²−1) + 1)²)<span class="sub">α = roughness² — artyści ustawiają „roughness”, ale wzór używa jego kwadratu; to sprawia, że slider czuje się bardziej liniowy percepcyjnie</span></div>
     <button class="reveal-btn" data-modal-target="explain-ggx-d">Wyjaśnij ten wzór</button>
     <template id="explain-ggx-d">
       <h3>D(H) — rozkład GGX, krok po kroku</h3>
@@ -152,7 +152,7 @@
 
     <p>Standardowy wybór to człon Smitha, rozdzielony na dwie niezależne części — jedną dla L, jedną dla V:</p>
 
-    <div class="formula">G(<span class="vec">L</span>,<span class="vec">V</span>) = G1(<span class="vec">L</span>) · G1(<span class="vec">V</span>)<br>G1(<span class="vec">V</span>) = 2(<span class="vec">N</span>·<span class="vec">V</span>) / ( (<span class="vec">N</span>·<span class="vec">V</span>) + √(α² + (1−α²)(<span class="vec">N</span>·<span class="vec">V</span>)²) )<span class="sub">ten sam wzór dla G1(L), z L w miejsce V; bez tego członu BRDF „traci” energię przy dużym roughness i płytkich kątach</span></div>
+    <div class="formula">G(<span class="vec" data-tip="Kierunek od punktu trafienia do światła">L</span>,<span class="vec" data-tip="Kierunek od punktu trafienia do obserwatora">V</span>) = G1(<span class="vec" data-tip="Kierunek od punktu trafienia do światła">L</span>) · G1(<span class="vec" data-tip="Kierunek od punktu trafienia do obserwatora">V</span>)<br>G1(<span class="vec" data-tip="Kierunek od punktu trafienia do obserwatora">V</span>) = 2(<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Kierunek od punktu trafienia do obserwatora">V</span>) / ( (<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Kierunek od punktu trafienia do obserwatora">V</span>) + √(α² + (1−α²)(<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Kierunek od punktu trafienia do obserwatora">V</span>)²) )<span class="sub">ten sam wzór dla G1(L), z L w miejsce V; bez tego członu BRDF „traci” energię przy dużym roughness i płytkich kątach</span></div>
   </div>
 
   <div class="section">
@@ -160,7 +160,7 @@
     <h2>Składanie kompletnego PBR: metallic-roughness</h2>
     <p>Zbieramy wszystko z Rozdziałów 5, 7, 10 i 11 w jeden model. Jedyna nowość: F0 (odbicie przy patrzeniu na wprost, z Rozdziału 7) przestaje być stałą — zależy od tego, czy materiał jest dielektrykiem czy metalem:</p>
 
-    <div class="formula">F0 = mix(0.04, albedo, metallic)<br>color = (1−metallic)·albedo·diffuse(<span class="vec">N</span>·<span class="vec">L</span>) + specular(D,G,F)<span class="sub">metallic = 0 → F0 ≈ 0,04 (dielektryk, biały specular, pełny diffuse); metallic = 1 → F0 = albedo (metal, kolorowy specular, zero diffuse)</span></div>
+    <div class="formula">F0 = mix(0.04, albedo, metallic)<br>color = (1−metallic)·albedo·diffuse(<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Kierunek od punktu trafienia do światła">L</span>) + specular(D,G,F)<span class="sub">metallic = 0 → F0 ≈ 0,04 (dielektryk, biały specular, pełny diffuse); metallic = 1 → F0 = albedo (metal, kolorowy specular, zero diffuse)</span></div>
 
     <p>To jest dosłownie to samo równanie, które Rozdział 10 opisał słowami — teraz z każdym symbolem podłączonym do konkretnego wzoru z poprzednich sześciu rozdziałów. Nic tu nie jest już arbitralne.</p>
   </div>

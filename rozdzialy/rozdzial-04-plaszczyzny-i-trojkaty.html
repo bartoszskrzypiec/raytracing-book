@@ -35,11 +35,11 @@
     <h2>Najprostszy przypadek: płaszczyzna</h2>
     <p>Płaszczyznę opisuje normalna <span class="term-amber">N</span> i dowolny punkt <span class="term-cyan">Q</span>, który na niej leży. Punkt P należy do płaszczyzny, jeśli wektor od Q do P jest prostopadły do N — czyli ich iloczyn skalarny wynosi zero:</p>
 
-    <div class="formula"><span class="vec">N</span> · (P − Q) = 0</div>
+    <div class="formula"><span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span> · (P − Q) = 0</div>
 
     <p>Podstawiamy nasz wzór promienia P(t) = O + t·D i rozwiązujemy — bez kwadratów, wprost:</p>
 
-    <div class="formula">t = <span class="vec">N</span> · (Q − O) / (<span class="vec">N</span> · <span class="vec">D</span>)<span class="sub">gdy N·D ≈ 0, promień jest równoległy do płaszczyzny (albo leży w niej) — brak jednoznacznego t</span></div>
+    <div class="formula">t = <span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span> · (Q − O) / (<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span> · <span class="vec" data-tip="Kierunek promienia (znormalizowany)">D</span>)<span class="sub">gdy N·D ≈ 0, promień jest równoległy do płaszczyzny (albo leży w niej) — brak jednoznacznego t</span></div>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Plane.hit</span><span>linear · 1 root</span></div>
@@ -76,7 +76,7 @@
     <div class="section-eyebrow">Pass: Trójkąt i wagi</div>
     <h2>Trójkąt to płaszczyzna z granicami</h2>
     <p>Normalną trójkąta o wierzchołkach A, B, C liczymy tym samym iloczynem wektorowym, który poznałeś w Rozdziale 3:</p>
-    <div class="formula"><span class="vec">N</span> = normalize((B − A) × (C − A))</div>
+    <div class="formula"><span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span> = normalize((B − A) × (C − A))</div>
     <p>Możemy teraz policzyć t tak jak dla płaszczyzny — ale to tylko połowa roboty. Trójkąt zajmuje wyłącznie <em>fragment</em> tej płaszczyzny, więc trzeba sprawdzić, czy trafiony punkt leży w jego granicach. Do tego służą <strong>współrzędne barycentryczne</strong>: każdy punkt trójkąta zapisujemy jako wagowaną kombinację jego trzech wierzchołków.</p>
     <div class="formula">P = (1 − u − v)·A + u·B + v·C<span class="sub">punkt leży w trójkącie ⇔ u ≥ 0, v ≥ 0, u + v ≤ 1</span></div>
 
@@ -250,5 +250,6 @@
     <a class="nav-next" href="rozdzial-05-oswietlenie.html">Następny →</a>
 </div>
 </div>
+<script src="../assets/interactive.js"></script>
 </body>
 </html>

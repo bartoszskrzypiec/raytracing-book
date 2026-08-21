@@ -54,7 +54,7 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
 
   <div class="subsection">
     <h3>Odejmowanie punktów, długość, normalizacja</h3>
-    <div class="formula"><span class="vec">V</span> = <span class="vec">A</span> − <span class="vec">B</span><br>|<span class="vec">V</span>| = √(Vx² + Vy² + Vz²)<br><span class="vec">V̂</span> = <span class="vec">V</span> / |<span class="vec">V</span>|</div>
+    <div class="formula"><span class="vec" data-tip="Wynikowy wektor A−B">V</span> = <span class="vec" data-tip="Dowolny wektor 3D (przykład)">A</span> − <span class="vec" data-tip="Dowolny wektor 3D (przykład)">B</span><br>|<span class="vec" data-tip="Wynikowy wektor A−B">V</span>| = √(Vx² + Vy² + Vz²)<br><span class="vec" data-tip="Wektor V znormalizowany (długość 1)">V̂</span> = <span class="vec" data-tip="Wynikowy wektor A−B">V</span> / |<span class="vec" data-tip="Wynikowy wektor A−B">V</span>|</div>
 
     <div class="worked">
       <div class="wlabel">Przykład</div>
@@ -69,7 +69,7 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
 
   <div class="subsection">
     <h3>Iloczyn skalarny i kąt między wektorami</h3>
-    <div class="formula"><span class="vec">A</span>·<span class="vec">B</span> = Ax·Bx + Ay·By + Az·Bz = |<span class="vec">A</span>||<span class="vec">B</span>|·cosθ<br>θ = arccos( <span class="vec">A</span>·<span class="vec">B</span> / (|<span class="vec">A</span>||<span class="vec">B</span>|) )</div>
+    <div class="formula"><span class="vec" data-tip="Dowolny wektor 3D (przykład)">A</span>·<span class="vec" data-tip="Dowolny wektor 3D (przykład)">B</span> = Ax·Bx + Ay·By + Az·Bz = |<span class="vec" data-tip="Dowolny wektor 3D (przykład)">A</span>||<span class="vec" data-tip="Dowolny wektor 3D (przykład)">B</span>|·cosθ<br>θ = arccos( <span class="vec" data-tip="Dowolny wektor 3D (przykład)">A</span>·<span class="vec" data-tip="Dowolny wektor 3D (przykład)">B</span> / (|<span class="vec" data-tip="Dowolny wektor 3D (przykład)">A</span>||<span class="vec" data-tip="Dowolny wektor 3D (przykład)">B</span>|) )</div>
 
     <div class="worked">
       <div class="wlabel">Przykład</div>
@@ -85,7 +85,7 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
 
   <div class="subsection">
     <h3>Iloczyn wektorowy</h3>
-    <div class="formula"><span class="vec">A</span> × <span class="vec">B</span> = (Ay·Bz − Az·By,  Az·Bx − Ax·Bz,  Ax·By − Ay·Bx)</div>
+    <div class="formula"><span class="vec" data-tip="Dowolny wektor 3D (przykład)">A</span> × <span class="vec" data-tip="Dowolny wektor 3D (przykład)">B</span> = (Ay·Bz − Az·By,  Az·Bx − Ax·Bz,  Ax·By − Ay·Bx)</div>
     <p>Zapamiętaj schemat: każda współrzędna wyniku „pomija” tę samą współrzędną wejściową i mnoży na krzyż pozostałe dwie, w cyklicznej kolejności x→y→z→x.</p>
   </div>
 
@@ -97,7 +97,7 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
 
   <div class="subsection">
     <h3>Wzór</h3>
-    <div class="formula">P(t) = O + t·<span class="vec">D</span><br>a = <span class="vec">D</span>·<span class="vec">D</span>,  b = 2·<span class="vec">D</span>·<span class="vec">L</span>,  c = <span class="vec">L</span>·<span class="vec">L</span> − r²,  gdzie <span class="vec">L</span> = O − C<br>Δ = b² − 4ac</div>
+    <div class="formula">P(t) = O + t·<span class="vec" data-tip="Kierunek promienia (znormalizowany)">D</span><br>a = <span class="vec" data-tip="Kierunek promienia (znormalizowany)">D</span>·<span class="vec" data-tip="Kierunek promienia (znormalizowany)">D</span>,  b = 2·<span class="vec" data-tip="Kierunek promienia (znormalizowany)">D</span>·<span class="vec" data-tip="Wektor od środka sfery do początku promienia: O−C">L</span>,  c = <span class="vec" data-tip="Wektor od środka sfery do początku promienia: O−C">L</span>·<span class="vec" data-tip="Wektor od środka sfery do początku promienia: O−C">L</span> − r²,  gdzie <span class="vec" data-tip="Wektor od środka sfery do początku promienia: O−C">L</span> = O − C<br>Δ = b² − 4ac</div>
   </div>
 
   <div class="subsection">
@@ -166,7 +166,7 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
 
   <div class="subsection">
     <h3>Wzór</h3>
-    <div class="formula"><span class="vec">forward</span> = normalize(target − eye)<br><span class="vec">right</span> = normalize(<span class="vec">forward</span> × <span class="vec">up_world</span>)<br><span class="vec">up</span> = <span class="vec">right</span> × <span class="vec">forward</span></div>
+    <div class="formula"><span class="vec" data-tip="Wektor bazowy kamery: kierunek patrzenia">forward</span> = normalize(target − eye)<br><span class="vec" data-tip="Wektor bazowy kamery: w prawo">right</span> = normalize(<span class="vec" data-tip="Wektor bazowy kamery: kierunek patrzenia">forward</span> × <span class="vec" data-tip="Świat-referencyjny wektor „w górę” (zwykle (0,1,0))">up_world</span>)<br><span class="vec" data-tip="Wektor bazowy kamery: w górę">up</span> = <span class="vec" data-tip="Wektor bazowy kamery: w prawo">right</span> × <span class="vec" data-tip="Wektor bazowy kamery: kierunek patrzenia">forward</span></div>
   </div>
 
   <div class="subsection">
@@ -197,7 +197,7 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
 
   <div class="subsection">
     <h3>Przykład: viewport i promień dla konkretnego piksela</h3>
-    <div class="formula">viewport_height = 2·tan(FOV/2)<br>viewport_width = aspect · viewport_height<br>s = (2(i+0,5)/W − 1)·(vw/2),  t = (1 − 2(j+0,5)/H)·(vh/2)<br><span class="vec">D_final</span> = normalize(eye + <span class="vec">forward</span> + s·<span class="vec">right</span> + t·<span class="vec">up</span> − eye)</div>
+    <div class="formula">viewport_height = 2·tan(FOV/2)<br>viewport_width = aspect · viewport_height<br>s = (2(i+0,5)/W − 1)·(vw/2),  t = (1 − 2(j+0,5)/H)·(vh/2)<br><span class="vec" data-tip="Ostateczny, przeliczony kierunek promienia">D_final</span> = normalize(eye + <span class="vec" data-tip="Wektor bazowy kamery: kierunek patrzenia">forward</span> + s·<span class="vec" data-tip="Wektor bazowy kamery: w prawo">right</span> + t·<span class="vec" data-tip="Wektor bazowy kamery: w górę">up</span> − eye)</div>
 
     <div class="worked">
       <div class="wlabel">Dane wejściowe</div>
@@ -242,7 +242,7 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
 
   <div class="subsection">
     <h3>Wzór — płaszczyzna</h3>
-    <div class="formula">t = <span class="vec">N</span>·(Q−O) / (<span class="vec">N</span>·<span class="vec">D</span>)</div>
+    <div class="formula">t = <span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·(Q−O) / (<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Kierunek promienia (znormalizowany)">D</span>)</div>
 
     <div class="worked">
       <div class="wlabel">Przykład</div>
@@ -259,7 +259,7 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
 
   <div class="subsection">
     <h3>Wzór — Möller–Trumbore</h3>
-    <div class="formula"><span class="vec">edge1</span>=B−A, <span class="vec">edge2</span>=C−A, <span class="vec">h</span>=<span class="vec">D</span>×<span class="vec">edge2</span>, det=<span class="vec">edge1</span>·<span class="vec">h</span><br><span class="vec">s</span>=O−A, u=(<span class="vec">s</span>·<span class="vec">h</span>)/det, <span class="vec">q</span>=<span class="vec">s</span>×<span class="vec">edge1</span>, v=(<span class="vec">D</span>·<span class="vec">q</span>)/det, t=(<span class="vec">edge2</span>·<span class="vec">q</span>)/det</div>
+    <div class="formula"><span class="vec" data-tip="Krawędź trójkąta: B−A">edge1</span>=B−A, <span class="vec" data-tip="Krawędź trójkąta: C−A">edge2</span>=C−A, <span class="vec" data-tip="Wektor pomocniczy: D×edge2">h</span>=<span class="vec" data-tip="Kierunek promienia (znormalizowany)">D</span>×<span class="vec" data-tip="Krawędź trójkąta: C−A">edge2</span>, det=<span class="vec" data-tip="Krawędź trójkąta: B−A">edge1</span>·<span class="vec" data-tip="Wektor pomocniczy: D×edge2">h</span><br><span class="vec" data-tip="Wektor od wierzchołka A do początku promienia: O−A">s</span>=O−A, u=(<span class="vec" data-tip="Wektor od wierzchołka A do początku promienia: O−A">s</span>·<span class="vec" data-tip="Wektor pomocniczy: D×edge2">h</span>)/det, <span class="vec" data-tip="Wektor pomocniczy: s×edge1">q</span>=<span class="vec" data-tip="Wektor od wierzchołka A do początku promienia: O−A">s</span>×<span class="vec" data-tip="Krawędź trójkąta: B−A">edge1</span>, v=(<span class="vec" data-tip="Kierunek promienia (znormalizowany)">D</span>·<span class="vec" data-tip="Wektor pomocniczy: s×edge1">q</span>)/det, t=(<span class="vec" data-tip="Krawędź trójkąta: C−A">edge2</span>·<span class="vec" data-tip="Wektor pomocniczy: s×edge1">q</span>)/det</div>
 
     <div class="worked">
       <div class="wlabel">Przykład</div>
@@ -307,7 +307,7 @@ h1{font-size:clamp(28px,5vw,46px);line-height:1.1;}
 
   <div class="subsection">
     <h3>Wzór</h3>
-    <div class="formula">diffuse = kd·I·max(0,<span class="vec">N</span>·<span class="vec">L</span>)<br><span class="vec">H</span> = normalize(<span class="vec">L</span>+<span class="vec">V</span>),  specular = ks·I·max(0,<span class="vec">N</span>·<span class="vec">H</span>)^shininess<br>color = ka·Ia + diffuse + specular</div>
+    <div class="formula">diffuse = kd·I·max(0,<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Kierunek od punktu trafienia do światła">L</span>)<br><span class="vec" data-tip="Wektor w pół drogi między L i V: normalize(L+V)">H</span> = normalize(<span class="vec" data-tip="Kierunek od punktu trafienia do światła">L</span>+<span class="vec" data-tip="Kierunek od punktu trafienia do obserwatora">V</span>),  specular = ks·I·max(0,<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Wektor w pół drogi między L i V: normalize(L+V)">H</span>)^shininess<br>color = ka·Ia + diffuse + specular</div>
   </div>
 
   <div class="subsection">
@@ -366,5 +366,6 @@ function toggleAnswer(id){
   el.classList.toggle('shown');
 }
 </script>
+<script src="../assets/interactive.js"></script>
 </body>
 </html>

@@ -32,7 +32,7 @@
     <h2>Gdy roughness ma kierunek</h2>
     <p>GGX z Rozdziału 11 zakłada jeden α — fasetki rozrzucone tak samo we wszystkie strony. Szczotkowany metal, satyna, płyta CD i włosy (Rozdział 20) mają fasetki wyrównane wzdłuż konkretnego kierunku — gładsze wzdłuż rys szczotkowania, chropowate w poprzek. Trzeba rozdzielić α na dwie wartości, jedną dla każdej osi lokalnej ramki (tangenta T, bitangenta B):</p>
 
-    <div class="formula">D(<span class="vec">H</span>) = 1 / ( π·αx·αy·( (<span class="vec">H</span>·<span class="vec">T</span>/αx)² + (<span class="vec">H</span>·<span class="vec">B</span>/αy)² + (<span class="vec">H</span>·<span class="vec">N</span>)² )² )<span class="sub">αx, αy — roughness wzdłuż T i B; αx=αy sprowadza wzór z powrotem do izotropowego GGX z Rozdziału 11</span></div>
+    <div class="formula">D(<span class="vec" data-tip="Wektor w pół drogi między L i V: normalize(L+V)">H</span>) = 1 / ( π·αx·αy·( (<span class="vec" data-tip="Wektor w pół drogi między L i V: normalize(L+V)">H</span>·<span class="vec" data-tip="Wektor styczny (tangent) powierzchni">T</span>/αx)² + (<span class="vec" data-tip="Wektor w pół drogi między L i V: normalize(L+V)">H</span>·<span class="vec" data-tip="Wektor dwustyczny (bitangent), prostopadły do T i N">B</span>/αy)² + (<span class="vec" data-tip="Wektor w pół drogi między L i V: normalize(L+V)">H</span>·<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>)² )² )<span class="sub">αx, αy — roughness wzdłuż T i B; αx=αy sprowadza wzór z powrotem do izotropowego GGX z Rozdziału 11</span></div>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Isotropic.vs.anisotropic</span><span>highlight shape</span></div>
@@ -156,5 +156,6 @@
     <a href="../rozdzialy/rozdzial-10-materialy.html">↑ Rozdział 10: Materiały</a>
 </div>
 </div>
+<script src="../assets/interactive.js"></script>
 </body>
 </html>

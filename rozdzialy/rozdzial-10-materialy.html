@@ -36,8 +36,8 @@
     <p>BRDF (bidirectional reflectance distribution function) to funkcja opisująca, ile światła przychodzącego z kierunku L wychodzi z powrotem w kierunku V, w konkretnym punkcie powierzchni. Diffuse z Rozdziału 5 i specular z Rozdziału 5 to po prostu dwie różne BRDF, dodane do siebie.</p>
     <p>Żeby BRDF miała sens fizyczny, musi spełniać dwa warunki. Symbole poniżej: <strong>N</strong> — normalna powierzchni w punkcie trafienia, <strong>L</strong> i <strong>V</strong> — kierunki do światła i do obserwatora (z akapitu wyżej), <strong>f(L,V)</strong> — wartość BRDF dla tej pary kierunków, <strong>dL</strong> — nieskończenie mały element kąta bryłowego wokół kierunku L, po którym całkujemy, zbierając wkład ze wszystkich kierunków hemisfery.</p>
 
-    <div class="formula">∫ f(<span class="vec">L</span>,<span class="vec">V</span>)·(<span class="vec">N</span>·<span class="vec">L</span>) dL ≤ 1<span class="sub">energooszczędność: suma odbitej energii po całej hemisferze kierunków L nie może przekroczyć energii, która padła — Blinn-Phong tego nie gwarantuje</span></div>
-    <div class="formula">f(<span class="vec">L</span>,<span class="vec">V</span>) = f(<span class="vec">V</span>,<span class="vec">L</span>)<span class="sub">wzajemność (zasada Helmholtza): zamiana miejscami światła i widza nie zmienia wartości BRDF</span></div>
+    <div class="formula">∫ f(<span class="vec" data-tip="Kierunek od punktu trafienia do światła">L</span>,<span class="vec" data-tip="Kierunek od punktu trafienia do obserwatora">V</span>)·(<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Kierunek od punktu trafienia do światła">L</span>) dL ≤ 1<span class="sub">energooszczędność: suma odbitej energii po całej hemisferze kierunków L nie może przekroczyć energii, która padła — Blinn-Phong tego nie gwarantuje</span></div>
+    <div class="formula">f(<span class="vec" data-tip="Kierunek od punktu trafienia do światła">L</span>,<span class="vec" data-tip="Kierunek od punktu trafienia do obserwatora">V</span>) = f(<span class="vec" data-tip="Kierunek od punktu trafienia do obserwatora">V</span>,<span class="vec" data-tip="Kierunek od punktu trafienia do światła">L</span>)<span class="sub">wzajemność (zasada Helmholtza): zamiana miejscami światła i widza nie zmienia wartości BRDF</span></div>
 
     <a class="inline-deeper" href="../matematyka/podstawy-matematyczne.html">↑ Podstawy matematyczne — czym jest różniczka pod całką</a>
 
@@ -147,7 +147,7 @@
 
     <p>Model Cook-Torrance'a (1982) łączy trzy składniki, korzystając z wektorów, które już masz. Ważne rozróżnienie: N, L, V i H to <strong>wektory</strong> — kierunki. D, G i F to zwykłe <strong>liczby z zakresu 0–1</strong>, policzone na podstawie tych kierunków — same w sobie nie mają kierunku ani nie „są" żadną normalną. Konkretnie: rozkład orientacji fasetek D (jaki ułamek ma normalną blisko H z Rozdziału 5), samo-zasłanianie fasetek G (jaki ułamek z nich nie jest zasłonięty przez sąsiednie), i Fresnel F (Schlick z Rozdziału 7, jaki ułamek światła się odbija):</p>
 
-    <div class="formula">specular = (D · G · F) / (4 · (<span class="vec">N</span>·<span class="vec">L</span>) · (<span class="vec">N</span>·<span class="vec">V</span>))<span class="sub">to dosłownie wszystkie wektory i wzory z Rozdziałów 5 i 7, złożone w jedną, fizycznie spójną BRDF; pełny rozkład D (GGX) czeka w Rozdziale 11</span></div>
+    <div class="formula">specular = (D · G · F) / (4 · (<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Kierunek od punktu trafienia do światła">L</span>) · (<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Kierunek od punktu trafienia do obserwatora">V</span>))<span class="sub">to dosłownie wszystkie wektory i wzory z Rozdziałów 5 i 7, złożone w jedną, fizycznie spójną BRDF; pełny rozkład D (GGX) czeka w Rozdziale 11</span></div>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Cook-Torrance.DGF</span><span>N, L, V, H → D · G · F</span></div>
@@ -228,5 +228,6 @@
     <a class="nav-next" href="rozdzial-11-pbr-ggx.html">Następny →</a>
 </div>
 </div>
+<script src="../assets/interactive.js"></script>
 </body>
 </html>

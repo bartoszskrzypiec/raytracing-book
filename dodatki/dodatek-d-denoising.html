@@ -32,7 +32,7 @@
     <h2>Filtr bilateralny: waga to iloczyn, nie suma</h2>
     <p>Każdy sąsiad dostaje wagę będącą <em>iloczynem</em> trzech niezależnych czynników Gaussa — musi być blisko w pikselach, mieć podobną normalną <em>i</em> podobną głębię. Wystarczy, że jeden czynnik spadnie do zera, żeby cały iloczyn spadł do zera, niezależnie jak dobre są pozostałe dwa.</p>
 
-    <div class="formula">w(p,q) = exp(−|p−q|²/2σ_s²) · exp(−|<span class="vec">N_p</span>−<span class="vec">N_q</span>|²/2σ_n²) · exp(−|D_p−D_q|²/2σ_d²)<span class="sub">σ_s, σ_n, σ_d — promienie tolerancji dla pozycji, normalnej i głębi; każdy czynnik osobno z zakresu [0,1]</span></div>
+    <div class="formula">w(p,q) = exp(−|p−q|²/2σ_s²) · exp(−|<span class="vec" data-tip="Normalna w pikselu p">N_p</span>−<span class="vec" data-tip="Normalna w pikselu q">N_q</span>|²/2σ_n²) · exp(−|D_p−D_q|²/2σ_d²)<span class="sub">σ_s, σ_n, σ_d — promienie tolerancji dla pozycji, normalnej i głębi; każdy czynnik osobno z zakresu [0,1]</span></div>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Bilateral.weight.breakdown</span><span>product of three factors</span></div>
@@ -191,5 +191,6 @@
     <a href="../rozdzialy/rozdzial-19-denoising.html">↑ Rozdział 19: Denoising</a>
 </div>
 </div>
+<script src="../assets/interactive.js"></script>
 </body>
 </html>

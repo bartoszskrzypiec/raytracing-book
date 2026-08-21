@@ -110,7 +110,7 @@
     <h2>Promień jako wzór</h2>
     <p>Mając wektory, możemy zapisać promień. Promień to punkt startowy <span class="term-amber">O</span> (origin — najczęściej pozycja kamery albo poprzedni punkt trafienia) i znormalizowany kierunek <span class="term-amber">D</span>. Każdy punkt na promieniu opisuje jeden wzór:</p>
 
-    <div class="formula">P(t) = O + t · <span class="vec">D</span><span class="sub">t — skalar: „jak daleko wzdłuż D od punktu O”</span></div>
+    <div class="formula">P(t) = O + t · <span class="vec" data-tip="Kierunek promienia (znormalizowany)">D</span><span class="sub">t — skalar: „jak daleko wzdłuż D od punktu O”</span></div>
 
     <p>t = 0 to sam punkt O. t = 1 to punkt w odległości |D| (czyli 1, jeśli D jest znormalizowany). Każde kolejne t oddala nas dalej w tym samym kierunku. W ray tracingu liczą się tylko t &gt; 0 — promień „istnieje” fizycznie tylko przed kamerą, nie za nią.</p>
 
@@ -235,5 +235,6 @@
     <a class="nav-next" href="rozdzial-03-model-kamery.html">Następny →</a>
 </div>
 </div>
+<script src="../assets/interactive.js"></script>
 </body>
 </html>

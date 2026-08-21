@@ -35,7 +35,7 @@
     <h2>Światło rozproszone: prawo Lamberta</h2>
     <p>Powierzchnia matowa — kreda, nieszkliwiona ceramika, papier — rozprasza padające światło równomiernie we wszystkie strony. Ilość odbitego światła zależy tylko od kąta, pod jakim światło pada na powierzchnię. To prawo cosinusów Lamberta (1760 r., najstarszy wzór w tej książce).</p>
 
-    <div class="formula">diffuse = kd · I · max(0, <span class="vec">N</span> · <span class="vec">L</span>)<span class="sub">N — normalna (znormalizowana); L — wektor od punktu trafienia do światła (znormalizowany); kd — kolor/albedo materiału; I — intensywność światła</span></div>
+    <div class="formula">diffuse = kd · I · max(0, <span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span> · <span class="vec" data-tip="Kierunek od punktu trafienia do światła">L</span>)<span class="sub">N — normalna (znormalizowana); L — wektor od punktu trafienia do światła (znormalizowany); kd — kolor/albedo materiału; I — intensywność światła</span></div>
 
     <p>Intuicja: światło padające pod kątem „rozmazuje się” na większej powierzchni, więc na jednostkę powierzchni przypada go mniej. Padające prostopadle skupia całą energię w jednym miejscu — a dokładnie tyle mówi cosinus kąta między N i L, czyli iloczyn skalarny dwóch wersorów z Rozdziału 2. max(0, …) obcina wynik, gdy światło jest za powierzchnią — ten sam rodzaj odrzucenia, co przy ujemnym t w Rozdziale 2 czy backface culling w Rozdziale 4.</p>
 
@@ -92,7 +92,7 @@
     <p><strong>Oryginalny Phong (1975):</strong> policz R = 2(N·L)N − L, czyli odbicie L względem N, a potem specular = ks · I · max(0, R·V)^shininess.</p>
     <p><strong>Blinn-Phong (1977):</strong> zamiast liczyć R, użyj wektora <em>half-way</em> H = normalize(L + V) — leżącego w połowie drogi między L i V — i policz max(0, N·H)^shininess. Inny wzór matematycznie, ale wizualnie bardzo podobny błysk, a dużo taniej: żadnego liczenia odbicia, tylko dodawanie i normalizacja.</p>
 
-    <div class="formula"><span class="vec">H</span> = normalize(<span class="vec">L</span> + <span class="vec">V</span>)<br>specular = ks · I · max(0, <span class="vec">N</span> · <span class="vec">H</span>)^shininess<span class="sub">H — wektor „w pół drogi” między L i V; ks — kolor/intensywność odbicia specular (analogicznie do kd dla diffuse); shininess — wykładnik: im wyższy, tym węższy i ostrzejszy błysk</span></div>
+    <div class="formula"><span class="vec" data-tip="Wektor w pół drogi między L i V: normalize(L+V)">H</span> = normalize(<span class="vec" data-tip="Kierunek od punktu trafienia do światła">L</span> + <span class="vec" data-tip="Kierunek od punktu trafienia do obserwatora">V</span>)<br>specular = ks · I · max(0, <span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span> · <span class="vec" data-tip="Wektor w pół drogi między L i V: normalize(L+V)">H</span>)^shininess<span class="sub">H — wektor „w pół drogi” między L i V; ks — kolor/intensywność odbicia specular (analogicznie do kd dla diffuse); shininess — wykładnik: im wyższy, tym węższy i ostrzejszy błysk</span></div>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Blinn-Phong.vectors</span><span>H vs R</span></div>
@@ -133,7 +133,7 @@
     <h2>Składanie modelu: ambient + diffuse + specular</h2>
     <p>Klasyczny model Phonga to suma trzech składników: <span class="term-violet">ambient</span> (stała, przybliżająca odbite światło otoczenia — ta sama „sztuczka” co light probes z Rozdziału 1, tylko w najprostszej możliwej wersji), <span class="term-amber">diffuse</span> i <span class="term-cyan">specular</span>, zsumowane dla każdego światła w scenie.</p>
 
-    <div class="formula">color = ka·Ia + Σ [ kd·I·max(0,<span class="vec">N</span>·<span class="vec">L</span>) + ks·I·max(0,<span class="vec">N</span>·<span class="vec">H</span>)^shininess ]<span class="sub">suma po wszystkich światłach w scenie; ka·Ia liczone raz, niezależnie od ich liczby</span></div>
+    <div class="formula">color = ka·Ia + Σ [ kd·I·max(0,<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Kierunek od punktu trafienia do światła">L</span>) + ks·I·max(0,<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Wektor w pół drogi między L i V: normalize(L+V)">H</span>)^shininess ]<span class="sub">suma po wszystkich światłach w scenie; ka·Ia liczone raz, niezależnie od ich liczby</span></div>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Shading.buildup</span><span>3 layers</span></div>
@@ -203,5 +203,6 @@
     <a class="nav-next" href="rozdzial-06-cienie.html">Następny →</a>
 </div>
 </div>
+<script src="../assets/interactive.js"></script>
 </body>
 </html>

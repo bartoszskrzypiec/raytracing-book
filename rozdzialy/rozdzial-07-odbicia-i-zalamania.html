@@ -35,7 +35,7 @@
     <h2>Odbicie: ten sam wzór, nowy kontekst</h2>
     <p>W Rozdziale 5 odbijałeś kierunek do światła L względem normalnej, żeby policzyć błysk specular. Teraz robimy to samo z samym promieniem D, żeby wystrzelić nowy promień — rekurencyjnie, tak jak zapowiadał diagram z Rozdziału 1.</p>
 
-    <div class="formula"><span class="vec">R</span> = <span class="vec">D</span> − 2(<span class="vec">D</span> · <span class="vec">N</span>)<span class="vec">N</span><span class="sub">D — kierunek promienia wchodzącego (znormalizowany); podstaw L' = −D do wzoru z Rozdziału 5 i wyjdzie identyczny wynik</span></div>
+    <div class="formula"><span class="vec" data-tip="Kierunek odbicia lustrzanego">R</span> = <span class="vec" data-tip="Kierunek promienia (znormalizowany)">D</span> − 2(<span class="vec" data-tip="Kierunek promienia (znormalizowany)">D</span> · <span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>)<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span><span class="sub">D — kierunek promienia wchodzącego (znormalizowany); podstaw L' = −D do wzoru z Rozdziału 5 i wyjdzie identyczny wynik</span></div>
 
     <p>Nowy promień startuje z punktu trafienia — z tym samym biasem wzdłuż N co promień cienia z Rozdziału 6, z tego samego powodu — i ma kierunek R. Wywołujesz na nim tę samą funkcję śledzenia promienia, w której właśnie jesteś: to jest rekurencja. Musi mieć limit — głębokość odbić (bounce depth) z glosariusza Rozdziału 1 — inaczej promień odbijający się między dwoma zwierciadłami nigdy się nie zatrzyma.</p>
 
@@ -242,5 +242,6 @@
     <a class="nav-next" href="rozdzial-08-antyaliasing.html">Następny →</a>
 </div>
 </div>
+<script src="../assets/interactive.js"></script>
 </body>
 </html>

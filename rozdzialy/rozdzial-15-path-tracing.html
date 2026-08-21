@@ -32,7 +32,7 @@
     <h2>Równanie renderowania</h2>
     <p>James Kajiya sformalizował w 1986 roku jedno równanie, które opisuje absolutnie każdy efekt świetlny z tej książki:</p>
 
-    <div class="formula">L_o(p,<span class="vec">ω_o</span>) = L_e(p,<span class="vec">ω_o</span>) + ∫_Ω f(p,<span class="vec">ω_i</span>,<span class="vec">ω_o</span>) · L_i(p,<span class="vec">ω_i</span>) · (<span class="vec">N</span>·<span class="vec">ω_i</span>) dω_i<span class="sub">L_o — światło wychodzące; L_e — światło emitowane (źródła); f — BRDF z Rozdziałów 10–11; L_i — światło przychodzące z kierunku ω_i; Ω — cała hemisfera nad punktem</span></div>
+    <div class="formula">L_o(p,<span class="vec" data-tip="Kierunek wychodzący (do obserwatora)">ω_o</span>) = L_e(p,<span class="vec" data-tip="Kierunek wychodzący (do obserwatora)">ω_o</span>) + ∫_Ω f(p,<span class="vec" data-tip="Kierunek przychodzący (do źródła światła)">ω_i</span>,<span class="vec" data-tip="Kierunek wychodzący (do obserwatora)">ω_o</span>) · L_i(p,<span class="vec" data-tip="Kierunek przychodzący (do źródła światła)">ω_i</span>) · (<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Kierunek przychodzący (do źródła światła)">ω_i</span>) dω_i<span class="sub">L_o — światło wychodzące; L_e — światło emitowane (źródła); f — BRDF z Rozdziałów 10–11; L_i — światło przychodzące z kierunku ω_i; Ω — cała hemisfera nad punktem</span></div>
     <button class="reveal-btn" data-modal-target="explain-rendering-eq">Wyjaśnij ten wzór</button>
     <template id="explain-rendering-eq">
       <h3>Równanie renderowania — krok po kroku</h3>
@@ -88,7 +88,7 @@
     <h2>Nie da się tego policzyć dokładnie</h2>
     <p>Całka po hemisferze nie ma zamkniętej formy dla realnej scenie. Metoda Monte Carlo szacuje każdą całkę, losowo próbkując punkty i uśredniając wynik. Zastosowana do jednego kierunku ω_i naraz:</p>
 
-    <div class="formula">L_o ≈ f(p,<span class="vec">ω_i</span>,<span class="vec">ω_o</span>) · L_i(p,<span class="vec">ω_i</span>) · (<span class="vec">N</span>·<span class="vec">ω_i</span>) / pdf(<span class="vec">ω_i</span>)<span class="sub">jedna losowa próbka kierunku, odpowiednio zważona przez gęstość prawdopodobieństwa (pdf), z której ją wylosowano — importance sampling: próbkuj częściej kierunki, które i tak wnoszą więcej (np. proporcjonalnie do BRDF)</span></div>
+    <div class="formula">L_o ≈ f(p,<span class="vec" data-tip="Kierunek przychodzący (do źródła światła)">ω_i</span>,<span class="vec" data-tip="Kierunek wychodzący (do obserwatora)">ω_o</span>) · L_i(p,<span class="vec" data-tip="Kierunek przychodzący (do źródła światła)">ω_i</span>) · (<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Kierunek przychodzący (do źródła światła)">ω_i</span>) / pdf(<span class="vec" data-tip="Kierunek przychodzący (do źródła światła)">ω_i</span>)<span class="sub">jedna losowa próbka kierunku, odpowiednio zważona przez gęstość prawdopodobieństwa (pdf), z której ją wylosowano — importance sampling: próbkuj częściej kierunki, które i tak wnoszą więcej (np. proporcjonalnie do BRDF)</span></div>
     <a class="inline-deeper" href="../dodatki/dodatek-b-importance-sampling.html">↓ Dodatek B — importance sampling i MIS, z dowodem</a>
 
     <p>Uśrednienie wielu takich pojedynczych „ścieżek” na piksel zbiega do prawidłowej odpowiedzi — to dosłownie ten sam supersampling z Rozdziału 8, tylko teraz próbkujemy nie pozycję w pikselu, a całą ścieżkę światła przez scenę.</p>
