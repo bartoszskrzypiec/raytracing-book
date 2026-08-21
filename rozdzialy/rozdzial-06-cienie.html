@@ -114,7 +114,7 @@
     <h2>Rozwiązanie: bias</h2>
     <p>Standardowa naprawa to <strong>bias</strong> — przesunięcie punktu startowego promienia cienia o mały kawałek wzdłuż normalnej, na zewnątrz powierzchni, zanim wystrzelisz promień:</p>
 
-    <div class="formula">shadow_origin = P + ε · N<span class="sub">ε — mała stała (np. 1e-4, w skali sceny); wypycha punkt na zewnątrz, żeby uniknąć natychmiastowego samo-trafienia</span></div>
+    <div class="formula">shadow_origin = P + ε · <span class="vec">N</span><span class="sub">ε — mała stała (np. 1e-4, w skali sceny); wypycha punkt na zewnątrz, żeby uniknąć natychmiastowego samo-trafienia</span></div>
 
     <p>Dobór ε to kompromis. Zbyt małe — acne wraca. Zbyt duże — cień odkleja się od podstawy obiektu, zostawiając widoczną szczelinę światła pod nim; ten artefakt ma swoją nazwę, <strong>peter panning</strong> (obiekt „lewituje” nad własnym cieniem). Wiele silników produkcyjnych zamiast przesuwać punkt po prostu odrzuca trafienia z t mniejszym niż epsilon w każdym teście przecięcia — efekt identyczny, implementacja czasem wygodniejsza.</p>
 
