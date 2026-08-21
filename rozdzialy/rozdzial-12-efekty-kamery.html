@@ -74,7 +74,7 @@
     <h2>Dysk apertury i losowe próbki</h2>
     <p>Naprawa jest zaskakująco prosta: zamiast wystrzeliwać promień zawsze z jednego punktu O (eye), losujemy inny punkt startowy na dysku apertury o promieniu lens_radius, ale celujemy wciąż w <em>ten sam</em> punkt na płaszczyźnie ostrości, w odległości focus_dist od kamery.</p>
 
-    <div class="formula">lens_point = eye + lens_radius · random_w_dysku()<br>focus_point = eye + focus_dist · D<br>new_D = normalize(focus_point − lens_point)<span class="sub">random_w_dysku() liczony w bazie right/up z Rozdziału 3; im większy lens_radius (mniejsze f-stop), tym silniejsze rozmycie</span></div>
+    <div class="formula">lens_point = eye + lens_radius · random_w_dysku()<br>focus_point = eye + focus_dist · <span class="vec">D</span><br><span class="vec">new_D</span> = normalize(focus_point − lens_point)<span class="sub">random_w_dysku() liczony w bazie right/up z Rozdziału 3; im większy lens_radius (mniejsze f-stop), tym silniejsze rozmycie</span></div>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Aperture.samples</span><span>same focal point</span></div>

@@ -134,7 +134,7 @@
     <h2>Ray-AABB: test przecięcia z pudełkiem</h2>
     <p>Pudełko to przecięcie trzech „plasterków” (slabs) — po jednym na każdą oś. Dla każdej osi liczysz t, przy którym promień wchodzi i wychodzi z plasterka, tym samym wzorem promienia P(t)=O+tD z Rozdziału 2. Promień trafia w pudełko, jeśli przedziały t z wszystkich osi się przecinają:</p>
 
-    <div class="formula">t1 = (box_min − O) / D,  t2 = (box_max − O) / D<br>t_near = max(min(t1,t2) po osiach),  t_far = min(max(t1,t2) po osiach)<span class="sub">trafienie ⇔ t_near ≤ t_far (i t_far ≥ 0); dzielenie po współrzędnych, oś po osi</span></div>
+    <div class="formula">t1 = (box_min − O) / <span class="vec">D</span>,  t2 = (box_max − O) / <span class="vec">D</span><br>t_near = max(min(t1,t2) po osiach),  t_far = min(max(t1,t2) po osiach)<span class="sub">trafienie ⇔ t_near ≤ t_far (i t_far ≥ 0); dzielenie po współrzędnych, oś po osi</span></div>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Slab.test.2D</span><span>x-slab ∩ y-slab</span></div>
