@@ -33,8 +33,7 @@
     <h2>GGX: ile fasetek jest zwróconych w stronę H</h2>
     <p>Standardem od połowy 2010. jest rozkład GGX (Trowbridge-Reitz), spopularyzowany przez kursy Disneya o PBR. Mówi, jaka część mikrofasetek ma normalną wystarczająco bliską H, żeby wziąć udział w odbiciu:</p>
 
-    <div class="formula">D(<span class="vec" data-tip="Wektor w pół drogi między L i V: normalize(L+V)">H</span>) = α² / (π · ((<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Wektor w pół drogi między L i V: normalize(L+V)">H</span>)²·(α²−1) + 1)²)<span class="sub">α = roughness² — artyści ustawiają „roughness”, ale wzór używa jego kwadratu; to sprawia, że slider czuje się bardziej liniowy percepcyjnie</span></div>
-    <button class="reveal-btn" data-modal-target="explain-ggx-d">Wyjaśnij ten wzór</button>
+    <div class="formula">D(<span class="vec" data-tip="Wektor w pół drogi między L i V: normalize(L+V)">H</span>) = α² / (π · ((<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Wektor w pół drogi między L i V: normalize(L+V)">H</span>)²·(α²−1) + 1)²)<span class="sub">α = roughness² — artyści ustawiają „roughness”, ale wzór używa jego kwadratu; to sprawia, że slider czuje się bardziej liniowy percepcyjnie</span><div class="formula-action"><button class="reveal-btn" data-modal-target="explain-ggx-d">Wyjaśnij ten wzór</button></div></div>
     <template id="explain-ggx-d">
       <h3>D(H) — rozkład GGX, krok po kroku</h3>
       <p><strong>Co ten wzór w ogóle liczy.</strong> D(H) to nie kolor ani jasność — to „gęstość”: jaka część mikroskopijnych fasetek na powierzchni ma normalną skierowaną dokładnie w stronę H (wektora „w pół drogi” między światłem a kamerą, z Rozdziału 5). Im więcej fasetek tak zwróconych, tym jaśniejszy błysk w tym miejscu.</p>
