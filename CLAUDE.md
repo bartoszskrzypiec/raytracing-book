@@ -28,9 +28,16 @@ branch → `main` / `/(root)`).
 ```
 index.html                              — table of contents (spis treści), root only
 rozdzialy/rozdzial-NN-slug.html         — 22 main chapters, NN zero-padded 01–22
-dodatki/dodatek-x-slug.html             — 26 lettered appendices, x = a–z
-pomocnik/pomocnik-obliczeniowy-tom-1.html — worked-exercises companion
+dodatki/dodatek-x-slug.html             — 26 lettered appendices, x = a–z (33 files: ACES L–O
+                                          and Perlin P–S are 4-part series)
+matematyka/podstawy-matematyczne.html   — Σ / ∫ notation primer; linked from R.10, R.11, R.15,
+                                          dodatek AC. Easy to miss — it is the one content page
+                                          outside rozdzialy/dodatki/pomocnik, so any repo-wide
+                                          script must glob it explicitly. 57 content pages total.
+pomocnik/pomocnik-obliczeniowy-tom-1.html — worked-exercises companion (covers R.2–R.5 only)
 assets/style.css                        — single shared stylesheet (dark theme) used by every page
+assets/interactive.js                   — formula modals + `.vec[data-tip]` symbol tooltips
+                                          (hover, tap, keyboard); loaded by every page that uses them
 ```
 
 Every page links `assets/style.css` plus keeps its own Google Fonts `<link>` inline. Some pages
