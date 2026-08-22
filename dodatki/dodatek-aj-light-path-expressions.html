@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dodatek AJ — Light Path Expressions: jak zamówić konkretną warstwę</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>C · kamera</span><span>L · światło</span><span>D/S · diffuse/specular</span><span>EXT OF · R.15, R.19</span>
+  </div>
+
+  <div class="eyebrow">Dodatek AJ / Warstwa wyjścia</div>
+  <h1>Light Path Expressions: jak zamówić konkretną warstwę</h1>
+  <p class="subtitle">Rozdział 15 pokazał, że path tracer buduje ścieżki: kamera, odbicie, kolejne odbicie, światło. Rozdział 19 wspomniał o AOV-ach jako o gotowych buforach. Między jednym a drugim jest mechanizm, którego książka dotąd nie nazwała — sposób, w jaki mówisz rendererowi „daj mi osobno tylko to, co odbiło się od metalu po drugim odbiciu”.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Renderer przy każdym odbiciu <strong>i tak wie</strong>, jakie to było zdarzenie. Wystarczy zapisać ciąg tych zdarzeń jako litery.</li>
+      <li>LPE to wyrażenie regularne nad takim ciągiem: pasuje albo nie pasuje, a wkład pasujących ścieżek ląduje w osobnym buforze.</li>
+      <li>Dlatego AOV-y sumują się do beauty — to nie osobne rendery, tylko podział <em>tych samych</em> ścieżek na rozłączne kubełki.</li>
+      <li>Light groups to ten sam mechanizm z warunkiem na konkretne światło zamiast na typ odbicia.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Ścieżka jako słowo</div>
+    <h2>Zapisz, co się działo po drodze</h2>
+    <p>Weź ścieżkę z Rozdziału 15: promień wychodzi z kamery, trafia w ścianę i odbija się rozproszenie, potem trafia w drugą ścianę i znów rozprasza, wreszcie trafia w światło. Renderer wykonał trzy decyzje i każdą z nich zna. Zapisane literami:</p>
+
+    <div class="formula">C D D L<span class="sub"><strong>C</strong> — start w kamerze (camera); <strong>D</strong> — rozproszenie (diffuse); <strong>L</strong> — koniec na źródle światła (light). Litery zapisywane są w kolejności, w jakiej zdarzenia zaszły — od kamery do światła</span></div>
+
+    <p>Alfabet jest krótki. Obok <strong>C</strong> i <strong>L</strong> są typy rozproszenia: <strong>D</strong> (diffuse), <strong>G</strong> (glossy, czyli rozmyte odbicie z Rozdziału 11) i <strong>S</strong> (specular, idealnie lustrzane z Rozdziału 7). Do tego kierunek zdarzenia: <strong>R</strong> (odbicie, reflection) albo <strong>T</strong> (przejście, transmission). Typ i kierunek zapisuje się razem w nawiasach ostrych, więc rozproszone odbicie to <strong>&lt;RD&gt;</strong>, a załamanie przez szkło to <strong>&lt;TS&gt;</strong>.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Path.as.word</span><span>ta sama sciezka co w R.15</span></div>
+      <svg viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Sciezka od kamery przez dwa rozproszenia do swiatla, z literami C, RD, RD, L przypisanymi do kolejnych zdarzen">
+        <defs>
+          <marker id="aj1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+        </defs>
+        <polygon points="50,150 50,176 72,163" fill="#8b909b"/>
+        <text x="58" y="200" font-family="IBM Plex Mono" font-size="11" fill="#9c82d8">C</text>
+
+        <line x1="72" y1="163" x2="245" y2="112" stroke="#e8a33d" stroke-width="2.2" marker-end="url(#aj1)"/>
+        <circle cx="255" cy="109" r="5" fill="#ecebe4"/>
+        <line x1="215" y1="60" x2="215" y2="200" stroke="#8b909b" stroke-width="2"/>
+        <text x="262" y="142" font-family="IBM Plex Mono" font-size="11" fill="#9c82d8">&lt;RD&gt;</text>
+
+        <line x1="255" y1="109" x2="465" y2="168" stroke="#e8a33d" stroke-width="2.2" marker-end="url(#aj1)"/>
+        <circle cx="475" cy="171" r="5" fill="#ecebe4"/>
+        <line x1="430" y1="200" x2="620" y2="200" stroke="#8b909b" stroke-width="2"/>
+        <text x="452" y="196" font-family="IBM Plex Mono" font-size="11" fill="#9c82d8">&lt;RD&gt;</text>
+
+        <line x1="475" y1="171" x2="655" y2="82" stroke="#e8a33d" stroke-width="2.2" marker-end="url(#aj1)"/>
+        <circle cx="668" cy="72" r="10" fill="#f0c880"/>
+        <text x="686" y="70" font-family="IBM Plex Mono" font-size="11" fill="#9c82d8">L</text>
+
+        <rect x="230" y="222" width="300" height="24" rx="5" fill="#20242c" stroke="#9c82d8" stroke-width="1.2"/>
+        <text x="380" y="239" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">C &lt;RD&gt; &lt;RD&gt; L</text>
+      </svg>
+      <div class="diagram-caption">Ta sama ścieżka, którą Rozdział 15 rysował jako geometrię, zapisana jako słowo. Każde odbicie dokłada jedną literę — nic ponad to, co renderer i tak musiał wiedzieć, żeby policzyć wkład.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Wyrażenie</div>
+    <h2>Wzorzec, który wybiera podzbiór ścieżek</h2>
+    <p>Skoro każda ścieżka jest słowem, to wybranie interesującej nas grupy jest dopasowaniem wzorca. LPE dokłada do alfabetu dwa operatory znane z wyrażeń regularnych: <strong>.</strong> (dowolne zdarzenie) i <strong>*</strong> (poprzedni element zero lub więcej razy).</p>
+
+    <div class="formula">C&lt;RD&gt;L&nbsp;&nbsp;&nbsp;kontra&nbsp;&nbsp;&nbsp;C&lt;RD&gt;.*L<span class="sub">Pierwsze pasuje wyłącznie do ścieżki kamera → jedno rozproszenie → światło, czyli <strong>diffuse bezpośredni</strong>. Drugie dopuszcza dowolny ciąg zdarzeń między pierwszym rozproszeniem a światłem, więc łapie <strong>cały diffuse</strong> — bezpośredni i pośredni razem</span></div>
+
+    <p>Różnica między tymi dwoma wyrażeniami to dokładnie różnica między AOV-em <em>direct diffuse</em> a <em>diffuse</em>. Pośredni dostajesz, odejmując jedno od drugiego — albo pisząc wzorzec, który wymaga co najmniej dwóch zdarzeń przed światłem.</p>
+
+    <p>Kilka wzorców, które warto rozpoznawać:</p>
+    <div class="panel">
+      <div class="panel-label">Typowe wyrażenia</div>
+      <ul>
+        <li><strong>C&lt;RD&gt;L</strong> — diffuse bezpośredni: jedno rozproszenie i od razu światło.</li>
+        <li><strong>C&lt;RS&gt;L</strong> — odbicie lustrzane prosto ze źródła, czyli klasyczny highlight.</li>
+        <li><strong>C&lt;TS&gt;.*L</strong> — wszystko, co przeszło <em>przez</em> powierzchnię: szkło, ciecze, transmisja z Rozdziału 7.</li>
+        <li><strong>C.*L</strong> — wszystkie ścieżki, jakie istnieją. To jest beauty.</li>
+      </ul>
+    </div>
+
+    <p>Ostatni wiersz jest tu najważniejszy. <strong>C.*L</strong> obejmuje każdą ścieżkę, więc jeśli zdefiniujesz zestaw AOV-ów, których wzorce są rozłączne i razem pokrywają <strong>C.*L</strong>, to ich suma jest matematycznie równa beauty — nie „mniej więcej”, tylko dokładnie. Renderer nie liczy ich osobno; liczy ścieżki raz i wrzuca wkład każdej do tego kubełka, do którego pasuje.</p>
+
+    <p>To wyjaśnia dwie rzeczy, które w compingu bywają zaskoczeniem. Po pierwsze: dodanie kolejnych AOV-ów prawie nie kosztuje czasu renderu, bo praca jest już wykonana — rośnie głównie zużycie pamięci i rozmiar pliku. Po drugie: jeśli warstwy <em>nie</em> sumują się do beauty, to znaczy, że zestaw wzorców czegoś nie pokrywa albo coś liczy dwa razy.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Light groups</div>
+    <h2>Ten sam mechanizm, warunek na światło</h2>
+    <p>Skoro wzorzec może wymagać konkretnego <em>typu</em> zdarzenia, może też wymagać konkretnego <em>źródła</em> na końcu ścieżki. Tak działają <span class="term-cyan">light groups</span>: przypisujesz światłom etykiety, a renderer wystawia osobny bufor na każdą z nich.</p>
+    <p>Efekt jest taki, że po renderze możesz zmienić intensywność i barwę każdego światła osobno, w compingu, bez ponownego liczenia sceny — bo każde ma własną warstwę, a ich suma to znów beauty. Przy scenie z kilkunastoma światłami zamienia to iterację „popraw, wyrenderuj, obejrzyj” trwającą godziny w suwak działający natychmiast.</p>
+    <p>Ograniczenie warto znać: tak zrekonstruowana zmiana jest liniowa. Podkręcenie światła w compingu skaluje jego wkład, ale nie zmieni tego, co ono oświetla pośrednio w sposób nieliniowy — nie pojawi się nowy refleks tam, gdzie ścieżek nie było. Do dużych zmian nadal trzeba renderu.</p>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Składnia pochodzi ze specyfikacji Open Shading Language, więc jest zaskakująco zgodna między silnikami — Arnold, RenderMan i inne renderery oparte o OSL rozumieją te same wyrażenia. Standardowe AOV-y, które widzisz na liście (direct_diffuse, indirect_specular, transmission), to gotowe LPE, które ktoś już za Ciebie wpisał; w każdej chwili możesz dopisać własne.</p>
+    <p>Najczęstsze zastosowanie własnego LPE w lookdevie to izolacja jednego komponentu materiału po to, żeby zobaczyć, co właściwie robi — na przykład sam coat albo samo SSS z Dodatku AG, oddzielone od reszty. To szybsza diagnoza niż wyłączanie komponentów po kolei i renderowanie od nowa.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Słowniczek</div>
+    <dl>
+      <dt>LPE</dt><dd>Light Path Expression — wyrażenie regularne nad ciągiem zdarzeń na ścieżce światła.</dd>
+      <dt>C, L</dt><dd>Kamera i światło — początek i koniec ścieżki.</dd>
+      <dt>D, G, S</dt><dd>Typ rozproszenia: diffuse, glossy, specular.</dd>
+      <dt>R, T</dt><dd>Kierunek zdarzenia: odbicie albo przejście przez powierzchnię.</dd>
+      <dt>Light group</dt><dd>Etykieta na świetle dająca mu własny bufor; pozwala na relight w compingu.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>LPE dzieli obraz według tego, <em>co</em> światło robiło. Dodatek AK rozwiązuje pokrewny problem podziału według tego, <em>w co</em> promień trafił — czyli maski per obiekt.</p>
+  </div>
+
+<div class="deeper">
+  <div class="deeper-label">Idź głębiej</div>
+  <a href="dodatek-b-importance-sampling.html">Dodatek B — Importance sampling i MIS</a>
+</div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-15-path-tracing.html">↑ Rozdział 15: Path tracing</a>
+</div>
+</div>
+<script src="../assets/interactive.js"></script>
+</body>
+</html>

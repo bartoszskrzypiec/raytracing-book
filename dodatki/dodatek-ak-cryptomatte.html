@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dodatek AK — Cryptomatte: maski, których nie da się uśrednić</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>PROBLEM · ID nie da się filtrować</span><span>HASH · nazwa → float32</span><span>PARY · (id, pokrycie)</span><span>EXT OF · R.19, R.8</span>
+  </div>
+
+  <div class="eyebrow">Dodatek AK / Warstwa wyjścia</div>
+  <h1>Cryptomatte: maski, których nie da się uśrednić</h1>
+  <p class="subtitle">Wydzielenie jednego obiektu w compingu wygląda na najprostszą rzecz pod słońcem: nadaj każdemu obiektowi numer, zapisz numery do bufora, gotowe. Ten dodatek pokazuje, dlaczego to nie działa — i to nie z powodu implementacji, tylko z powodu antyaliasingu z Rozdziału 8.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Identyfikatorów <strong>nie wolno uśredniać</strong>. Średnia z ID 3 i ID 7 to ID 5 — obiekt, którego w tym pikselu w ogóle nie było.</li>
+      <li>Każdy piksel na krawędzi jest mieszanką (Rozdział 8), więc problem dotyczy dokładnie tych pikseli, na których zależy nam najbardziej.</li>
+      <li>Cryptomatte zapisuje zamiast tego <strong>listę par</strong>: identyfikator i jego udział w pikselu, posortowaną malejąco.</li>
+      <li>Ponieważ udział to zwykłe pokrycie podpikselowe, motion blur, głębia ostrości i przezroczystość działają za darmo.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Problem</div>
+    <h2>Dlaczego zwykły ID pass zawodzi</h2>
+    <p>Rozdział 8 ustalił, że piksel na krawędzi obiektu nie należy do żadnego z nich w całości — kilka podpróbek trafia w jeden obiekt, kilka w drugi, a wynik jest ich średnią. Dla koloru to jest dokładnie to, czego chcemy: gładka krawędź.</p>
+    <p>Dla identyfikatora to katastrofa. Numer obiektu jest etykietą, nie wielkością — nie ma czegoś takiego jak „obiekt pomiędzy”. Uśrednienie ID 3 i ID 7 z wagami pół na pół daje 5, czyli wskazuje na zupełnie inny obiekt sceny. Im ładniejszy antyaliasing, tym gorsze maski.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>ID.averaging.fails</span><span>krawedz miedzy dwoma obiektami</span></div>
+      <svg viewBox="0 0 760 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Piksel na krawedzi pokryty w 60 procentach obiektem o ID 3 i w 40 procentach obiektem o ID 7; usrednienie daje ID 5, czyli bledny obiekt">
+        <text x="150" y="32" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">PIKSEL NA KRAWĘDZI</text>
+        <rect x="70" y="55" width="160" height="160" fill="#20242c" stroke="#8b909b" stroke-width="1.5"/>
+        <path d="M 70,55 L 186,55 L 70,215 Z" fill="#4fc3c0" fill-opacity="0.45"/>
+        <text x="104" y="100" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">ID 3</text>
+        <text x="176" y="188" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">ID 7</text>
+        <text x="150" y="234" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">60% / 40%</text>
+
+        <text x="420" y="100" font-family="IBM Plex Mono" font-size="12" fill="#8b909b">0,6 · 3 &nbsp;+&nbsp; 0,4 · 7 &nbsp;=&nbsp;</text>
+        <text x="600" y="100" font-family="IBM Plex Mono" font-size="15" fill="#e06c5a">5</text>
+        <text x="420" y="130" font-family="IBM Plex Mono" font-size="11" fill="#e06c5a">obiekt nr 5 nie ma z tym pikselem nic wspólnego</text>
+
+        <rect x="418" y="152" width="290" height="52" rx="7" fill="#20242c" stroke="#4fc3c0" stroke-width="1.4"/>
+        <text x="563" y="173" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#4fc3c0">potrzebna lista, nie liczba:</text>
+        <text x="563" y="192" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#4fc3c0">(3 → 0,6) &nbsp; (7 → 0,4)</text>
+      </svg>
+      <div class="diagram-caption">Nie ma takiej wartości, którą dałoby się zapisać w jednym kanale, żeby uczciwie opisać „w 60% obiekt 3, w 40% obiekt 7”. Rozwiązaniem nie jest lepsza liczba, tylko inna struktura danych.</div>
+    </div>
+
+    <p>Historyczne obejścia sprowadzały się do rezygnacji z antyaliasingu w ID passie: jedna próbka na piksel, twarde krawędzie, ręczne dopasowywanie masek. Działało średnio, a przy motion blurze i głębi ostrości przestawało działać w ogóle — tam „krawędzią” jest cała rozmyta smuga, nie jedna linia.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Rozwiązanie</div>
+    <h2>Lista par zamiast jednej liczby</h2>
+    <p>Cryptomatte zapisuje dla każdego piksela to, co renderer faktycznie zaobserwował: <strong>które obiekty go pokryły i w jakim ułamku</strong>. Nic nie jest uśredniane między identyfikatorami — sumowane są tylko pokrycia, każde przy swoim identyfikatorze.</p>
+
+    <div class="formula">piksel → [ (id₁, w₁), (id₂, w₂), (id₃, w₃), … ]&nbsp;&nbsp;&nbsp;Σ wᵢ = 1<span class="sub"><strong>idᵢ</strong> — identyfikator obiektu albo materiału; <strong>wᵢ</strong> — jego udział w pikselu, czyli dokładnie to pokrycie podpikselowe, które Rozdział 8 liczył dla koloru. Pary są sortowane malejąco po wadze, a lista przycinana do kilku pierwszych — reszta wnosi tak mało, że nie zmienia maski</span></div>
+
+    <p>Identyfikator nie jest kolejnym numerem, tylko <strong>skrótem nazwy</strong>. Renderer bierze nazwę obiektu albo materiału, przepuszcza ją przez funkcję haszującą i zapisuje wynik jako liczbę zmiennoprzecinkową. Ma to dwie zalety: nie trzeba prowadzić żadnej centralnej numeracji, a maska przetrwa przenumerowanie sceny — dopóki nazwa się nie zmieni, skrót jest ten sam.</p>
+    <p>Odwzorowanie skrótów na czytelne nazwy ląduje w metadanych pliku, więc program do compingu może pokazać listę obiektów zamiast liczb. To dlatego wybierasz obiekt, klikając w niego w obrazie: kliknięcie odczytuje skrót spod kursora i szuka go w tej tablicy.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Cryptomatte.layers</span><span>pary upakowane w kanaly</span></div>
+      <svg viewBox="0 0 760 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pary identyfikator-pokrycie upakowane po dwie w czterokanalowe warstwy obrazu">
+        <text x="380" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">JEDNA WARSTWA RGBA = DWIE PARY</text>
+
+        <g font-family="IBM Plex Mono" font-size="10">
+          <rect x="90" y="60" width="130" height="46" rx="6" fill="#20242c" stroke="#4fc3c0" stroke-width="1.4"/>
+          <text x="155" y="80" text-anchor="middle" fill="#4fc3c0">R = id₁</text>
+          <text x="155" y="97" text-anchor="middle" fill="#4fc3c0">G = w₁</text>
+
+          <rect x="230" y="60" width="130" height="46" rx="6" fill="#20242c" stroke="#9c82d8" stroke-width="1.4"/>
+          <text x="295" y="80" text-anchor="middle" fill="#9c82d8">B = id₂</text>
+          <text x="295" y="97" text-anchor="middle" fill="#9c82d8">A = w₂</text>
+
+          <rect x="420" y="60" width="130" height="46" rx="6" fill="#20242c" stroke="#4fc3c0" stroke-width="1.4"/>
+          <text x="485" y="80" text-anchor="middle" fill="#4fc3c0">R = id₃</text>
+          <text x="485" y="97" text-anchor="middle" fill="#4fc3c0">G = w₃</text>
+
+          <rect x="560" y="60" width="130" height="46" rx="6" fill="#20242c" stroke="#9c82d8" stroke-width="1.4"/>
+          <text x="625" y="80" text-anchor="middle" fill="#9c82d8">B = id₄</text>
+          <text x="625" y="97" text-anchor="middle" fill="#9c82d8">A = w₄</text>
+        </g>
+
+        <text x="225" y="132" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">warstwa 00</text>
+        <text x="555" y="132" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">warstwa 01</text>
+        <line x1="90" y1="118" x2="360" y2="118" stroke="#3a4048"/>
+        <line x1="420" y1="118" x2="690" y2="118" stroke="#3a4048"/>
+
+        <text x="380" y="172" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">więcej warstw = więcej obiektów na piksel</text>
+        <text x="380" y="192" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">dwie warstwy wystarczają w większości ujęć; futro i liście potrzebują więcej</text>
+      </svg>
+      <div class="diagram-caption">Pary upakowane po dwie w czterokanalową warstwę. Liczba warstw to jedyne ustawienie, którym realnie sterujesz — decyduje, ile różnych obiektów może współdzielić jeden piksel, zanim najsłabsze zostaną odrzucone.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Konsekwencje</div>
+    <h2>Dlaczego motion blur i włosy działają same z siebie</h2>
+    <p>Najładniejsza cecha tego rozwiązania jest taka, że nie wymagało niczego dodatkowego dla trudnych przypadków. Waga to zwykłe pokrycie podpikselowe — a wszystko, co renderer już robi przez próbkowanie, wpływa na nie automatycznie:</p>
+    <ul class="compact">
+      <li><strong>Motion blur i głębia ostrości</strong> (Rozdział 12) to więcej podpróbek rozłożonych w czasie i po przysłonie. Rozmyta smuga po prostu daje pikselowi ułamkowe pokrycia z kilku obiektów.</li>
+      <li><strong>Przezroczystość</strong> — promień przechodzący przez szybę trafia w dwa obiekty, więc oba wnoszą swój udział do tego samego piksela.</li>
+      <li><strong>Włosy i liście</strong> (Rozdział 20) to skrajny przypadek: kilkanaście krzywych w jednym pikselu. Tu akurat trzeba podnieść liczbę warstw, bo domyślne dwie nie pomieszczą wszystkich udziałów.</li>
+    </ul>
+    <p>Ograniczenie warto znać: to jest maska <em>pokrycia</em>, nie maska oświetlenia. Cryptomatte powie Ci, gdzie obiekt jest widoczny, ale nie oddzieli światła, które on rzuca na innych — od tego jest LPE z Dodatku AJ. Te dwa mechanizmy odpowiadają na dwa różne pytania i w praktyce używa się ich razem.</p>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Cryptomatte jest otwartym standardem, nie funkcją jednego silnika — Arnold, RenderMan, Karma, V-Ray i Cycles zapisują ten sam format, a Nuke, Fusion i After Effects go czytają. Renderery wystawiają zwykle trzy warianty naraz: po obiekcie, po materiale i po nazwie węzła — bo w compingu raz potrzebujesz „ten konkretny model”, a raz „wszystko, co ma ten shader”.</p>
+    <p>Typowy objaw za małej liczby warstw: maska wygląda dobrze na płaskich powierzchniach, ale gubi się na futrze albo w listowiu, zostawiając dziury. To nie jest błąd wyboru w compingu, tylko informacja, że najsłabsze udziały zostały przycięte przy zapisie — i naprawia się to po stronie renderu, nie kompozycji.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Słowniczek</div>
+    <dl>
+      <dt>Cryptomatte</dt><dd>Otwarty format masek zapisujący per piksel listę par (identyfikator, pokrycie).</dd>
+      <dt>Skrót nazwy (hash)</dt><dd>Nazwa obiektu przepuszczona przez funkcję haszującą i zapisana jako liczba zmiennoprzecinkowa.</dd>
+      <dt>Pokrycie (coverage)</dt><dd>Udział obiektu w pikselu; to samo pokrycie podpikselowe co przy antyaliasingu z Rozdziału 8.</dd>
+      <dt>Manifest</dt><dd>Tablica skrót → nazwa zapisana w metadanych pliku; pozwala pokazać nazwy zamiast liczb.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Zostaje trzecia oś podziału obrazu: nie po typie odbicia i nie po obiekcie, tylko po źródle światła. Dodatek AL zajmuje się organizacją świateł — i tym, gdzie celowo łamie się dla niej fizykę z Rozdziału 5.</p>
+  </div>
+
+<div class="deeper">
+  <div class="deeper-label">Idź głębiej</div>
+  <a href="dodatek-d-denoising.html">Dodatek D — Mechanika denoisera</a>
+</div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-19-denoising.html">↑ Rozdział 19: Denoising</a>
+</div>
+</div>
+<script src="../assets/interactive.js"></script>
+</body>
+</html>

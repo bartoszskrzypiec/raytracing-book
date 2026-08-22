@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dodatek AL — Light linking: kiedy celowo łamie się fizykę</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>LINK · zbiór per obiekt</span><span>SHADOW · osobna oś</span><span>NIEFIZYCZNE · celowo</span><span>EXT OF · R.5, R.6</span>
+  </div>
+
+  <div class="eyebrow">Dodatek AL / Warstwa wyjścia</div>
+  <h1>Light linking: kiedy celowo łamie się fizykę</h1>
+  <p class="subtitle">Cała ta książka opisywała, jak liczyć światło poprawnie. Ten dodatek jest o narzędziach, które istnieją wyłącznie po to, żeby policzyć je <em>niepoprawnie</em> — bo reżyser chce, żeby ta jedna lampa oświetlała twarz, ale nie ścianę za nią. To nie jest obejście ograniczeń renderera. To jest funkcja.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Light linking to zbiór świateł przypisany do obiektu: renderer pomija pozostałe, jakby ich nie było.</li>
+      <li>Cienie są osobną osią — obiekt może być oświetlony przez lampę i jednocześnie nie rzucać od niej cienia.</li>
+      <li>Wynik przestaje być fizycznie spójny i to jest zamierzone; kadr wygrywa z symulacją.</li>
+      <li>Koszt bywa zaskakujący: linkowanie potrafi popsuć optymalizacje próbkowania świateł i <em>wydłużyć</em> render mimo mniejszej liczby świateł.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Mechanizm</div>
+    <h2>Zbiór świateł zamiast wszystkich świateł</h2>
+    <p>Rozdział 6 liczył cień, wysyłając promień od punktu trafienia do każdego światła w scenie. Rozdział 15 uogólnił to na próbkowanie świateł wewnątrz całki. W obu przypadkach „każde światło” znaczyło dosłownie każde.</p>
+    <p>Light linking zmienia tylko jedną rzecz: zamiast globalnej listy świateł renderer używa listy przypisanej do <em>tego</em> obiektu. Jeśli światła na niej nie ma, nie ma promienia cienia, nie ma wkładu, koniec. Z punktu widzenia obiektu ta lampa po prostu nie istnieje.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Light.linking</span><span>ta sama lampa, dwa obiekty</span></div>
+      <svg viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Jedna lampa oswietla postac, ale jest odlinkowana od sciany za nia, wiec sciana pozostaje ciemna">
+        <defs>
+          <marker id="al1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8a33d"/></marker>
+        </defs>
+        <circle cx="130" cy="60" r="11" fill="#f0c880"/>
+        <text x="130" y="38" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#e8a33d">LAMPA</text>
+
+        <rect x="560" y="40" width="150" height="180" fill="#20242c" stroke="#8b909b" stroke-width="1.5"/>
+        <text x="635" y="238" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">ściana — odlinkowana</text>
+
+        <ellipse cx="370" cy="140" rx="46" ry="66" fill="#2a2116" stroke="#8b909b" stroke-width="1.5"/>
+        <ellipse cx="352" cy="128" rx="30" ry="44" fill="#e8a33d" fill-opacity="0.4"/>
+        <text x="370" y="228" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">postać — zlinkowana</text>
+
+        <line x1="140" y1="70" x2="322" y2="122" stroke="#e8a33d" stroke-width="2.2" marker-end="url(#al1)"/>
+        <text x="196" y="108" font-family="IBM Plex Mono" font-size="10" fill="#e8a33d">liczone</text>
+
+        <line x1="142" y1="66" x2="548" y2="96" stroke="#e06c5a" stroke-width="1.6" stroke-dasharray="6 5"/>
+        <line x1="470" y1="76" x2="490" y2="96" stroke="#e06c5a" stroke-width="2"/>
+        <line x1="490" y1="76" x2="470" y2="96" stroke="#e06c5a" stroke-width="2"/>
+        <text x="404" y="70" font-family="IBM Plex Mono" font-size="10" fill="#e06c5a">pominięte — brak promienia cienia</text>
+      </svg>
+      <div class="diagram-caption">Ta sama lampa, dwa obiekty, dwa różne wyniki. Dla ściany renderer nawet nie wystrzeli promienia w jej stronę — nie chodzi o to, że wynik wychodzi zero, tylko że obliczenie się nie odbywa.</div>
+    </div>
+
+    <p>Konsekwencja jest głębsza, niż wygląda: ponieważ światło zostaje pominięte także w <em>pośrednim</em> oświetleniu, ściana nie dostanie też odbicia od podłogi oświetlonej tą lampą, jeśli podłoga również jest odlinkowana. Efekty potrafią się kaskadować w sposób, którego nie widać wprost w interfejsie — i to jest najczęstsza przyczyna „dlaczego ten róg jest czarny”.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Cienie osobno</div>
+    <h2>Oświetlenie i rzucanie cienia to dwie różne osie</h2>
+    <p>Częsty problem inscenizacyjny: postać ma być oświetlona mocnym światłem z boku, ale jej cień pada dokładnie na twarz drugiego aktora. Fizycznie to jedno i to samo zdarzenie — cień istnieje, <em>bo</em> obiekt blokuje światło. W produkcji rozdziela się je na dwie niezależne kontrolki.</p>
+    <p><span class="term-cyan">Shadow linking</span> pozwala powiedzieć: ta lampa oświetla postać, ale postać nie blokuje jej promieni cienia. Renderer po prostu pomija ten obiekt przy testach widoczności z Rozdziału 6, licząc jednocześnie jego oświetlenie normalnie.</p>
+    <p>To jest moment, w którym obraz przestaje odpowiadać jakiejkolwiek scenie możliwej do zbudowania w realnym świecie — i dokładnie po to ta kontrolka istnieje. Warto to nazwać wprost, bo próba „naprawienia” takiej sceny przez powrót do fizyki zwykle oznacza cofnięcie decyzji reżyserskiej.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Koszt</div>
+    <h2>Dlaczego mniej świateł potrafi liczyć się dłużej</h2>
+    <p>Intuicja mówi, że odlinkowanie połowy świateł powinno przyspieszyć render. Bywa odwrotnie i warto rozumieć dlaczego.</p>
+    <p>Renderery ze scenami o setkach świateł nie próbkują ich wszystkich przy każdym trafieniu — budują strukturę przyspieszającą wybór świateł, podobną w duchu do BVH z Rozdziału 13, i losują kilka istotnych zamiast sprawdzać komplet. Ta struktura jest budowana <strong>raz, dla całej sceny</strong>.</p>
+    <p>Light linking oznacza, że każdy obiekt widzi inny podzbiór świateł, więc jedna wspólna struktura przestaje być poprawna. Renderer musi albo utrzymywać osobne warianty, albo odrzucać wylosowane światła po fakcie — a odrzucona próbka to praca wykonana na darmo. Przy scenie z rozbudowanym, niespójnym linkowaniem potrafi to zjeść więcej, niż dało pominięcie świateł.</p>
+    <p>Praktyczny wniosek: linkowanie stosowane do kilku świateł kluczowych jest tanie i wygodne. Linkowanie ustawiane odruchowo na każdym obiekcie zamienia optymalizację próbkowania w kosztowną loterię.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Light groups</div>
+    <h2>Alternatywa: nie wyłączaj, tylko rozdziel</h2>
+    <p>Zanim sięgniesz po linkowanie, warto rozważyć rozwiązanie, które nie łamie fizyki w ogóle. <strong>Light groups</strong> z Dodatku AJ dają każdemu światłu własną warstwę w tym samym renderze. Zamiast decydować przed renderem, że lampa nie oświetla ściany, renderujesz scenę uczciwie i ściszasz tę lampę w compingu.</p>
+    <p>Różnica jest istotna: linkowanie jest decyzją nieodwracalną bez ponownego renderu, a light group to suwak. Linkowanie wciąż wygrywa tam, gdzie chcesz zmienić <em>rozkład</em> światła, a nie jego siłę — bo ściszenie warstwy przygasza lampę wszędzie naraz, a odlinkowanie tylko na wybranym obiekcie.</p>
+    <a class="inline-deeper" href="dodatek-aj-light-path-expressions.html">↓ Dodatek AJ — light groups i mechanizm LPE, który je wystawia</a>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>W Mayi i Arnoldzie to zbiory <em>Light Linking</em> i osobne <em>Shadow Linking</em> w Relationship Editor. RenderMan i Karma wystawiają to jako kolekcje na prymach USD — light link i shadow link są tam dwiema niezależnymi relacjami, dokładnie jak opisano wyżej. Blender realizuje ten sam pomysł przez Light Linking i Shadow Linking z kolekcjami.</p>
+    <p>Diagnostyka: jeśli obiekt jest niespodziewanie ciemny, sprawdź linkowanie <em>zanim</em> zaczniesz szukać w materiale. Objaw jest mylący, bo wygląda dokładnie jak zbyt niska waga diffuse albo zły kolor — a przyczyna leży w zupełnie innym miejscu sceny i żadna zmiana shadera jej nie naprawi.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Słowniczek</div>
+    <dl>
+      <dt>Light linking</dt><dd>Zbiór świateł przypisany do obiektu; pozostałe są dla niego pomijane.</dd>
+      <dt>Shadow linking</dt><dd>Niezależna kontrola tego, czy obiekt blokuje promienie cienia danego światła.</dd>
+      <dt>Struktura wyboru świateł</dt><dd>Akcelerator pozwalający losować istotne światła zamiast sprawdzać wszystkie; light linking go osłabia.</dd>
+      <dt>Light group</dt><dd>Osobna warstwa na światło; alternatywa dla linkowania, odwracalna w compingu.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>To zamyka blok warstwy wyjścia. Dodatki AM i AN wracają do teorii — do tego, co się dzieje, gdy RGB przestaje wystarczać, i do metod transportu światła, których Rozdziały 15–16 nie objęły.</p>
+  </div>
+
+<div class="deeper">
+  <div class="deeper-label">Idź głębiej</div>
+  <a href="dodatek-aj-light-path-expressions.html">Dodatek AJ — Light Path Expressions i AOV</a>
+  <a href="dodatek-u-kat-brylowy.html">Dodatek U — Kąt bryłowy i geometria sferyczna</a>
+</div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-05-oswietlenie.html">↑ Rozdział 5: Oświetlenie</a>
+</div>
+</div>
+<script src="../assets/interactive.js"></script>
+</body>
+</html>
