@@ -159,9 +159,18 @@
   <div class="section">
     <div class="section-eyebrow">Pass: Kompozycja</div>
     <h2>Składanie kompletnego PBR: metallic-roughness</h2>
-    <p>Zbieramy wszystko z Rozdziałów 5, 7, 10 i 11 w jeden model. Jedyna nowość: F0 (odbicie przy patrzeniu na wprost, z Rozdziału 7) przestaje być stałą — zależy od tego, czy materiał jest dielektrykiem czy metalem:</p>
+    <p>Mamy trzy człony osobno: <span class="term-cyan">D</span> mówi, ile mikrofasetek jest ustawionych pod H, <span class="term-cyan">G</span> ile z nich faktycznie widać, a <span class="term-cyan">F</span> ile światła taka fasetka odbija pod danym kątem. Cook-Torrance skleja je w jedną BRDF odbicia lustrzanego:</p>
 
-    <div class="formula">F0 = mix(0.04, albedo, metallic)<br>color = (1−metallic)·albedo·diffuse(<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Kierunek od punktu trafienia do światła">L</span>) + specular(D,G,F)<span class="sub">metallic = 0 → F0 ≈ 0,04 (dielektryk, biały specular, pełny diffuse); metallic = 1 → F0 = albedo (metal, kolorowy specular, zero diffuse)</span></div>
+    <div class="formula">f_spec = D(<span class="vec" data-tip="Wektor w pół drogi między L i V: normalize(L+V)">H</span>) · G(<span class="vec" data-tip="Kierunek od punktu trafienia do światła">L</span>,<span class="vec" data-tip="Kierunek od punktu trafienia do obserwatora">V</span>) · F(<span class="vec" data-tip="Kierunek od punktu trafienia do obserwatora">V</span>·<span class="vec" data-tip="Wektor w pół drogi między L i V: normalize(L+V)">H</span>) / ( 4 · (<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Kierunek od punktu trafienia do światła">L</span>) · (<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Kierunek od punktu trafienia do obserwatora">V</span>) )<span class="sub">f_spec — BRDF odbicia lustrzanego, czyli funkcja f z równania renderowania (Rozdział 15) dla części specular. Mianownik <strong>4·(N·L)·(N·V)</strong> przelicza statystykę z mikropowierzchni na jednostkę powierzchni makroskopowej — bez niego BRDF nie zachowywałaby energii i model przestałby być fizycznie poprawny. <strong>F(V·H)</strong> — Fresnel liczony względem normalnej <em>mikrofasetki</em> (czyli H), nie względem N powierzchni</span></div>
+
+    <p>Ten mianownik to najczęściej gubiony element całego modelu. Nie jest współczynnikiem korekcyjnym „na oko” — wynika wprost z przeliczenia gęstości mikrofasetek na gęstość odbicia i to on odpowiada za to, że przy płytkich kątach (gdy N·V dąży do zera) odbicie <em>jaśnieje</em>, zamiast gasnąć razem z cosinusem.</p>
+
+    <p>Zwróć uwagę na argument Fresnela: <strong>V·H</strong>, nie N·V. To odbicie zachodzi na mikrofasetce, więc kąt liczy się od <em>jej</em> normalnej — czyli od H. Shader liczący F od N·V da poprawny wynik tylko dla idealnie gładkiej powierzchni, gdzie H i N się pokrywają.</p>
+    <a class="inline-deeper" href="rozdzial-07-odbicia-i-zalamania.html">↑ Rozdział 7 — pełny wzór Schlicka na F, z R0</a>
+
+    <p>Zostaje ostatnia nowość: F0 (odbicie przy patrzeniu na wprost, z Rozdziału 7) przestaje być stałą — zależy od tego, czy materiał jest dielektrykiem czy metalem:</p>
+
+    <div class="formula">F0 = mix(0.04, albedo, metallic)<br>color = (1−metallic)·albedo·diffuse(<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Kierunek od punktu trafienia do światła">L</span>) + f_spec·(<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Kierunek od punktu trafienia do światła">L</span>)<span class="sub">metallic = 0 → F0 ≈ 0,04 (dielektryk, biały specular, pełny diffuse); metallic = 1 → F0 = albedo (metal, kolorowy specular, zero diffuse). Oba człony mnożone przez (N·L), bo to cosinus z równania renderowania, wspólny dla całej BRDF</span></div>
 
     <p>To jest dosłownie to samo równanie, które Rozdział 10 opisał słowami — teraz z każdym symbolem podłączonym do konkretnego wzoru z poprzednich sześciu rozdziałów. Nic tu nie jest już arbitralne.</p>
   </div>
@@ -182,6 +191,7 @@
       <dt>Samo-zacienianie / maskowanie mikrofasetek</dt><dd>Blokowanie L (zacienianie) albo V (maskowanie) przez sąsiednie fasetki.</dd>
       <dt>α (alpha)</dt><dd>roughness²; parametr wejściowy do D i G.</dd>
       <dt>F0</dt><dd>Odbicie przy N·V=1; mix(0,04, albedo, metallic).</dd>
+      <dt>Model Cook-Torrance</dt><dd>f_spec = D·G·F / (4(N·L)(N·V)); mianownik przelicza mikrofasetki na powierzchnię makro.</dd>
       <dt>Metallic-roughness workflow</dt><dd>Standard PBR: dwa slidery zamiast osobnych map na każdy parametr.</dd>
       <dt>Principled BSDF / Standard Surface</dt><dd>Nazwy tego samego modelu w Blenderze i Arnoldzie/USD.</dd>
     </dl>

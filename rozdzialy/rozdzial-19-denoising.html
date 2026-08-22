@@ -150,6 +150,7 @@
   <div class="panel practice">
     <div class="panel-label">Z praktyki</div>
     <p>OptiX AI Denoiser, Intel Open Image Denoise, „AI Denoiser” w Arnoldzie czy Blenderze to sieci neuronowe wytrenowane właśnie na tej relacji: szumiący beauty + czyste albedo/normal/depth na wejściu, czysty obraz na wyjściu. To dlatego włączenie denoisera bez podania buforów pomocniczych daje gorszy wynik niż z nimi — sieć dosłownie ma mniej informacji, z czego skorzystać.</p>
+    <p>Ten sam denoiser bywa wpięty w kilku miejscach naraz: Arnold ma <em>Imager Denoiser</em> działający po renderze, Karma wystawia OIDN jako opcję w ROP-ie, RenderMan ma własny, trenowany na danych produkcyjnych. Różnią się miejscem w pipelinie, nie zasadą — wszystkie chcą dostać te same bufory pomocnicze.</p>
     <p>Denoising to kompromis, nie magia: agresywne ustawienia mogą zmiękczyć drobne, prawdziwe detale (futro, ostre kaustyki z Rozdziału 16) tak samo jak szum. Dlatego produkcyjne pipeline’y wciąż renderują z rozsądną liczbą próbek i używają denoisera jako ostatniego wygładzenia, nie zamiennika próbkowania.</p>
   </div>
 

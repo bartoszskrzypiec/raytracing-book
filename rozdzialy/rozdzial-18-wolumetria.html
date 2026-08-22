@@ -170,6 +170,7 @@
   <div class="panel practice">
     <div class="panel-label">Z praktyki</div>
     <p>Volume Shader w Blenderze, VDB w Houdinim, „Fog”/„Volumetric” w Unrealu — wszystkie sprowadzają się do ray marchingu przez pole gęstości (często zapisane właśnie jako VDB albo OpenVDB) i tego samego prawa Beera-Lamberta na transmitancję.</p>
+    <p>W Karmie i RenderManie ten sam wolumen wpina się przez USD jako osobny prym typu Volume wskazujący na pole VDB, a gęstość, kolor rozpraszania i anizotropia to po prostu parametry shadera wolumetrycznego. To dlatego chmura wyrenderowana w Houdinim i ta sama chmura wyrenderowana w Arnoldzie wyglądają podobnie mimo zupełnie innych silników — dane są te same, a fizyka z tego rozdziału jest jedna.</p>
     <p>Rozpraszanie podpowierzchniowe (SSS) w skórze, wosku czy marmurze to dokładnie ten sam mechanizm — tylko w mikroskali, pod z pozoru nieprzezroczystą z zewnątrz powierzchnią. To właśnie ten proces opisał „diffuse” w Rozdziale 10 słowami; SSS po prostu symuluje go bezpośrednio, ray marchingiem albo dyfuzyjną aproksymacją, zamiast udawać go jednym wzorem Lamberta.</p>
 
     <div class="diagram-frame">

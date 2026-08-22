@@ -123,6 +123,7 @@
   <div class="panel practice">
     <div class="panel-label">Z praktyki</div>
     <p>Instancje w Blenderze, Houdinim (copy-to-points) czy Unrealu (Instanced Static Mesh) to dosłownie ten mechanizm — dlatego rozsypanie dziesięciu tysięcy kopii tego samego kamienia kosztuje ułamek pamięci dziesięciu tysięcy unikalnych siatek.</p>
+    <p>W pipeline'ach opartych o USD — Solaris i Karma w Houdinim, Arnold czy RenderMan wpięte przez Hydrę — ten mechanizm ma dwie osobne nazwy, które warto rozróżniać. <em>Native instancing</em> to dokładnie powyższe: wiele prymitywów wskazujących na tę samą geometrię. <em>PointInstancer</em> idzie dalej i trzyma tysiące transformacji jako tablice punktów, bez tworzenia osobnego węzła na każdą kopię — dzięki temu las z miliona drzew nie rozdyma samego pliku sceny, nie tylko pamięci renderera.</p>
     <p>Import z OBJ, FBX, glTF czy USD sprowadza się do wypełnienia dokładnie tych struktur: pozycje wierzchołków (Rozdział 2), normalne (Rozdział 4), UV (Rozdział 9) i hierarchia transformacji z tego rozdziału. Żaden z tych formatów nie wymaga nowej matematyki — tylko innego układu bajtów na dysku.</p>
   </div>
 

@@ -183,6 +183,65 @@
     <p>Ludzkie oko jest dużo bardziej tolerancyjne dla przypadkowego szumu niż dla regularnego wzoru — dlatego zamiana strukturalnego aliasingu na losowy szum jest realną poprawą, nawet gdy liczba próbek się nie zmienia.</p>
   </div>
 
+  <div class="section">
+    <div class="section-eyebrow">Pass: Ile i jak zsumować</div>
+    <h2>Adaptacja i filtr rekonstrukcji</h2>
+    <p>Wzór z tego rozdziału mówi „weź N próbek i uśrednij”. Produkcyjny renderer robi dwie rzeczy inaczej — i obie siedzą w suwakach, które kręcisz najczęściej.</p>
+
+    <p><strong>Po pierwsze: N nie jest stałe.</strong> Gładkie niebo jest gotowe po czterech próbkach; krawędź gałęzi na tle tego nieba potrzebuje stu. <span class="term-cyan">Adaptive sampling</span> wystrzeliwuje najpierw garść próbek, mierzy, jak bardzo się między sobą różnią, i dosypuje kolejne <em>tylko</em> tam, gdzie rozrzut przekracza próg. Ustawiasz więc nie jedną liczbę, a trzy: minimum próbek, maksimum próbek i próg, poniżej którego piksel uznajemy za gotowy.</p>
+
+    <p>To dlatego podniesienie „max samples” z 256 na 512 często prawie nie zmienia czasu renderu — jeśli próg jest osiągany wcześniej, ten limit nigdy się nie aktywuje. I odwrotnie: obniżenie progu potrafi wydłużyć render kilkukrotnie przy nietkniętym maksimum.</p>
+
+    <p><strong>Po drugie: to nie jest zwykła średnia.</strong> Próbki nie należą wyłącznie do „swojego” piksela — renderer waży je funkcją rozciągającą się <em>poza</em> jego granice. Ta funkcja to <span class="term-amber">filtr rekonstrukcji</span>:</p>
+
+    <div class="formula">color_pixel = Σ w(Δx_i, Δy_i) · trace(ray_i) &nbsp;/&nbsp; Σ w(Δx_i, Δy_i)<span class="sub">Δx_i, Δy_i — przesunięcie próbki <em>i</em> względem środka piksela; w — waga z filtra, malejąca wraz z odległością. Wzór z początku rozdziału to szczególny przypadek: filtr „box” o szerokości 1 piksela, gdzie w = 1 wewnątrz piksela i 0 poza nim, więc suma wag redukuje się do N</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Reconstruction.filter</span><span>box / gaussian / mitchell</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Po lewej zasieg filtra siegajacy poza piksel, po prawej ksztalty wag: box prostokatny, gaussian dzwonowy, mitchell z ujemnymi bocznymi listkami">
+        <text x="140" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">ZASIĘG FILTRA</text>
+
+        <rect x="60" y="70" width="50" height="50" fill="#20242c" stroke="#2a2f38"/>
+        <rect x="110" y="70" width="50" height="50" fill="#20242c" stroke="#2a2f38"/>
+        <rect x="160" y="70" width="50" height="50" fill="#20242c" stroke="#2a2f38"/>
+        <rect x="60" y="120" width="50" height="50" fill="#20242c" stroke="#2a2f38"/>
+        <rect x="110" y="120" width="50" height="50" fill="#2b3038" stroke="#e8a33d" stroke-width="2"/>
+        <rect x="160" y="120" width="50" height="50" fill="#20242c" stroke="#2a2f38"/>
+        <rect x="60" y="170" width="50" height="50" fill="#20242c" stroke="#2a2f38"/>
+        <rect x="110" y="170" width="50" height="50" fill="#20242c" stroke="#2a2f38"/>
+        <rect x="160" y="170" width="50" height="50" fill="#20242c" stroke="#2a2f38"/>
+
+        <circle cx="135" cy="145" r="72" fill="#e8a33d" fill-opacity="0.10" stroke="#e8a33d" stroke-width="1.3" stroke-dasharray="5 4"/>
+        <text x="135" y="243" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">piksel liczony · zasięg wag</text>
+
+        <line x1="250" y1="30" x2="250" y2="240" stroke="#2a2f38"/>
+        <text x="430" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">KSZTAŁT WAGI w(Δ)</text>
+
+        <line x1="296" y1="205" x2="564" y2="205" stroke="#3a4048" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="286" y="209" text-anchor="end" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">0</text>
+        <text x="286" y="104" text-anchor="end" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">1</text>
+        <text x="368" y="228" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">−1 px</text>
+        <text x="430" y="228" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">środek</text>
+        <text x="492" y="228" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">+1 px</text>
+
+        <path d="M 399,205 L 399,100 L 461,100 L 461,205" fill="none" stroke="#6e93be" stroke-width="2"/>
+        <text x="600" y="106" font-family="IBM Plex Mono" font-size="10.5" fill="#6e93be">box — ostry, aliasuje</text>
+
+        <path d="M 306,205 L 311.6,204.9 L 317.3,204.9 L 322.9,204.7 L 328.5,204.5 L 334.2,204.1 L 339.8,203.5 L 345.5,202.5 L 351.1,200.9 L 356.7,198.6 L 362.4,195.3 L 368,190.8 L 373.6,184.9 L 379.3,177.5 L 384.9,168.5 L 390.5,158.3 L 396.2,147.1 L 401.8,135.5 L 407.5,124.4 L 413.1,114.5 L 418.7,106.7 L 424.4,101.7 L 430,100 L 435.6,101.7 L 441.3,106.7 L 446.9,114.5 L 452.5,124.4 L 458.2,135.5 L 463.8,147.1 L 469.5,158.3 L 475.1,168.5 L 480.7,177.5 L 486.4,184.9 L 492,190.8 L 497.6,195.3 L 503.3,198.6 L 508.9,200.9 L 514.5,202.5 L 520.2,203.5 L 525.8,204.1 L 531.5,204.5 L 537.1,204.7 L 542.7,204.9 L 548.4,204.9 L 554,205" fill="none" stroke="#e8a33d" stroke-width="2.2"/>
+        <text x="600" y="128" font-family="IBM Plex Mono" font-size="10.5" fill="#e8a33d">gaussian — miękki</text>
+
+        <path d="M 306,205 L 311.6,205.3 L 317.3,206 L 322.9,207 L 328.5,208 L 334.2,208.8 L 339.8,209.3 L 345.5,209.1 L 351.1,208.2 L 356.7,206.2 L 362.4,203 L 368,198.4 L 373.6,191.7 L 379.3,182.7 L 384.9,171.9 L 390.5,160.2 L 396.2,147.9 L 401.8,135.9 L 407.5,124.6 L 413.1,114.8 L 418.7,107 L 424.4,101.8 L 430,100 L 435.6,101.8 L 441.3,107 L 446.9,114.8 L 452.5,124.6 L 458.2,135.9 L 463.8,147.9 L 469.5,160.2 L 475.1,171.9 L 480.7,182.7 L 486.4,191.7 L 492,198.4 L 497.6,203 L 503.3,206.2 L 508.9,208.2 L 514.5,209.1 L 520.2,209.3 L 525.8,208.8 L 531.5,208 L 537.1,207 L 542.7,206 L 548.4,205.3 L 554,205" fill="none" stroke="#9c82d8" stroke-width="2.2"/>
+        <text x="600" y="150" font-family="IBM Plex Mono" font-size="10.5" fill="#9c82d8">mitchell — ostrzejszy,</text>
+        <text x="600" y="164" font-family="IBM Plex Mono" font-size="10.5" fill="#9c82d8">ale schodzi poniżej zera</text>
+        <line x1="340" y1="219" x2="340" y2="211" stroke="#9c82d8" stroke-width="1.2"/>
+        <text x="340" y="232" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#9c82d8">w &lt; 0</text>
+      </svg>
+      <div class="diagram-caption">Filtr sięga poza liczony piksel — próbka z sąsiada też wnosi wkład, tylko z mniejszą wagą. Ujemne „listki” Mitchella wyostrzają obraz, ale potrafią wygenerować ciemną obwódkę przy bardzo jasnej krawędzi (ringing), a w skrajnym przypadku ujemną wartość piksela.</div>
+    </div>
+
+    <p>Szerokość filtra to osobny suwak od liczby próbek i miesza się z nią w diagnozie: obraz „miękki mimo wysokich sampli” to najczęściej za szeroki filtr, nie za mało próbek. Zwiększanie N takiego obrazu nie wyostrzy — usunie tylko szum.</p>
+  </div>
+
   <div class="panel practice">
     <div class="panel-label">Z praktyki</div>
     <p>Slider „Samples” albo „AA Samples” w Arnoldzie, V-Rayu, Cyclesie czy Unrealu to dosłownie N z tego rozdziału. Więcej próbek = gładsze krawędzie i mniej szumu z innych stochastycznych efektów (miękkie cienie z Rozdziału 6, GI w dalszych rozdziałach) — ale czas renderu rośnie liniowo z N.</p>
@@ -190,6 +249,8 @@
     <p>Sekwencje o niskiej dyskrepancji (najpopularniejsza w produkcji: Sobol) rozwiązują to inaczej niż stratified sampling z tego rozdziału — zamiast dzielić piksel na sztywne komórki, generują punkty tak, żeby każdy fragment przestrzeni próbek dostał sprawiedliwy udział, bez luk i bez skupisk, dla dowolnego N, nie tylko dla N będącego kwadratem liczby całkowitej (jak siatka komórek). W praktyce zbiegają się do poprawnego wyniku szybciej niż czysto losowe próbkowanie — mniej próbek daje ten sam poziom szumu.</p>
     <p>Blue noise gra w zupełnie inną grę: nie chodzi o szybszą matematyczną zbieżność, tylko o to, gdzie ląduje błąd w domenie częstotliwości. Oko jest dużo bardziej tolerancyjne na szum wysokoczęstotliwościowy (drobne, przypadkowe ziarno) niż na szum niskoczęstotliwościowy (większe, widoczne plamy) — ten sam mechanizm percepcyjny, na którym opiera się dithering w kompresji obrazu. Wzorce blue noise są skonstruowane tak, żeby przy tej samej liczbie próbek przesunąć błąd w stronę wysokich częstotliwości — wynik <em>wygląda</em> czyściej, nawet gdy wariancja jest identyczna jak przy losowym próbkowaniu.</p>
     <p>Z perspektywy artysty żadna z tych technik nie wymaga implementacji — to zwykle jedna pozycja w rozwijanym menu „Sampler” (Sobol, Correlated Multi-Jittered, Progressive…), obok samego slidera „Samples”. Zasada z tego rozdziału zostaje ta sama: wiele próbek, uśrednionych, byle nie w regularnym wzorze — różnica jest tylko w tym, jak sprytnie te próbki są rozłożone.</p>
+    <p>Adaptacja i filtr nazywają się w każdym silniku inaczej, ale sterują dokładnie tym, co opisuje sekcja wyżej. W Arnoldzie: <em>AA Samples</em> plus <em>Adaptive Sampling</em> z <em>AA Samples Max</em> i <em>Adaptive Threshold</em>, a filtr to <em>Filter Type</em> (domyślnie gaussian o szerokości 2,0). W RenderManie próg nazywa się <em>Pixel Variance</em>, a domyślnym filtrem jest blackman-harris. W Karmie (Houdini/Solaris) to <em>Min/Max Pixel Samples</em> plus <em>Noise Level</em>. W Cyclesie — <em>Max Samples</em> i <em>Noise Threshold</em>.</p>
+    <p>Praktyczny wniosek z tych dwóch mechanizmów razem: gdy render jest wolny, sprawdź najpierw <em>próg</em>, nie maksimum próbek — to on decyduje, ile z tego maksimum faktycznie zostanie zużyte. A gdy obraz jest miękki mimo wysokich sampli, sprawdź szerokość filtra, bo liczba próbek nie ma z tym nic wspólnego.</p>
   </div>
 
   <div class="panel glossary">
@@ -201,6 +262,9 @@
       <dt>Stratified sampling</dt><dd>Podział piksela na komórki z jedną próbką w każdej — gwarantuje równomierne pokrycie.</dd>
       <dt>Jittering</dt><dd>Losowe przesunięcie próbki wewnątrz jej komórki.</dd>
       <dt>Moiré</dt><dd>Pulsujący wzór powstały z rezonansu regularnego próbkowania z regularną strukturą sceny.</dd>
+      <dt>Adaptive sampling</dt><dd>Dosypywanie próbek tylko tam, gdzie rozrzut między nimi przekracza próg; sterowane trójką min / max / próg.</dd>
+      <dt>Filtr rekonstrukcji</dt><dd>Funkcja wagi, z jaką próbka wnosi wkład do piksela; sięga poza jego granice. Box, gaussian, blackman-harris, mitchell.</dd>
+      <dt>Ringing</dt><dd>Ciemna obwódka przy jasnej krawędzi, skutek ujemnych listków filtra (np. mitchell).</dd>
     </dl>
   </div>
 

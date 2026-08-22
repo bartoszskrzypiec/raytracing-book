@@ -193,6 +193,7 @@
   <div class="panel practice">
     <div class="panel-label">Z praktyki</div>
     <p>Przełącznik „GI” / „Global Illumination” i „Light Bounces” / „Max Bounces” w Arnoldzie, RenderManie, Cyclesie, V-Rayu czy trybie Path Tracer w Unrealu to dosłownie ten rozdział: GI włącza człon odbity równania renderowania, bounces ogranicza (statystycznie, przez ruletkę) długość ścieżki.</p>
+    <p>Nazwy suwaka są różne, mechanizm ten sam: <em>Diffuse/Specular/Transmission Depth</em> w Arnoldzie, <em>Max Diffuse/Specular Bounces</em> w Karmie (Houdini/Solaris), <em>Trace Depth</em> w RenderManie. Wszędzie chodzi o to samo — po ilu odbiciach urwać rekurencję z tego rozdziału. Osobne limity dla diffuse i specular istnieją, bo to pierwsze zbiega się szybko i rzadko potrzebuje więcej niż 2–3 odbić, a drugie potrafi wymagać kilkunastu, zanim szkło przestanie być czarne.</p>
     <p>Szum kontra czas renderu, z którym walczysz w każdym projekcie, to nieunikniona konsekwencja Monte Carlo — nie ma darmowego obiadu, są tylko lepsze sposoby próbkowania (next-event estimation, bidirectional path tracing, ReSTIR) i denoisery, które wygładzają wynik przy tej samej liczbie próbek.</p>
   </div>
 

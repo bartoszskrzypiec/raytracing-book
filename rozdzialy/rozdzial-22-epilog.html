@@ -94,7 +94,11 @@
   <div class="section">
     <div class="section-eyebrow">Pass: Uczciwa mapa</div>
     <h2>Czego tu nie ma</h2>
-    <p>Ta książka nie jest wszystkim, co istnieje w ray tracingu — jest solidnym fundamentem, na którym stoi reszta. Zostawiliśmy z boku: rendering spektralny (osobna długość fali zamiast RGB, ważny dla dyspersji i dokładnej kolorymetrii), transport światła z polaryzacją, Metropolis Light Transport (jeszcze inny sposób próbkowania ścieżek dla ekstremalnie trudnych scen), oraz techniki specyficzne dla czasu rzeczywistego, jak ReSTIR czy rekonstrukcja neuronowa klatek. Każdy z tych tematów buduje na dokładnie tych samych podstawach — wektorach z Rozdziału 2, BRDF z Rozdziału 10, równaniu renderowania z Rozdziału 15.</p>
+    <p>Ta książka nie jest wszystkim, co istnieje w ray tracingu — jest solidnym fundamentem, na którym stoi reszta. Po stronie <strong>teorii transportu światła</strong> zostawiliśmy z boku: rendering spektralny (osobna długość fali zamiast RGB, ważny dla dyspersji i dokładnej kolorymetrii), transport światła z polaryzacją, Metropolis Light Transport (jeszcze inny sposób próbkowania ścieżek dla ekstremalnie trudnych scen), oraz techniki specyficzne dla czasu rzeczywistego, jak ReSTIR czy rekonstrukcja neuronowa klatek. Każdy z tych tematów buduje na dokładnie tych samych podstawach — wektorach z Rozdziału 2, BRDF z Rozdziału 10, równaniu renderowania z Rozdziału 15.</p>
+
+    <p>Jest też druga, równie uczciwa lista — rzeczy, które w produkcji klikasz codziennie, a które ta książka co najwyżej muska. <span class="term-cyan">Light Path Expressions</span> i cały system AOV zbudowany na nich: sposób, w jaki mówisz rendererowi „daj mi osobno tylko odbicia od metali, po drugim odbiciu”. <span class="term-cyan">Cryptomatte</span> — automatyczne maski per obiekt i materiał, wynikające wprost z tego, że przy każdym trafieniu promienia renderer i tak wie, w co trafił. <span class="term-cyan">Displacement i subdivision w czasie renderu</span>, czyli największy pojedynczy zjadacz pamięci w Arnoldzie i RenderManie. <span class="term-cyan">MaterialX i OSL</span> — języki, w których dzisiaj faktycznie opisuje się materiały z Rozdziałów 10–11. Wreszcie <span class="term-cyan">light linking</span>, <span class="term-cyan">light groups</span> i cała warstwa organizacji świateł, która z fizyką z Rozdziału 5 ma niewiele wspólnego, a z codzienną pracą oświetleniowca — wszystko.</p>
+
+    <p>Ta druga lista nie jest przypadkowa. Ta książka opisuje, <em>co renderer robi</em>; te tematy opisują, <em>jak mu to zlecasz</em>. Jedno bez drugiego nie wystarcza — ale zrozumienie mechanizmu jest tą częścią, która się nie dezaktualizuje przy zmianie silnika.</p>
   </div>
 
   <div class="panel glossary">
@@ -109,6 +113,76 @@
       <dt>Część VII — Specjalizacje (R.20–21)</dt><dd>Włosy i krzywe, atmosfera i niebo.</dd>
       <dt>Epilog (R.22)</dt><dd>Ten rozdział: synteza całości i mapa dodatków.</dd>
     </dl>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Druga połowa</div>
+    <h2>Mapa dodatków</h2>
+    <p>Dwadzieścia dwa rozdziały to jedna połowa tej książki. Druga to trzydzieści trzy dodatki, które nie wchodziły w główny nurt, bo zatrzymałyby go na pół godziny — pełne wyprowadzenia, policzone przykłady, cztery-częściowe wykłady. Litera to adres, nie kolejność: wchodzi się tam z rozdziału, w którym akurat zabrakło Ci głębi.</p>
+
+    <div class="panel">
+      <div class="panel-label">Fundamenty: notacja, jednostki, geometria</div>
+      <div class="map-group">
+        <a href="../matematyka/podstawy-matematyczne.html"><span class="m-num">MAT</span>Podstawy matematyczne — czym jest Σ i ∫ w tej książce</a>
+        <a href="../dodatki/dodatek-t-radiometria.html"><span class="m-num">T</span>Radiometria — czym naprawdę jest „L”</a>
+        <a href="../dodatki/dodatek-u-kat-brylowy.html"><span class="m-num">U</span>Kąt bryłowy i geometria sferyczna — czym jest dω</a>
+        <a href="../dodatki/dodatek-f-macierze.html"><span class="m-num">F</span>Macierze i współrzędne jednorodne</a>
+        <a href="../dodatki/dodatek-k-moller-trumbore-derivation.html"><span class="m-num">K</span>Wyprowadzenie Möller–Trumbore, linia po linii</a>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label">Monte Carlo i próbkowanie</div>
+      <div class="map-group">
+        <a href="../dodatki/dodatek-v-monte-carlo-estymatory.html"><span class="m-num">V</span>Estymatory i odwrotna CDF</a>
+        <a href="../dodatki/dodatek-b-importance-sampling.html"><span class="m-num">B</span>Importance sampling i MIS, z dowodem</a>
+        <a href="../dodatki/dodatek-w-transformacja-rozkladow.html"><span class="m-num">W</span>Transformacja między rozkładami</a>
+        <a href="../dodatki/dodatek-ad-importance-sampling-brdf.html"><span class="m-num">AD</span>Importance sampling dla BRDF</a>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label">Materiały, BRDF i oświetlenie pośrednie</div>
+      <div class="map-group">
+        <a href="../dodatki/dodatek-a-materialy.html"><span class="m-num">A</span>Warianty materiałów PBR — anizotropia, clearcoat, multi-scatter</a>
+        <a href="../dodatki/dodatek-ab-brdf-zmierzone-i-parametryzacja.html"><span class="m-num">AB</span>BRDF w praktyce: zmierzone dane i pułapki parametryzacji</a>
+        <a href="../dodatki/dodatek-ac-warstwowe-materialy.html"><span class="m-num">AC</span>Warstwowe materiały: pełna matematyka</a>
+        <a href="../dodatki/dodatek-x-rough-dielectric.html"><span class="m-num">X</span>Rough dielectric BSDF — chropowate szkło</a>
+        <a href="../dodatki/dodatek-ae-ambient-occlusion.html"><span class="m-num">AE</span>Ambient Occlusion</a>
+        <a href="../dodatki/dodatek-y-environment-lighting.html"><span class="m-num">Y</span>Environment lighting / HDRI</a>
+        <a href="../dodatki/dodatek-af-prefiltered-ibl.html"><span class="m-num">AF</span>Prefiltered IBL: irradiance i split-sum</a>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label">Tekstury i szum proceduralny</div>
+      <div class="map-group">
+        <a href="../dodatki/dodatek-g-mipmapping.html"><span class="m-num">G</span>Mipmapping i filtrowanie tekstur</a>
+        <a href="../dodatki/dodatek-aa-triplanar.html"><span class="m-num">AA</span>Triplanar mapping</a>
+        <a href="../dodatki/dodatek-p-perlin-czesc1-idea.html"><span class="m-num">P–S</span>Wykład: Perlin Noise — idea, algorytm, oktawy, simplex (4 części)</a>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label">Kolor</div>
+      <div class="map-group">
+        <a href="../dodatki/dodatek-e-kolor-tonemapping.html"><span class="m-num">E</span>Przestrzenie kolorów, gamma i tone mapping</a>
+        <a href="../dodatki/dodatek-l-aces-czesc1-problem.html"><span class="m-num">L–O</span>Wykład: ACES — problem, AP0/AP1, RRT/ODT, 1.0 kontra 2.0 (4 części)</a>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label">Wydajność, zjawiska i obliczenia</div>
+      <div class="map-group">
+        <a href="../dodatki/dodatek-c-bvh-sah.html"><span class="m-num">C</span>Budowa BVH: SAH</a>
+        <a href="../dodatki/dodatek-i-geometria-obciazenie.html"><span class="m-num">I</span>Złożoność geometrii a obciążenie</a>
+        <a href="../dodatki/dodatek-j-shading-network-obciazenie.html"><span class="m-num">J</span>Złożoność sieci shaderów</a>
+        <a href="../dodatki/dodatek-h-dyspersja.html"><span class="m-num">H</span>Dyspersja i aberracja chromatyczna</a>
+        <a href="../dodatki/dodatek-z-henyey-greenstein.html"><span class="m-num">Z</span>Funkcja fazowa Henyeya-Greensteina</a>
+        <a href="../dodatki/dodatek-d-denoising.html"><span class="m-num">D</span>Mechanika denoisera</a>
+        <a href="../pomocnik/pomocnik-obliczeniowy-tom-1.html"><span class="m-num">TOM 1</span>Pomocnik obliczeniowy — Rozdziały 2–5 krok po kroku, z zadaniami</a>
+      </div>
+    </div>
   </div>
 
   <div class="closing">
