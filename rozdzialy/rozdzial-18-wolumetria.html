@@ -167,12 +167,11 @@
     </script>
   </div>
 
-  <div class="panel practice">
-    <div class="panel-label">Z praktyki</div>
-    <p>Volume Shader w Blenderze, VDB w Houdinim, „Fog”/„Volumetric” w Unrealu — wszystkie sprowadzają się do ray marchingu przez pole gęstości (często zapisane właśnie jako VDB albo OpenVDB) i tego samego prawa Beera-Lamberta na transmitancję.</p>
-    <p>W Karmie i RenderManie ten sam wolumen wpina się przez USD jako osobny prym typu Volume wskazujący na pole VDB, a gęstość, kolor rozpraszania i anizotropia to po prostu parametry shadera wolumetrycznego. To dlatego chmura wyrenderowana w Houdinim i ta sama chmura wyrenderowana w Arnoldzie wyglądają podobnie mimo zupełnie innych silników — dane są te same, a fizyka z tego rozdziału jest jedna.</p>
+  <div class="section">
+    <div class="section-eyebrow">Pass: Podpowierzchniowe</div>
+    <h2>Ten sam ośrodek, tylko pod skórą</h2>
     <p>Rozpraszanie podpowierzchniowe (SSS) w skórze, wosku czy marmurze to dokładnie ten sam mechanizm — tylko w mikroskali, pod z pozoru nieprzezroczystą z zewnątrz powierzchnią. To właśnie ten proces opisał „diffuse” w Rozdziale 10 słowami; SSS po prostu symuluje go bezpośrednio, ray marchingiem albo dyfuzyjną aproksymacją, zamiast udawać go jednym wzorem Lamberta.</p>
-
+    <p>Różnica względem mgły jest wyłącznie w skali. Mgła ma średnią drogę swobodną rzędu metrów, więc widzisz jej wnętrze. Skóra ma ją rzędu milimetrów, więc z zewnątrz wygląda na nieprzezroczystą — ale w środku dzieje się dokładnie to samo błądzenie fotonu, które ray marching z poprzedniej sekcji śledził we mgle.</p>
     <div class="diagram-frame">
       <div class="diagram-hud"><span>SSS.entry.exit</span><span>wejście ≠ wyjście</span></div>
       <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
@@ -207,6 +206,15 @@
       </svg>
       <div class="diagram-caption">Punkt wejścia ≠ punkt wyjścia — światło wchodzi w jednym miejscu, rozprasza się wielokrotnie wewnątrz materiału i wychodzi kawałek dalej. To przesunięcie to cała różnica między zwykłym diffuse (Rozdział 10) a SSS.</div>
     </div>
+    <p>Żeby to policzyć, trzeba rozbić współczynnik ekstynkcji na dwa składniki. We mgle wystarczało wiedzieć, ile światła ubywa z wiązki; pod powierzchnią ma znaczenie, czy ubyło, bo zostało <em>pochłonięte</em>, czy dlatego, że poleciało dalej w innym kierunku:</p>
+    <div class="formula">σ_t = σ_s + σ_a<span class="sub"><strong>σ_s</strong> — współczynnik rozpraszania: światło zmienia kierunek, ale nadal niesie energię; <strong>σ_a</strong> — współczynnik absorpcji: energia zamienia się w ciepło i przepada. Ich suma to σ_t z prawa Beera-Lamberta z poprzedniej sekcji. Materiały SSS mają σ_s wielokrotnie większe od σ_a — dlatego światło potrafi w nich przebyć długą drogę, zanim zniknie</span></div>
+    <a class="inline-deeper" href="../dodatki/dodatek-ag-subsurface-scattering.html">↓ Dodatek AG — SSS w praktyce lookdevu: dyfuzja kontra random walk, promień per kanał, pułapka skali</a>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Volume Shader w Blenderze, VDB w Houdinim, „Fog”/„Volumetric” w Unrealu — wszystkie sprowadzają się do ray marchingu przez pole gęstości (często zapisane właśnie jako VDB albo OpenVDB) i tego samego prawa Beera-Lamberta na transmitancję.</p>
+    <p>W Karmie i RenderManie ten sam wolumen wpina się przez USD jako osobny prym typu Volume wskazujący na pole VDB, a gęstość, kolor rozpraszania i anizotropia to po prostu parametry shadera wolumetrycznego. To dlatego chmura wyrenderowana w Houdinim i ta sama chmura wyrenderowana w Arnoldzie wyglądają podobnie mimo zupełnie innych silników — dane są te same, a fizyka z tego rozdziału jest jedna.</p>
   </div>
 
   <div class="panel glossary">
@@ -228,6 +236,7 @@
 <div class="deeper">
   <div class="deeper-label">Idź głębiej</div>
   <a href="../dodatki/dodatek-z-henyey-greenstein.html">Dodatek Z — Funkcja fazowa Henyeya-Greensteina</a>
+  <a href="../dodatki/dodatek-ag-subsurface-scattering.html">Dodatek AG — Subsurface scattering</a>
 </div>
 
 <div class="site-nav chapter-nav">

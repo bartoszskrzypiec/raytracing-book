@@ -7,8 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 "Ray Tracing dla Artystów Technicznych" — a Polish-language static HTML book teaching ray tracing
 concepts to technical artists, not programmers writing a renderer from scratch. It assumes the
 reader already uses Blender/Arnold/Unreal/etc. and wants to understand what happens under the hood.
-22 numbered main chapters (rozdziały) build linearly on each other; 26 lettered appendices (dodatki
-A–Z) go much deeper into specific topics (full derivations, numerically worked examples); one
+22 numbered main chapters (rozdziały) build linearly on each other; 40 lettered appendices (dodatki
+A–Z, AA–AN) go much deeper into specific topics (full derivations, numerically worked examples); one
 worked-exercises companion (pomocnik) walks through early-chapter problems step by step. Live at
 https://bartoszskrzypiec.github.io/raytracing-book/.
 
@@ -28,12 +28,16 @@ branch → `main` / `/(root)`).
 ```
 index.html                              — table of contents (spis treści), root only
 rozdzialy/rozdzial-NN-slug.html         — 22 main chapters, NN zero-padded 01–22
-dodatki/dodatek-x-slug.html             — 26 lettered appendices, x = a–z (33 files: ACES L–O
-                                          and Perlin P–S are 4-part series)
+dodatki/dodatek-x-slug.html             — 40 lettered appendices, x = a–z then aa–an. Letters
+                                          AG–AN form "Część VIII · Zaawansowane" — production
+                                          topics the main chapters only mention (SSS, displacement,
+                                          MaterialX/OSL, LPE, cryptomatte, light linking, spectral,
+                                          MLT/ReSTIR). They are dodatki on disk but get their own
+                                          highlighted block in index.html, above the other dodatki.
 matematyka/podstawy-matematyczne.html   — Σ / ∫ notation primer; linked from R.10, R.11, R.15,
                                           dodatek AC. Easy to miss — it is the one content page
                                           outside rozdzialy/dodatki/pomocnik, so any repo-wide
-                                          script must glob it explicitly. 57 content pages total.
+                                          script must glob it explicitly. 65 content pages total.
 pomocnik/pomocnik-obliczeniowy-tom-1.html — worked-exercises companion (covers R.2–R.5 only)
 assets/style.css                        — single shared stylesheet (dark theme) used by every page
 assets/interactive.js                   — formula modals + `.vec[data-tip]` symbol tooltips
@@ -49,7 +53,7 @@ would conflict with one of these overrides.
 
 ## Content authoring rules
 
-- **Never rename/reletter dodatki (A–Z) without asking**, even when the ordering looks imperfect
+- **Never rename/reletter dodatki (A–Z, AA–AN) without asking**, even when the ordering looks imperfect
   (e.g. Dodatek V is conceptually a prerequisite to Dodatek B but sorts after it alphabetically).
   Fixing that would mean editing prose cross-references ("Dodatek B", "Dodatek E", …) scattered by
   name across *other* dodatek files — a much bigger, riskier change than it first appears.

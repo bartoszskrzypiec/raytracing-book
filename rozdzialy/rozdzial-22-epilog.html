@@ -94,11 +94,13 @@
   <div class="section">
     <div class="section-eyebrow">Pass: Uczciwa mapa</div>
     <h2>Czego tu nie ma</h2>
-    <p>Ta książka nie jest wszystkim, co istnieje w ray tracingu — jest solidnym fundamentem, na którym stoi reszta. Po stronie <strong>teorii transportu światła</strong> zostawiliśmy z boku: rendering spektralny (osobna długość fali zamiast RGB, ważny dla dyspersji i dokładnej kolorymetrii), transport światła z polaryzacją, Metropolis Light Transport (jeszcze inny sposób próbkowania ścieżek dla ekstremalnie trudnych scen), oraz techniki specyficzne dla czasu rzeczywistego, jak ReSTIR czy rekonstrukcja neuronowa klatek. Każdy z tych tematów buduje na dokładnie tych samych podstawach — wektorach z Rozdziału 2, BRDF z Rozdziału 10, równaniu renderowania z Rozdziału 15.</p>
+    <p>Rozdziały główne nie są wszystkim, co istnieje w ray tracingu — są fundamentem, na którym stoi reszta. Po stronie <strong>teorii transportu światła</strong> zostawiły z boku rendering spektralny, transport z polaryzacją, Metropolis Light Transport i techniki czasu rzeczywistego w rodzaju ReSTIR-a. Każdy z tych tematów buduje na dokładnie tych samych podstawach — wektorach z Rozdziału 2, BRDF z Rozdziału 10, równaniu renderowania z Rozdziału 15 — i każdy dostał własny dodatek w <strong>Części VIII</strong>: AM zajmuje się widmem i polaryzacją, AN metodami transportu, których Rozdziały 15–16 nie objęły.</p>
 
-    <p>Jest też druga, równie uczciwa lista — rzeczy, które w produkcji klikasz codziennie, a które ta książka co najwyżej muska. <span class="term-cyan">Light Path Expressions</span> i cały system AOV zbudowany na nich: sposób, w jaki mówisz rendererowi „daj mi osobno tylko odbicia od metali, po drugim odbiciu”. <span class="term-cyan">Cryptomatte</span> — automatyczne maski per obiekt i materiał, wynikające wprost z tego, że przy każdym trafieniu promienia renderer i tak wie, w co trafił. <span class="term-cyan">Displacement i subdivision w czasie renderu</span>, czyli największy pojedynczy zjadacz pamięci w Arnoldzie i RenderManie. <span class="term-cyan">MaterialX i OSL</span> — języki, w których dzisiaj faktycznie opisuje się materiały z Rozdziałów 10–11. Wreszcie <span class="term-cyan">light linking</span>, <span class="term-cyan">light groups</span> i cała warstwa organizacji świateł, która z fizyką z Rozdziału 5 ma niewiele wspólnego, a z codzienną pracą oświetleniowca — wszystko.</p>
+    <p>Była też druga lista — rzeczy, które w produkcji klikasz codziennie, a których rozdziały główne co najwyżej musnęły: <span class="term-cyan">Light Path Expressions</span> i system AOV, <span class="term-cyan">cryptomatte</span>, <span class="term-cyan">displacement i subdivision</span> w czasie renderu, <span class="term-cyan">MaterialX i OSL</span>, <span class="term-cyan">light linking</span>. Do tego temat, który dla lookdevu jest pierwszoplanowy: <span class="term-cyan">rozpraszanie podpowierzchniowe</span>. Ta lista przestała być listą braków — to jest <strong>Część VIII</strong>, osiem dodatków AG–AN, i cała jej zawartość czeka w spisie treści.</p>
 
-    <p>Ta druga lista nie jest przypadkowa. Ta książka opisuje, <em>co renderer robi</em>; te tematy opisują, <em>jak mu to zlecasz</em>. Jedno bez drugiego nie wystarcza — ale zrozumienie mechanizmu jest tą częścią, która się nie dezaktualizuje przy zmianie silnika.</p>
+    <p>Podział między jedną a drugą listą nie jest przypadkowy. Rozdziały główne opisują, <em>co renderer robi</em>; Część VIII opisuje, <em>jak mu to zlecasz</em>. Jedno bez drugiego nie wystarcza — ale zrozumienie mechanizmu jest tą częścią, która nie dezaktualizuje się przy zmianie silnika.</p>
+
+    <p>Co zostaje naprawdę poza zasięgiem tej książki: warstwa organizacyjna wokół renderu. Farmy renderowe i kolejkowanie zadań, wersjonowanie i publikowanie assetów, konwencje nazewnicze, formaty wymiany między działami, review i zatwierdzanie ujęć. Tego nie da się opisać raz — różni się między studiami bardziej niż silniki między sobą i zmienia się szybciej niż fizyka światła.</p>
   </div>
 
   <div class="panel glossary">
@@ -112,6 +114,7 @@
       <dt>Część VI — Zastosowania praktyczne (R.17–19)</dt><dd>Sceny i instancing, wolumetria, denoising.</dd>
       <dt>Część VII — Specjalizacje (R.20–21)</dt><dd>Włosy i krzywe, atmosfera i niebo.</dd>
       <dt>Epilog (R.22)</dt><dd>Ten rozdział: synteza całości i mapa dodatków.</dd>
+      <dt>Część VIII — Zaawansowane (Dodatki AG–AN)</dt><dd>SSS, displacement, MaterialX, LPE, cryptomatte, light linking, spektralny, MLT i ReSTIR.</dd>
     </dl>
   </div>
 
@@ -119,6 +122,20 @@
     <div class="section-eyebrow">Pass: Druga połowa</div>
     <h2>Mapa dodatków</h2>
     <p>Dwadzieścia dwa rozdziały to jedna połowa tej książki. Druga to trzydzieści trzy dodatki, które nie wchodziły w główny nurt, bo zatrzymałyby go na pół godziny — pełne wyprowadzenia, policzone przykłady, cztery-częściowe wykłady. Litera to adres, nie kolejność: wchodzi się tam z rozdziału, w którym akurat zabrakło Ci głębi.</p>
+
+    <div class="panel">
+      <div class="panel-label">Część VIII · Zaawansowane (AG–AN)</div>
+      <div class="map-group">
+        <a href="../dodatki/dodatek-ag-subsurface-scattering.html"><span class="m-num">AG</span>Subsurface scattering — dyfuzja, random walk i pułapka skali</a>
+        <a href="../dodatki/dodatek-ah-displacement-subdivision.html"><span class="m-num">AH</span>Displacement i subdivision w czasie renderu</a>
+        <a href="../dodatki/dodatek-ai-materialx-osl.html"><span class="m-num">AI</span>MaterialX i OSL — w czym dziś opisuje się materiały</a>
+        <a href="../dodatki/dodatek-aj-light-path-expressions.html"><span class="m-num">AJ</span>Light Path Expressions i AOV</a>
+        <a href="../dodatki/dodatek-ak-cryptomatte.html"><span class="m-num">AK</span>Cryptomatte — maski, których nie da się uśrednić</a>
+        <a href="../dodatki/dodatek-al-light-linking.html"><span class="m-num">AL</span>Light linking — kiedy celowo łamie się fizykę</a>
+        <a href="../dodatki/dodatek-am-spektralny-polaryzacja.html"><span class="m-num">AM</span>Rendering spektralny i polaryzacja</a>
+        <a href="../dodatki/dodatek-an-mlt-restir.html"><span class="m-num">AN</span>MLT, ReSTIR i rekonstrukcja neuronowa</a>
+      </div>
+    </div>
 
     <div class="panel">
       <div class="panel-label">Fundamenty: notacja, jednostki, geometria</div>
