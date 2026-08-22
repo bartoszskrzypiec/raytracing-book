@@ -39,6 +39,10 @@
 
     <a class="inline-deeper" href="../matematyka/podstawy-matematyczne.html">↑ Podstawy matematyczne — czym jest różniczka pod całką</a>
 
+    <p>BRDF jest funkcją, więc żeby ją <em>zobaczyć</em>, trzeba ją narysować. Robi się to w jeden, umowny sposób: z punktu trafienia odkłada się w każdym kierunku odcinek o długości proporcjonalnej do wartości BRDF dla tego kierunku, a końce tych odcinków tworzą zamknięty kształt. Ten kształt nazywa się <span class="term-cyan">lobem</span> (ang. <em>lobe</em>) i to on pojawia się na diagramach w tej książce zawsze, gdy trzeba pokazać, „dokąd leci światło”.</p>
+
+    <p>Czyta się go jedną zasadą: <strong>im dalej brzeg lobu od punktu trafienia w danym kierunku, tym więcej światła leci właśnie tam</strong>. Szeroki, przysadzisty lob oznacza energię rozrzuconą po całej hemisferze — czyli diffuse. Wąski, wyciągnięty w jedną stronę oznacza energię skupioną wokół jednego kierunku — czyli specular. Sam kształt niesie więc pełną charakterystykę materiału — nie da się jej sprowadzić do jednej liczby.</p>
+
     <div class="diagram-frame">
       <div class="diagram-hud"><span>BRDF.lobes</span><span>diffuse vs specular</span></div>
       <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
@@ -55,6 +59,11 @@
         <text x="112" y="108" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">L</text>
         <circle cx="190" cy="220" r="4" fill="#ecebe4"/>
 
+        <line x1="190" y1="216" x2="190" y2="136" stroke="#ecebe4" stroke-width="1.1" stroke-dasharray="3 3"/>
+        <line x1="185" y1="136" x2="195" y2="136" stroke="#ecebe4" stroke-width="1.1"/>
+        <text x="190" y="256" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#ecebe4">długość odcinka w danym kierunku</text>
+        <text x="190" y="271" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">= ile światła leci właśnie tam</text>
+
         <line x1="440" y1="220" x2="700" y2="220" stroke="#8b909b" stroke-width="2"/>
         <line x1="490" y1="120" x2="570" y2="220" stroke="#e8a33d" stroke-width="2.3" marker-end="url(#bl1)"/>
         <text x="492" y="108" font-family="IBM Plex Mono" font-size="12" fill="#e8a33d">L</text>
@@ -63,7 +72,7 @@
         <text x="652" y="120" font-family="IBM Plex Mono" font-size="12" fill="#9c82d8">R</text>
         <circle cx="570" cy="220" r="4" fill="#ecebe4"/>
       </svg>
-      <div class="diagram-caption">Kształt lobu to sama BRDF — diffuse rozprasza energię wszędzie, specular skupia ją wokół kierunku odbicia R.</div>
+      <div class="diagram-caption">Kształt lobu to sama BRDF — diffuse rozprasza energię wszędzie, specular skupia ją wokół kierunku odbicia R. Ten sam typ rysunku wróci jeszcze dwa razy: przy rozkładzie GGX w Rozdziale 11, gdzie lob zwęża się i rozszerza wraz z roughness, oraz przy funkcji fazowej w Rozdziale 21, gdzie opisuje rozproszenie w objętości zamiast na powierzchni.</div>
     </div>
   </div>
 
@@ -233,6 +242,7 @@
       <dt>Wzajemność (Helmholtz)</dt><dd>f(L,V) = f(V,L).</dd>
       <dt>Dielektryk</dt><dd>Niemetal: diffuse z pigmentu + bezbarwny specular.</dd>
       <dt>Metal (przewodnik)</dt><dd>Zero diffuse; cały kolor w kolorowym specular.</dd>
+      <dt>Lob (lobe)</dt><dd>Kształt powstały z odłożenia wartości BRDF w każdym kierunku; im dalej brzeg od punktu trafienia, tym więcej światła leci w tę stronę.</dd>
       <dt>Mikrofasetka</dt><dd>Mikroskopijny, płaski fragment powierzchni ze swoją normalną.</dd>
       <dt>Model Cook-Torrance'a</dt><dd>Specular = D·G·F / (4·(N·L)·(N·V)).</dd>
       <dt>Metallic/Roughness workflow</dt><dd>Standard PBR: dwa slidery zamiast osobnych map dla każdego parametru.</dd>
