@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dodatek AH — Displacement i subdivision w czasie renderu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>SUBDIV · 4ⁿ</span><span>DICE · do mikropoligonów</span><span>BOUNDS · AABB musi objąć</span><span>EXT OF · R.9, R.17</span>
+  </div>
+
+  <div class="eyebrow">Dodatek AH / Lookdev w praktyce</div>
+  <h1>Displacement i subdivision w czasie renderu</h1>
+  <p class="subtitle">Plik sceny waży dwieście megabajtów, a render zjada trzydzieści gigabajtów pamięci. Różnicę robi geometria, której w pliku nie ma — powstaje dopiero w rendererze, tuż przed pierwszym promieniem. Ten dodatek pokazuje, skąd się bierze i dlaczego jedno źle ustawione pole potrafi albo obciąć model, albo spowolnić render kilkukrotnie.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Subdivision zagęszcza siatkę <em>w rendererze</em>: każda iteracja mnoży liczbę czworokątów przez cztery, więc czwarta iteracja to 256× więcej geometrii niż siatka bazowa.</li>
+      <li>Displacement przesuwa te wygenerowane wierzchołki według tekstury — dopiero to daje prawdziwą sylwetkę i prawdziwy cień, w odróżnieniu od normal mapy.</li>
+      <li><strong>Displacement bounds</strong> to jedyne pole, które musisz podać ręcznie: BVH z Rozdziału 13 buduje pudełka <em>zanim</em> pozna przesunięcie. Za mało → obcięta geometria, za dużo → spuchnięte pudełka i wolny render.</li>
+      <li>To największy pojedynczy konsument pamięci w typowej scenie produkcyjnej.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Subdivision</div>
+    <h2>Cztery razy więcej, na każdą iterację</h2>
+    <p>Modelarz oddaje siatkę bazową — kilka tysięcy czworokątów opisujących kształt, ale nie detal. Renderer, zanim cokolwiek policzy, dzieli każdy czworokąt na cztery mniejsze i wygładza pozycje wierzchołków (najczęściej schematem Catmulla-Clarka). Powtórzone <strong>n</strong> razy daje:</p>
+
+    <div class="formula">liczba czworokątów = N_bazowa · 4ⁿ<span class="sub"><strong>N_bazowa</strong> — liczba czworokątów w siatce oddanej przez modelarza; <strong>n</strong> — liczba iteracji podziału. Wzrost jest wykładniczy, więc różnica między n=3 a n=5 to nie „trochę więcej detalu”, tylko szesnastokrotnie większa siatka</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Subdiv.growth</span><span>4ⁿ na iteracje</span></div>
+      <svg viewBox="0 0 760 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Czery kwadraty pokazujace kolejne iteracje podzialu: 1, 4, 16 i 64 czworokaty">
+        <g stroke="#4fc3c0" stroke-width="1.4" fill="#20242c">
+          <rect x="60" y="60" width="110" height="110"/>
+        </g>
+        <text x="115" y="192" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">n=0 · 1</text>
+
+        <g stroke="#4fc3c0" stroke-width="1.2" fill="#20242c">
+          <rect x="230" y="60" width="110" height="110"/>
+          <line x1="285" y1="60" x2="285" y2="170"/><line x1="230" y1="115" x2="340" y2="115"/>
+        </g>
+        <text x="285" y="192" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">n=1 · 4</text>
+
+        <g stroke="#4fc3c0" stroke-width="1" fill="#20242c">
+          <rect x="400" y="60" width="110" height="110"/>
+          <line x1="427.5" y1="60" x2="427.5" y2="170"/><line x1="455" y1="60" x2="455" y2="170"/><line x1="482.5" y1="60" x2="482.5" y2="170"/>
+          <line x1="400" y1="87.5" x2="510" y2="87.5"/><line x1="400" y1="115" x2="510" y2="115"/><line x1="400" y1="142.5" x2="510" y2="142.5"/>
+        </g>
+        <text x="455" y="192" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">n=2 · 16</text>
+
+        <g stroke="#4fc3c0" stroke-width="0.7" fill="#20242c">
+          <rect x="570" y="60" width="110" height="110"/>
+          <line x1="583.75" y1="60" x2="583.75" y2="170"/><line x1="597.5" y1="60" x2="597.5" y2="170"/><line x1="611.25" y1="60" x2="611.25" y2="170"/><line x1="625" y1="60" x2="625" y2="170"/><line x1="638.75" y1="60" x2="638.75" y2="170"/><line x1="652.5" y1="60" x2="652.5" y2="170"/><line x1="666.25" y1="60" x2="666.25" y2="170"/>
+          <line x1="570" y1="73.75" x2="680" y2="73.75"/><line x1="570" y1="87.5" x2="680" y2="87.5"/><line x1="570" y1="101.25" x2="680" y2="101.25"/><line x1="570" y1="115" x2="680" y2="115"/><line x1="570" y1="128.75" x2="680" y2="128.75"/><line x1="570" y1="142.5" x2="680" y2="142.5"/><line x1="570" y1="156.25" x2="680" y2="156.25"/>
+        </g>
+        <text x="625" y="192" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#8b909b">n=3 · 64</text>
+
+        <text x="380" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#e8a33d">jeden czworokąt bazowy, cztery iteracje</text>
+      </svg>
+      <div class="diagram-caption">Cztery kroki na jednym czworokącie. Przy siatce bazowej liczącej 20 000 czworokątów n=4 daje ponad pięć milionów — i tyle właśnie trafia do BVH z Rozdziału 13.</div>
+    </div>
+
+    <p><strong>Podział adaptacyjny.</strong> Stała liczba iteracji marnuje pamięć na obiekty daleko od kamery: postać w tle dostaje ten sam detal co ta na pierwszym planie. Dlatego renderery liczą podział <em>adaptacyjnie</em>, w przestrzeni ekranu — dzielą dopóty, dopóki krawędź czworokąta nie zejdzie poniżej zadanej długości w pikselach. Obiekt oddalający się od kamery automatycznie dostaje mniej geometrii, bez ingerencji artysty.</p>
+
+    <p>To ma konsekwencję, która bywa zaskoczeniem: <strong>zużycie pamięci zależy od kadru</strong>. Ta sama scena renderowana z bliska i z daleka to dwa różne budżety. Ujęcie, które „nagle” przestało się mieścić w pamięci, często nie zmieniło się w żaden inny sposób niż zbliżeniem kamery.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Displacement</div>
+    <h2>Prawdziwa sylwetka, nie udawana</h2>
+    <p>Mając gęstą siatkę, renderer przesuwa każdy jej wierzchołek — najczęściej wzdłuż normalnej, o wartość odczytaną z tekstury (Rozdział 9). Wynik różni się od normal mapy w trzech miejscach, których nie da się podrobić: <strong>sylwetka</strong> na krawędzi obiektu jest faktycznie poszarpana, <strong>cień własny</strong> pada z prawdziwych wypukłości, a <strong>przecięcia</strong> z inną geometrią zachodzą tam, gdzie naprawdę.</p>
+    <p>Wariant wektorowy (vector displacement) przesuwa wierzchołek w dowolnym kierunku, nie tylko wzdłuż normalnej — dopiero to pozwala wyrzeźbić nawisy i zawinięcia, których displacement skalarny z definicji nie potrafi.</p>
+
+    <div class="formula">P' = P + <span class="vec" data-tip="Normalna powierzchni w wierzchołku przed przesunięciem">N</span> · (tex(u,v) − zero) · height<span class="sub"><strong>P</strong> — pozycja wierzchołka po podziale; <strong>tex(u,v)</strong> — wartość z mapy displacement w tym punkcie UV; <strong>zero</strong> — wartość uznawana za „brak przesunięcia” (zwykle 0 albo 0,5 dla map ze środkiem w szarości); <strong>height</strong> — mnożnik w jednostkach sceny</span></div>
+
+    <p>Zwróć uwagę na <strong>zero</strong>. Mapa zapisana ze środkiem w 0,5 i wczytana z zerem ustawionym na 0 przesunie <em>całą</em> powierzchnię na zewnątrz, zamiast rzeźbić w obie strony — model spuchnie równomiernie. To jeden z częstszych objawów „displacement nie działa tak, jak w programie do rzeźbienia”.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Bounds</div>
+    <h2>Pole, które trzeba wypełnić ręcznie</h2>
+    <p>Tu pojawia się problem, który wynika wprost z Rozdziału 13. BVH buduje pudełka wokół geometrii, żeby móc odrzucać promienie bez testowania trójkątów. Ale przesunięcie jest znane dopiero po odczytaniu tekstury dla każdego wierzchołka — a renderer musi znać rozmiar pudełka <em>wcześniej</em>, żeby w ogóle zdecydować, które fragmenty siatki wygenerować.</p>
+    <p>Rozwiązanie jest niewygodne, ale jedyne: podajesz z góry, o ile maksymalnie geometria może się przesunąć. Renderer powiększa pudełka o tę wartość i dopiero potem liczy.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Displacement.bounds</span><span>za malo / dobrze / za duzo</span></div>
+      <svg viewBox="0 0 760 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Trzy przypadki granic displacementu: za male obcinaja szczyty, dobre obejmuja calosc ciasno, za duze marnuja miejsce w pudelku BVH">
+        <text x="130" y="28" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#e06c5a">ZA MAŁO · obcięcie</text>
+        <rect x="55" y="112" width="150" height="86" fill="none" stroke="#e06c5a" stroke-width="1.6" stroke-dasharray="5 4"/>
+        <path d="M 55,198 L 80,150 L 105,178 L 130,96 L 155,168 L 180,140 L 205,198" fill="none" stroke="#8b909b" stroke-width="1.8"/>
+        <line x1="55" y1="112" x2="205" y2="112" stroke="#e06c5a" stroke-width="1"/>
+        <circle cx="130" cy="96" r="4" fill="#e06c5a"/>
+        <text x="130" y="222" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">szczyt poza pudełkiem</text>
+
+        <text x="380" y="28" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#6fbf73">DOBRZE · ciasno</text>
+        <rect x="305" y="88" width="150" height="110" fill="none" stroke="#6fbf73" stroke-width="1.6" stroke-dasharray="5 4"/>
+        <path d="M 305,198 L 330,150 L 355,178 L 380,96 L 405,168 L 430,140 L 455,198" fill="none" stroke="#8b909b" stroke-width="1.8"/>
+        <text x="380" y="222" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">wszystko objęte, bez luzu</text>
+
+        <text x="630" y="28" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#e8a33d">ZA DUŻO · pusty luz</text>
+        <rect x="555" y="44" width="150" height="154" fill="none" stroke="#e8a33d" stroke-width="1.6" stroke-dasharray="5 4"/>
+        <rect x="555" y="44" width="150" height="44" fill="#e8a33d" fill-opacity="0.10"/>
+        <path d="M 555,198 L 580,150 L 605,178 L 630,96 L 655,168 L 680,140 L 705,198" fill="none" stroke="#8b909b" stroke-width="1.8"/>
+        <text x="630" y="222" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">promienie wchodzą bez potrzeby</text>
+      </svg>
+      <div class="diagram-caption">Pudełko za małe obcina to, co z niego wystaje — geometria po prostu znika. Za duże jest poprawne wizualnie, ale każdy promień przechodzący przez pustą górę pudełka wymusza test, który do niczego nie prowadzi. To dokładnie ten koszt, który SAH z Dodatku C stara się minimalizować.</div>
+    </div>
+
+    <p>Objaw zbyt małych granic jest charakterystyczny i łatwy do rozpoznania: geometria wygląda, jakby ktoś ściął jej wierzchołki płaszczyzną — bo dokładnie to się stało. Objaw zbyt dużych jest podstępniejszy, bo obraz jest poprawny; widać tylko czas renderu, który nie ma uzasadnienia w tym, co na obrazku.</p>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>W Arnoldzie to grupa na siatce: <em>subdiv_type</em> (catclark albo linear), <em>subdiv_iterations</em>, <em>subdiv_adaptive_metric</em> i <em>subdiv_pixel_error</em> dla podziału adaptacyjnego, oraz <em>disp_height</em>, <em>disp_zero_value</em> i <em>disp_padding</em> — to ostatnie jest właśnie polem granic z sekcji wyżej. RenderMan dziedziczy tu wprost po REYES-ie i mówi o <em>dicingu</em> do mikropoligonów; Karma wystawia analogiczne kontrolki na prymie USD.</p>
+    <p>Kolejność diagnozy przy renderze, który nie mieści się w pamięci: najpierw sprawdź iteracje podziału na najcięższych obiektach, potem czy podział jest adaptacyjny, a dopiero na końcu tekstury. Zejście z n=5 na n=4 na jednym obiekcie tła potrafi zwolnić więcej pamięci niż cała reszta optymalizacji razem.</p>
+    <p>Osobna pułapka: displacement psuje instancing z Rozdziału 17 wtedy, gdy każda instancja dostaje inną mapę — wspólna siatka przestaje być wspólna i oszczędność pamięci znika. Instancje z tą samą mapą displacement zachowują się normalnie.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Słowniczek</div>
+    <dl>
+      <dt>Subdivision surface</dt><dd>Siatka bazowa plus reguła podziału (najczęściej Catmull-Clark); render generuje gęstą wersję sam.</dd>
+      <dt>Iteracja podziału</dt><dd>Jeden krok dzielenia; liczba czworokątów rośnie jak 4ⁿ.</dd>
+      <dt>Podział adaptacyjny</dt><dd>Zagęszczanie sterowane długością krawędzi w pikselach — zależne od kadru.</dd>
+      <dt>Dicing / mikropoligon</dt><dd>Podział do fragmentów rzędu piksela; termin z REYES-a, żywy w RenderManie.</dd>
+      <dt>Displacement bounds (padding)</dt><dd>Deklarowane maksymalne przesunięcie; powiększa pudełka BVH budowane przed odczytem tekstury.</dd>
+      <dt>Vector displacement</dt><dd>Przesunięcie w dowolnym kierunku, nie tylko wzdłuż normalnej; pozwala na nawisy.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Geometrię mamy już wygenerowaną i przesuniętą. Dodatek AI zajmuje się drugą stroną tej samej pracy: językami, w których dziś opisuje się materiały pokrywające tę geometrię.</p>
+  </div>
+
+<div class="deeper">
+  <div class="deeper-label">Idź głębiej</div>
+  <a href="dodatek-i-geometria-obciazenie.html">Dodatek I — Złożoność geometrii a obciążenie</a>
+  <a href="dodatek-c-bvh-sah.html">Dodatek C — Budowa BVH: SAH</a>
+</div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-09-tekstury-i-uv.html">↑ Rozdział 9: Tekstury i UV</a>
+</div>
+</div>
+<script src="../assets/interactive.js"></script>
+</body>
+</html>

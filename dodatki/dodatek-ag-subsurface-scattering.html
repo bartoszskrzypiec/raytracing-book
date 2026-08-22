@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dodatek AG — Subsurface scattering: dlaczego skóra nie jest matowa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>BSSRDF · 2 punkty</span><span>σt = σs + σa</span><span>MFP · 1/σt</span><span>EXT OF · R.18, R.10</span>
+  </div>
+
+  <div class="eyebrow">Dodatek AG / Lookdev w praktyce</div>
+  <h1>Subsurface scattering: dlaczego skóra nie jest matowa</h1>
+  <p class="subtitle">Rozdział 10 nazwał diffuse „światłem, które wniknęło pod powierzchnię i wyszło w losowym kierunku” — i od razu założył, że wyszło <em>w tym samym punkcie</em>. Dla betonu to prawda z dokładnością do mikrometrów. Dla skóry, wosku, marmuru i mleka to założenie jest fałszywe i widać to gołym okiem. Ten dodatek pokazuje, co dokładnie się psuje, jak renderer to naprawia i którym pokrętłem naprawdę sterujesz.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>SSS to wolumetria z Rozdziału 18 zamknięta pod powierzchnią: te same σs, σa i funkcja fazowa, tylko w skali milimetrów.</li>
+      <li>BRDF z Rozdziału 10 opisuje jeden punkt; SSS potrzebuje <strong>dwóch</strong> — wejścia i wyjścia. Ta jedna różnica zmienia całą matematykę.</li>
+      <li>Dwie rodziny implementacji: <strong>aproksymacja dyfuzyjna</strong> (szybka, rozpada się na cienkiej geometrii) i <strong>random walk</strong> (fizyczny, dziś domyślny, droższy).</li>
+      <li>Najczęstszy błąd lookdevowy w całym temacie nie dotyczy koloru, tylko <strong>skali sceny</strong> — promień SSS jest w jednostkach sceny.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Dwa punkty zamiast jednego</div>
+    <h2>Co dokładnie psuje się w BRDF</h2>
+    <p>BRDF z Rozdziałów 10–11 to funkcja <span class="vec" data-tip="Bidirectional Reflectance Distribution Function — odbicie w jednym punkcie">f</span>(p, ω_i, ω_o): jeden punkt <strong>p</strong>, kierunek wejścia, kierunek wyjścia. Cztery wymiary, bo każdy kierunek to dwa kąty. Cała jej konstrukcja opiera się na założeniu, że światło wchodzi i wychodzi w tym samym miejscu.</p>
+    <p>SSS łamie dokładnie to założenie, więc potrzebuje funkcji o dwóch punktach — <span class="vec" data-tip="Bidirectional Scattering-Surface Reflectance Distribution Function — odbicie między dwoma punktami powierzchni">S</span>(x_i, ω_i; x_o, ω_o), zwanej <span class="term-cyan">BSSRDF</span>. Osiem wymiarów zamiast czterech: dwa punkty na powierzchni po dwie współrzędne i dwa kierunki po dwa kąty.</p>
+
+    <div class="formula">L_o(x_o, ω_o) = ∫_A ∫_Ω <span class="vec" data-tip="BSSRDF — ile światła wchodzącego w x_i wychodzi w x_o">S</span>(x_i, ω_i; x_o, ω_o) · L_i(x_i, ω_i) · (<span class="vec" data-tip="Normalna powierzchni w punkcie wejścia">N</span>·ω_i) dω_i dA<span class="sub">Różnica względem równania renderowania z Rozdziału 15 to <strong>dodatkowa całka po powierzchni A</strong>: żeby policzyć światło wychodzące w x_o, trzeba zebrać wkład ze wszystkich punktów x_i, w których cokolwiek mogło wniknąć. BRDF to szczególny przypadek, w którym S jest niezerowe tylko dla x_i = x_o</span></div>
+
+    <p>Ta dodatkowa całka po powierzchni jest całym kosztem i całym efektem. To ona sprawia, że ucho podświetlone od tyłu świeci na czerwono, a nos w zbliżeniu ma miękkie, „mięsiste” przejście do cienia zamiast twardej krawędzi Lamberta.</p>
+
+    <p><strong>Kiedy można to zignorować.</strong> Jeśli typowe przesunięcie między wejściem a wyjściem jest wyraźnie mniejsze niż piksel, całka po A zbiega się do jednego punktu i BSSRDF <em>staje się</em> BRDF — nie przez przybliżenie, tylko dokładnie. Dlatego ta sama postać w szerokim planie nie potrzebuje SSS, a w zbliżeniu na twarz potrzebuje go rozpaczliwie. To nie jest kwestia „jakości ustawień”, tylko relacji między promieniem rozpraszania a wielkością piksela w tym konkretnym ujęciu.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Ośrodek</div>
+    <h2>Trzy liczby opisujące materiał</h2>
+    <p>Rozdział 18 wprowadził <span class="vec" data-tip="Współczynnik ekstynkcji — jak szybko światło jest usuwane z wiązki">σ_t</span> jako jeden współczynnik ekstynkcji w prawie Beera-Lamberta. Pod powierzchnią trzeba go rozbić, bo światło ginie z wiązki na dwa zupełnie różne sposoby: albo zostaje <em>pochłonięte</em> (zamienione w ciepło, przepada), albo <em>rozproszone</em> (leci dalej, tylko w innym kierunku).</p>
+
+    <div class="formula"><span class="vec" data-tip="Współczynnik ekstynkcji — suma obu strat">σ_t</span> = <span class="vec" data-tip="Współczynnik rozpraszania — światło zmienia kierunek, ale leci dalej">σ_s</span> + <span class="vec" data-tip="Współczynnik absorpcji — światło zamienia się w ciepło i przepada">σ_a</span><br>α = <span class="vec" data-tip="Współczynnik rozpraszania — światło zmienia kierunek, ale leci dalej">σ_s</span> / <span class="vec" data-tip="Współczynnik ekstynkcji — suma obu strat">σ_t</span><span class="sub"><strong>σ_s</strong> — rozpraszanie, <strong>σ_a</strong> — absorpcja, oba w jednostkach 1/długość. <strong>α</strong> (albedo pojedynczego rozproszenia) mówi, jaka część zdarzeń to rozproszenie, a nie pochłonięcie. Materiały SSS mają α bardzo blisko 1 — światło odbija się w środku setki razy, zanim cokolwiek je pochłonie</span></div>
+
+    <div class="formula">MFP = 1 / <span class="vec" data-tip="Współczynnik ekstynkcji — suma obu strat">σ_t</span><span class="sub">Średnia droga swobodna (mean free path) — dystans, jaki foton przebywa średnio między dwoma zdarzeniami. To jest ta „długość”, którą w interfejsie widzisz jako <em>radius</em> albo <em>mean free path</em>, i to ona decyduje, jak daleko światło rozlewa się pod skórą</span></div>
+
+    <p>Do kompletu dochodzi czwarta wielkość, którą znasz już z Rozdziału 18: <strong>anizotropia g</strong> funkcji fazowej. Tkanki biologiczne rozpraszają silnie do przodu (g rzędu 0,7–0,9), a nie równomiernie — foton po rozproszeniu leci mniej więcej tam, gdzie leciał.</p>
+    <a class="inline-deeper" href="dodatek-z-henyey-greenstein.html">↓ Dodatek Z — funkcja fazowa Henyeya-Greensteina i parametr g</a>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Dwie szkoły</div>
+    <h2>Dyfuzja kontra random walk</h2>
+    <p>Mając te współczynniki, renderer może pójść dwiema drogami. Różnica między nimi to najważniejszy przełącznik w całym shaderze SSS.</p>
+
+    <p><strong>Aproksymacja dyfuzyjna.</strong> Skoro α ≈ 1 i rozproszeń są setki, to statystycznie światło zachowuje się jak <em>dyfuzja</em> — rozlewa się od punktu wejścia według gładkiego profilu, którym można opisać całą chmurę ścieżek jednym wzorem. Renderer nie śledzi niczego pod powierzchnią; oświetla powierzchnię, a potem rozmywa to oświetlenie profilem <strong>R(r)</strong> zależnym wyłącznie od odległości między punktami.</p>
+
+    <p><strong>Random walk.</strong> Renderer po prostu robi to, co Rozdział 18 robił we mgle: załamuje promień do wnętrza, losuje dystans do następnego zdarzenia z rozkładu wykładniczego, rozprasza kierunek funkcją fazową, powtarza — aż foton zostanie pochłonięty albo wyjdzie przez powierzchnię. Żadnego profilu, żadnego założenia. Ta sama pętla co w wolumetrii, tylko w skali milimetrów.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Diffusion.vs.randomwalk</span><span>profil kontra sledzenie</span></div>
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Po lewej aproksymacja dyfuzyjna jako gladki profil rozlewajacy sie od punktu wejscia, po prawej random walk jako lamane sciezki fotonow wewnatrz materialu">
+        <line x1="380" y1="20" x2="380" y2="290" stroke="#2a2f38"/>
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">DYFUZJA · jeden profil</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11.5" fill="#8b909b">RANDOM WALK · prawdziwe scieżki</text>
+
+        <rect x="40" y="120" width="300" height="120" fill="#2a2116"/>
+        <line x1="40" y1="120" x2="340" y2="120" stroke="#8b909b" stroke-width="2"/>
+        <line x1="150" y1="70" x2="190" y2="120" stroke="#e8a33d" stroke-width="2.2"/>
+        <circle cx="190" cy="120" r="4" fill="#ecebe4"/>
+        <path d="M 100,120 Q 190,196 280,120 Z" fill="#9c82d8" fill-opacity="0.28" stroke="#9c82d8" stroke-width="1.4"/>
+        <text x="190" y="168" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#9c82d8">R(r)</text>
+        <text x="190" y="262" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">nic nie jest sledzone —</text>
+        <text x="190" y="276" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">powierzchnia jest rozmywana</text>
+
+        <rect x="420" y="120" width="300" height="120" fill="#2a2116"/>
+        <line x1="420" y1="120" x2="720" y2="120" stroke="#8b909b" stroke-width="2"/>
+        <line x1="530" y1="70" x2="570" y2="120" stroke="#e8a33d" stroke-width="2.2"/>
+        <circle cx="570" cy="120" r="4" fill="#ecebe4"/>
+        <polyline points="570,120 596,158 556,182 618,196 662,160 690,120" fill="none" stroke="#4fc3c0" stroke-width="1.5"/>
+        <polyline points="570,120 548,150 580,172 534,190 512,140 520,120" fill="none" stroke="#4fc3c0" stroke-width="1.5"/>
+        <polyline points="570,120 600,142 638,132 620,120" fill="none" stroke="#4fc3c0" stroke-width="1.5"/>
+        <circle cx="690" cy="120" r="3.5" fill="#4fc3c0"/>
+        <circle cx="520" cy="120" r="3.5" fill="#4fc3c0"/>
+        <circle cx="620" cy="120" r="3.5" fill="#4fc3c0"/>
+        <circle cx="618" cy="196" r="2.5" fill="#e8a33d"/>
+        <text x="628" y="212" font-family="IBM Plex Mono" font-size="9.5" fill="#e8a33d">pochłonięty</text>
+        <text x="570" y="262" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">ta sama pętla co w mgle</text>
+        <text x="570" y="276" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">z Rozdziału 18, w skali mm</text>
+      </svg>
+      <div class="diagram-caption">Dyfuzja zgaduje wynik setek rozproszeń jednym wzorem. Random walk je wykonuje. Przy grubej geometrii oba dają ten sam obraz — różnice zaczynają się tam, gdzie założenie „setek rozproszeń” przestaje być prawdziwe.</div>
+    </div>
+
+    <p><strong>Gdzie dyfuzja się rozpada.</strong> Jej wyprowadzenie zakłada, że foton ma miejsce na wiele rozproszeń, zanim trafi na powierzchnię. W uchu, płetwie, płatku kwiatu albo skrzydle owada geometria jest cieńsza niż kilka średnich dróg swobodnych — foton wychodzi po dwóch, trzech zdarzeniach. Model dyfuzyjny tego nie przewiduje: cienkie miejsca wychodzą za ciemne i za mało prześwitujące, bo profil zakłada materiał półnieskończony i nie ma pojęcia, że po drugiej stronie jest powietrze. Random walk trafia to poprawnie bez żadnego dodatkowego ustawienia, bo po prostu widzi, że promień wyszedł drugą stroną.</p>
+
+    <p>To jest powód, dla którego produkcja przeszła na random walk mimo wyższego kosztu — nie dlatego, że dyfuzja jest „niedokładna” w ogólności, tylko dlatego, że zawodzi dokładnie tam, gdzie patrzy widz: na uszach i nosie w kontrze.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Pokrętła</div>
+    <h2>Cztery parametry, którymi naprawdę sterujesz</h2>
+
+    <p><strong>1. Promień per kanał RGB.</strong> To nie jest „kolor SSS” w sensie barwnika — to trzy różne <em>odległości</em>. Czerwone światło wnika w tkankę znacznie głębiej niż niebieskie, bo hemoglobina i melanina pochłaniają krótkie fale dużo silniej. Stąd charakterystyczna czerwona poświata na krawędziach: w miejscu, gdzie zieleń i błękit już dawno zostały pochłonięte, czerwień wciąż ma dość energii, żeby wyjść.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Profile.per.channel</span><span>R(r) dla trzech promieni</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Trzy krzywe profilu dyfuzji: czerwona opada najwolniej, zielona szybciej, niebieska najszybciej">
+        <line x1="90" y1="210" x2="690" y2="210" stroke="#3a4048" stroke-width="1"/>
+        <line x1="90" y1="80" x2="90" y2="210" stroke="#3a4048" stroke-width="1"/>
+        <text x="80" y="214" text-anchor="end" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">0</text>
+        <text x="80" y="94" text-anchor="end" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">1</text>
+        <text x="90" y="230" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">0</text>
+        <text x="375" y="230" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">1× promień</text>
+        <text x="660" y="230" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">2×</text>
+        <text x="390" y="250" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">odległość od punktu wejścia</text>
+
+        <path d="M 90,90 L 110.4,95.5 L 130.7,100.8 L 151.1,105.7 L 171.4,110.4 L 191.8,114.8 L 212.1,118.9 L 232.5,122.8 L 252.9,126.5 L 273.2,130 L 293.6,133.3 L 313.9,136.5 L 334.3,139.4 L 354.6,142.3 L 375,144.9 L 395.4,147.5 L 415.7,149.9 L 436.1,152.2 L 456.4,154.3 L 476.8,156.4 L 497.1,158.4 L 517.5,160.2 L 537.9,162 L 558.2,163.7 L 578.6,165.3 L 598.9,166.9 L 619.3,168.3 L 639.6,169.7 L 660,171.1" fill="none" stroke="#e06c5a" stroke-width="2.4"/>
+        <text x="672" y="174" font-family="IBM Plex Mono" font-size="10.5" fill="#e06c5a">R</text>
+
+        <path d="M 90,90 L 110.4,114.8 L 130.7,133.3 L 151.1,147.5 L 171.4,158.4 L 191.8,166.9 L 212.1,173.6 L 232.5,179 L 252.9,183.4 L 273.2,187 L 293.6,190.1 L 313.9,192.6 L 334.3,194.8 L 354.6,196.7 L 375,198.3 L 395.4,199.7 L 415.7,200.9 L 436.1,201.9 L 456.4,202.9 L 476.8,203.7 L 497.1,204.4 L 517.5,205 L 537.9,205.6 L 558.2,206.1 L 578.6,206.5 L 598.9,206.9 L 619.3,207.3 L 639.6,207.6 L 660,207.9" fill="none" stroke="#6fbf73" stroke-width="2.4"/>
+        <text x="672" y="205" font-family="IBM Plex Mono" font-size="10.5" fill="#6fbf73">G</text>
+
+        <path d="M 90,90 L 110.4,133.3 L 130.7,158.4 L 151.1,173.6 L 171.4,183.4 L 191.8,190.1 L 212.1,194.8 L 232.5,198.3 L 252.9,200.9 L 273.2,202.9 L 293.6,204.4 L 313.9,205.6 L 334.3,206.5 L 354.6,207.3 L 375,207.9 L 395.4,208.3 L 415.7,208.7 L 436.1,209 L 456.4,209.2 L 476.8,209.3 L 497.1,209.5 L 517.5,209.6 L 537.9,209.7 L 558.2,209.7 L 578.6,209.8 L 598.9,209.8 L 619.3,209.9 L 639.6,209.9 L 660,209.9" fill="none" stroke="#6e93be" stroke-width="2.4"/>
+        <text x="672" y="216" font-family="IBM Plex Mono" font-size="10.5" fill="#6e93be">B</text>
+      </svg>
+      <div class="diagram-caption">Prawdziwy kształt profilu Burleya dla promieni w proporcji 1,0 / 0,2 / 0,1. Przy odległości „1× promień” czerwień ma jeszcze wyraźny wkład, zieleń resztkowy, a błękit praktycznie zerowy — i to jest cała przyczyna czerwonej poświaty.</div>
+    </div>
+
+    <p><strong>2. Skala. Tu ginie najwięcej czasu.</strong> Promień jest wyrażony <em>w jednostkach sceny</em>. Ta sama wartość 1,0 znaczy „jeden centymetr” w scenie modelowanej w centymetrach i „jeden metr” w scenie modelowanej w metrach — czyli sto razy więcej rozlania. Postać zaimportowana z innego pipeline'u albo przeskalowana węzłem transformacji potrafi z dnia na dzień zmienić się z realistycznej skóry w półprzezroczysty wosk, przy nietkniętym shaderze.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Scale.trap</span><span>ten sam shader, dwie skale sceny</span></div>
+      <svg viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ta sama glowa w dwoch skalach sceny: przy modelu w centymetrach rozlanie jest male, przy modelu w metrach obejmuje cala glowe">
+        <line x1="380" y1="20" x2="380" y2="240" stroke="#2a2f38"/>
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">MODEL W cm · radius 1,0</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">TEN SAM MODEL W m · radius 1,0</text>
+
+        <ellipse cx="190" cy="140" rx="62" ry="78" fill="#2a2116" stroke="#8b909b" stroke-width="1.6"/>
+        <circle cx="190" cy="112" r="14" fill="#e8a33d" fill-opacity="0.55"/>
+        <text x="190" y="235" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">rozlanie ≈ 1 cm — skóra</text>
+
+        <ellipse cx="570" cy="140" rx="62" ry="78" fill="#2a2116" stroke="#8b909b" stroke-width="1.6"/>
+        <ellipse cx="570" cy="140" rx="62" ry="78" fill="#e8a33d" fill-opacity="0.5"/>
+        <text x="570" y="235" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">rozlanie ≈ 1 m — cała głowa świeci</text>
+      </svg>
+      <div class="diagram-caption">Shader identyczny, wartości identyczne, zmieniona wyłącznie jednostka sceny. Dlatego przed strojeniem SSS zawsze sprawdza się, ile jednostek ma model — nie zaczyna się od kręcenia kolorem.</div>
+    </div>
+
+    <p>Dlatego shadery rozdzielają zwykle <em>promień</em> (proporcje między kanałami, czyli charakter materiału) od <em>skali</em> (jeden mnożnik dopasowujący całość do jednostek sceny). Charakter skóry stroisz proporcją kanałów; dopasowanie do modelu — mnożnikiem.</p>
+
+    <p><strong>3. Współczynnik załamania (IOR).</strong> Steruje dwiema rzeczami naraz: siłą odbicia lustrzanego na powierzchni, przez Fresnela z Rozdziału 7, oraz — w random walku — załamaniem promienia przy wejściu do ośrodka. Dla tkanek to okolice 1,33–1,4. Podniesienie IOR rozjaśnia specular i jednocześnie zmienia rozkład światła w środku, więc nie jest to pokrętło „tylko od połysku”.</p>
+
+    <p><strong>4. Anizotropia g.</strong> Domyślne zero (rozpraszanie izotropowe) jest wygodne, bo pozwala renderowi używać krótszych ścieżek, ale tkanki rozpraszają do przodu. Dodatnie g sprawia, że światło wnika głębiej przy tej samej wartości σ_s — efekt bywa mylony ze zwiększeniem promienia.</p>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>W Arnoldzie to grupa <em>Subsurface</em> w <em>standard_surface</em>: <em>subsurface</em> (waga), <em>subsurface_color</em>, <em>subsurface_radius</em> (trzy kanały), <em>subsurface_scale</em> (mnożnik do jednostek sceny), <em>subsurface_anisotropy</em> oraz przełącznik <em>subsurface_type</em> — <em>randomwalk</em> kontra starsza <em>diffusion</em>. RenderMan wystawia kilka modeli w <em>PxrSurface</em>, w tym ścieżkę path-traced odpowiadającą random walkowi. Karma i inne silniki oparte o MaterialX robią to przez <em>subsurface</em> w MaterialX Standard Surface — czyli ten sam model, który Rozdział 11 opisał jako standard.</p>
+    <p>Kolejność strojenia, która oszczędza najwięcej czasu: najpierw sprawdź jednostki sceny i ustaw skalę, potem proporcje kanałów, dopiero na końcu wagę i kolor. Odwrotna kolejność kończy się kompensowaniem błędu skali kolorem — i shaderem, który rozjeżdża się przy pierwszym ujęciu z inną kamerą.</p>
+    <p>Jeśli SSS zaszumia się bardziej niż reszta obrazu, to zwykle random walk na materiale o α bardzo blisko 1: fotony wykonują setki odbić, zanim wyjdą. Renderery mają na to osobne limity kroków i to je podnosi się w pierwszej kolejności, a nie globalną liczbę próbek z Rozdziału 8.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Słowniczek</div>
+    <dl>
+      <dt>BSSRDF</dt><dd>Funkcja odbicia z dwoma punktami powierzchni (wejście i wyjście); uogólnienie BRDF na SSS.</dd>
+      <dt>σ_s, σ_a, σ_t</dt><dd>Współczynniki rozpraszania, absorpcji i ich suma (ekstynkcja), w jednostkach 1/długość.</dd>
+      <dt>Albedo pojedynczego rozproszenia (α)</dt><dd>σ_s/σ_t — jaka część zdarzeń to rozproszenie, nie pochłonięcie. Materiały SSS mają α bliskie 1.</dd>
+      <dt>Średnia droga swobodna (MFP)</dt><dd>1/σ_t — średni dystans między zdarzeniami; to, co interfejs nazywa promieniem.</dd>
+      <dt>Aproksymacja dyfuzyjna</dt><dd>Zastąpienie setek rozproszeń gładkim profilem R(r); szybka, zawodzi na cienkiej geometrii.</dd>
+      <dt>Random walk</dt><dd>Faktyczne śledzenie fotonu wewnątrz ośrodka; fizyczne, poprawne dla cienkich kształtów, droższe.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>SSS to jeden z trzech tematów, które w produkcji dotykasz codziennie, a które w głównym nurcie książki były tylko wspomniane. Dodatek AH bierze następny: displacement i subdivision liczone w czasie renderu.</p>
+  </div>
+
+<div class="deeper">
+  <div class="deeper-label">Idź głębiej</div>
+  <a href="dodatek-z-henyey-greenstein.html">Dodatek Z — Funkcja fazowa Henyeya-Greensteina</a>
+  <a href="dodatek-t-radiometria.html">Dodatek T — Radiometria: czym naprawdę jest „L”</a>
+</div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-18-wolumetria.html">↑ Rozdział 18: Wolumetria</a>
+</div>
+</div>
+<script src="../assets/interactive.js"></script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dodatek AI — MaterialX i OSL: w czym dziś opisuje się materiały</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>OSL · domknięcia</span><span>MaterialX · graf</span><span>≠ shader pikseli</span><span>EXT OF · R.10, R.11</span>
+  </div>
+
+  <div class="eyebrow">Dodatek AI / Lookdev w praktyce</div>
+  <h1>MaterialX i OSL: w czym dziś opisuje się materiały</h1>
+  <p class="subtitle">Rozdziały 10 i 11 podały model materiału jako wzory. W produkcji nikt nie wpisuje tych wzorów ręcznie — buduje graf węzłów, który potem musi zadziałać w Arnoldzie, w Karmie, w podglądzie w Houdinim i w przeglądarce USD, dając ten sam wynik. Ten dodatek wyjaśnia, jak to w ogóle możliwe, że jeden opis materiału działa w kilku silnikach naraz.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Shader w ray tracerze nie zwraca koloru piksela — zwraca <strong>opis</strong> tego, co powierzchnia robi ze światłem. Renderer sam decyduje, jak go próbkować.</li>
+      <li>Ten opis to <span class="term-cyan">domknięcie</span> (closure): „tu jest GGX o takim roughness i takim F0” zamiast „tu jest kolor RGB”.</li>
+      <li>OSL to język, w którym takie domknięcia się pisze. MaterialX to format grafu, który przenosi materiał między programami.</li>
+      <li>MaterialX Standard Surface to dosłownie model z Rozdziału 11 — spisany jako standard, którego trzyma się kilka silników naraz.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Domknięcia</div>
+    <h2>Dlaczego shader nie zwraca koloru</h2>
+    <p>W rasteryzacji shader fragmentu dostaje wszystkie dane wejściowe naraz i zwraca gotowy kolor. W ray tracerze to nie zadziała — i powód jest ten sam, który przewijał się przez cały Rozdział 15.</p>
+    <p>Żeby policzyć kolor, trzeba znać L_i, czyli światło przychodzące. Żeby je poznać, trzeba wystrzelić promienie. Żeby wiedzieć, <em>gdzie</em> je wystrzelić, trzeba znać BRDF — bo importance sampling z Dodatku B losuje kierunki proporcjonalnie do niej. Ale BRDF jest wynikiem działania shadera. Shader musiałby więc zwrócić kolor, żeby renderer mógł mu dostarczyć dane, których shader potrzebuje, żeby zwrócić kolor.</p>
+
+    <p>Wyjście z tego błędnego koła nazywa się <strong>domknięciem</strong>. Shader nie liczy koloru — <em>opisuje</em> BRDF i oddaje ten opis rendererowi:</p>
+
+    <div class="formula">shader → closure(typ, parametry)&nbsp;&nbsp;&nbsp;zamiast&nbsp;&nbsp;&nbsp;shader → RGB<span class="sub"><strong>typ</strong> — która rodzina BRDF, np. mikrofasetkowa GGX z Rozdziału 11 albo Lambert z Rozdziału 5; <strong>parametry</strong> — konkretne wartości dla tego punktu: roughness, F0, kolor, IOR. Renderer dostaje przepis, nie wynik, więc może go próbkować tak, jak akurat mu wygodnie</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Closure.vs.color</span><span>kto decyduje o probkowaniu</span></div>
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Po lewej shader zwracajacy kolor, ktory nie moze poznac swiatla; po prawej shader zwracajacy domkniecie, ktore renderer probkuje sam">
+        <defs>
+          <marker id="ai1" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e06c5a"/></marker>
+          <marker id="ai2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4fc3c0"/></marker>
+        </defs>
+        <line x1="380" y1="20" x2="380" y2="250" stroke="#2a2f38"/>
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#e06c5a">SHADER ZWRACA KOLOR</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#4fc3c0">SHADER ZWRACA DOMKNIĘCIE</text>
+
+        <rect x="70" y="70" width="110" height="46" rx="7" fill="#20242c" stroke="#8b909b" stroke-width="1.4"/>
+        <text x="125" y="98" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#ecebe4">shader</text>
+        <rect x="220" y="70" width="110" height="46" rx="7" fill="#20242c" stroke="#8b909b" stroke-width="1.4"/>
+        <text x="275" y="98" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#ecebe4">potrzebuje L_i</text>
+        <line x1="180" y1="93" x2="216" y2="93" stroke="#e06c5a" stroke-width="1.8" marker-end="url(#ai1)"/>
+        <path d="M 275,116 L 275,150 L 125,150 L 125,120" fill="none" stroke="#e06c5a" stroke-width="1.8" marker-end="url(#ai1)"/>
+        <text x="200" y="172" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#e06c5a">żeby poznać L_i, trzeba</text>
+        <text x="200" y="186" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#e06c5a">znać BRDF — czyli wynik shadera</text>
+        <text x="200" y="212" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#e06c5a">błędne koło</text>
+
+        <rect x="440" y="70" width="110" height="46" rx="7" fill="#20242c" stroke="#8b909b" stroke-width="1.4"/>
+        <text x="495" y="98" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#ecebe4">shader</text>
+        <rect x="600" y="70" width="120" height="46" rx="7" fill="#20242c" stroke="#4fc3c0" stroke-width="1.6"/>
+        <text x="660" y="91" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#4fc3c0">closure:</text>
+        <text x="660" y="106" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#4fc3c0">GGX, α=0,3</text>
+        <line x1="550" y1="93" x2="596" y2="93" stroke="#4fc3c0" stroke-width="1.8" marker-end="url(#ai2)"/>
+        <rect x="510" y="160" width="210" height="42" rx="7" fill="#20242c" stroke="#9c82d8" stroke-width="1.4"/>
+        <text x="615" y="186" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#9c82d8">renderer próbkuje sam</text>
+        <path d="M 660,116 L 660,156" fill="none" stroke="#4fc3c0" stroke-width="1.8" marker-end="url(#ai2)"/>
+        <text x="570" y="228" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">shader nigdy nie widzi światła</text>
+      </svg>
+      <div class="diagram-caption">Rozdzielenie ról: shader mówi <em>czym jest</em> powierzchnia, renderer decyduje <em>jak ją policzyć</em>. Dzięki temu ten sam shader działa w path tracerze, w BDPT z Rozdziału 16 i w podglądzie czasu rzeczywistego — każdy próbkuje po swojemu.</div>
+    </div>
+
+    <p>To rozdzielenie ma jeszcze jedną konsekwencję, którą widać w praktyce: shader nie może „podejrzeć” światła i zareagować na nie warunkiem. Próba napisania materiału, który zachowuje się inaczej w cieniu niż w świetle, rozbija się właśnie o tę granicę — i to jest cecha, nie ograniczenie implementacji.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: OSL</div>
+    <h2>Język, w którym się je pisze</h2>
+    <p>Open Shading Language powstał w Sony Imageworks właśnie po to, żeby pisać domknięcia. Składniowo przypomina C, ale zwraca nie kolor, tylko wyrażenie budowane z wbudowanych domknięć — <em>diffuse</em>, <em>microfacet</em>, <em>emission</em> i kilkunastu innych — które można ze sobą mieszać i ważyć.</p>
+    <p>Dla artysty technicznego istotne są trzy konsekwencje. Po pierwsze, OSL kompiluje się raz i działa w każdym rendererze, który go obsługuje. Po drugie, węzły w edytorze materiałów to najczęściej właśnie shadery OSL — graf, który klikasz, jest kompilowany do jednego programu. Po trzecie, koszt: rozbudowana sieć węzłów to realny czas liczony <em>przy każdym trafieniu promienia</em>, a nie raz na obiekt.</p>
+    <a class="inline-deeper" href="dodatek-j-shading-network-obciazenie.html">↓ Dodatek J — ile faktycznie kosztuje sieć shaderów</a>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: MaterialX</div>
+    <h2>Format, który przenosi materiał między programami</h2>
+    <p>OSL rozwiązuje problem „jak opisać materiał”, ale nie „jak przenieść go z Mayi do Houdiniego bez przepisywania”. Tym zajmuje się MaterialX: to opis grafu węzłów wraz z definicjami, co każdy węzeł znaczy — niezależny od konkretnej aplikacji.</p>
+    <p>Najważniejszy element z punktu widzenia tej książki to <strong>MaterialX Standard Surface</strong>: uzgodniony, spisany model powierzchni, którego wejścia to dokładnie parametry z Rozdziału 11 i Dodatku AG — base, specular roughness, metalness, IOR, transmission, subsurface, coat. To nie jest „jeszcze jeden shader”, tylko wspólny mianownik, do którego kilku producentów silników się zobowiązało.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>MaterialX.interchange</span><span>jeden graf, wiele silnikow</span></div>
+      <svg viewBox="0 0 760 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Graf MaterialX w srodku, z ktorego strzalki prowadza do Arnolda, Karmy, RenderMana i podgladu USD">
+        <rect x="290" y="82" width="180" height="56" rx="9" fill="#20242c" stroke="#9c82d8" stroke-width="2"/>
+        <text x="380" y="106" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#9c82d8">MaterialX</text>
+        <text x="380" y="123" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">Standard Surface</text>
+
+        <g font-family="IBM Plex Mono" font-size="10.5" fill="#4fc3c0">
+          <rect x="40" y="26" width="112" height="34" rx="7" fill="#20242c" stroke="#4fc3c0" stroke-width="1.3"/>
+          <text x="96" y="48" text-anchor="middle">Arnold</text>
+          <rect x="40" y="94" width="112" height="34" rx="7" fill="#20242c" stroke="#4fc3c0" stroke-width="1.3"/>
+          <text x="96" y="116" text-anchor="middle">Karma</text>
+          <rect x="40" y="162" width="112" height="34" rx="7" fill="#20242c" stroke="#4fc3c0" stroke-width="1.3"/>
+          <text x="96" y="184" text-anchor="middle">RenderMan</text>
+          <rect x="608" y="60" width="112" height="34" rx="7" fill="#20242c" stroke="#4fc3c0" stroke-width="1.3"/>
+          <text x="664" y="82" text-anchor="middle">podgląd USD</text>
+          <rect x="608" y="128" width="112" height="34" rx="7" fill="#20242c" stroke="#4fc3c0" stroke-width="1.3"/>
+          <text x="664" y="150" text-anchor="middle">inne silniki</text>
+        </g>
+
+        <g stroke="#8b909b" stroke-width="1.3" stroke-dasharray="4 3" fill="none">
+          <path d="M 152,43 L 286,96"/>
+          <path d="M 152,111 L 286,110"/>
+          <path d="M 152,179 L 286,124"/>
+          <path d="M 474,104 L 604,79"/>
+          <path d="M 474,118 L 604,143"/>
+        </g>
+        <text x="380" y="176" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">ten sam graf, ten sam model z Rozdziału 11</text>
+      </svg>
+      <div class="diagram-caption">MaterialX nie jest silnikiem — jest umową. Każdy renderer implementuje ten sam model po swojemu, ale wejścia i ich znaczenie są wspólne, więc materiał przenosi się bez tłumaczenia węzeł po węźle.</div>
+    </div>
+
+    <p>W praktyce oznacza to, że kolumna parametrów, którą stroisz w lookdevie, jest dziś w dużej mierze <em>ta sama</em> niezależnie od silnika — a różnice, na które trafiasz, są różnicami implementacji tego samego modelu, nie różnicami modelu.</p>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Karma używa MaterialX natywnie — graf, który budujesz w Solarisie, jest grafem MaterialX, a nie tłumaczeniem na niego. Arnold i RenderMan obsługują zarówno własne węzły, jak i MaterialX; <em>standard_surface</em> Arnolda i MaterialX Standard Surface to celowo ten sam model o tych samych nazwach wejść. OSL działa w Arnoldzie, RenderManie i Cyclesie.</p>
+    <p>Praktyczna konsekwencja przy przenoszeniu materiału: rozjazd wyglądu między silnikami przy identycznych wartościach wynika prawie zawsze z rzeczy <em>obok</em> modelu — innej przestrzeni kolorów tekstury (Dodatek E), innych jednostek sceny przy SSS (Dodatek AG) albo innego domyślnego filtra tekstur (Dodatek G) — a nie z samej BRDF.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Słowniczek</div>
+    <dl>
+      <dt>Domknięcie (closure)</dt><dd>Opis BRDF zwracany przez shader zamiast koloru; renderer sam decyduje, jak go próbkować.</dd>
+      <dt>OSL</dt><dd>Open Shading Language — język do pisania shaderów zwracających domknięcia.</dd>
+      <dt>MaterialX</dt><dd>Otwarty format opisu grafu materiału, przenośny między aplikacjami i silnikami.</dd>
+      <dt>MaterialX Standard Surface</dt><dd>Uzgodniony model powierzchni; jego wejścia to parametry z Rozdziału 11 i Dodatku AG.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Blok lookdev zamknięty: materiał opisany, geometria wygenerowana, rozpraszanie podpowierzchniowe policzone. Dodatki AJ–AL zajmują się tym, co dzieje się z gotowym renderem — jak rozdzielić go na warstwy, którymi da się sterować w compingu.</p>
+  </div>
+
+<div class="deeper">
+  <div class="deeper-label">Idź głębiej</div>
+  <a href="dodatek-j-shading-network-obciazenie.html">Dodatek J — Złożoność sieci shaderów</a>
+  <a href="dodatek-a-materialy.html">Dodatek A — Warianty materiałów PBR</a>
+</div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-10-materialy.html">↑ Rozdział 10: Materiały</a>
+</div>
+</div>
+<script src="../assets/interactive.js"></script>
+</body>
+</html>
