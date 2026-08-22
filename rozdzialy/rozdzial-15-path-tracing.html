@@ -35,6 +35,8 @@
 
     <div class="formula">L_o(p,<span class="vec" data-tip="Kierunek wychodzący (do obserwatora)">ω_o</span>) = L_e(p,<span class="vec" data-tip="Kierunek wychodzący (do obserwatora)">ω_o</span>) + ∫_Ω f(p,<span class="vec" data-tip="Kierunek przychodzący (do źródła światła)">ω_i</span>,<span class="vec" data-tip="Kierunek wychodzący (do obserwatora)">ω_o</span>) · L_i(p,<span class="vec" data-tip="Kierunek przychodzący (do źródła światła)">ω_i</span>) · (<span class="vec" data-tip="Normalna powierzchni w punkcie trafienia">N</span>·<span class="vec" data-tip="Kierunek przychodzący (do źródła światła)">ω_i</span>) dω_i<span class="sub">L_o — światło wychodzące; L_e — światło emitowane (źródła); f — BRDF z Rozdziałów 10–11; L_i — światło przychodzące z kierunku ω_i; Ω — cała hemisfera nad punktem</span></div>
     <button class="reveal-btn" data-modal-target="explain-rendering-eq">Wyjaśnij ten wzór</button>
+    <a class="inline-deeper" href="../dodatki/dodatek-u-kat-brylowy.html">↓ Dodatek U — czym właściwie jest dω, czyli kąt bryłowy</a>
+    <a class="inline-deeper" href="../dodatki/dodatek-t-radiometria.html">↓ Dodatek T — „L czego?”, czyli co mierzy radiancja</a>
     <template id="explain-rendering-eq">
       <h3>Równanie renderowania — krok po kroku</h3>
       <p><strong>Co to znaczy fizycznie.</strong> L_o(p,ω_o) to ilość światła wychodzącego z punktu p w stronę kamery (kierunek ω_o). To suma dwóch rzeczy: światła, które ten punkt sam emituje (L_e — zero dla większości powierzchni, coś więcej dla źródeł światła), plus całego światła, które dotarło do niego z <em>każdego</em> kierunku hemisfery nad nim, odpowiednio przefiltrowanego przez materiał i kąt padania.</p>

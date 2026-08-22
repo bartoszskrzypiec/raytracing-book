@@ -31,33 +31,34 @@
   <div class="section">
     <div class="section-eyebrow">Pass: Hierarchia</div>
     <h2>Scena jako drzewo transformacji</h2>
-    <p>Koło samochodu nie ma sensownej „pozycji w świecie” zapisanej na trwałe — ma pozycję <em>względem</em> nadwozia, a nadwozie ma pozycję względem świata. Gdy samochód rusza, każde koło porusza się automatycznie, bo dziedziczy transformację rodzica. To jest dosłownie ten sam mechanizm co parent/child w outlinerze Mayi albo Blendera.</p>
+    <p>Koło samochodu nie ma sensownej „pozycji w świecie” zapisanej na trwałe — ma pozycję <em>względem</em> nadwozia, nadwozie względem węzła całego samochodu, a ten dopiero względem świata. Gdy samochód rusza, każde koło porusza się automatycznie, bo dziedziczy transformację rodzica, a ten swojego. To jest dosłownie ten sam mechanizm co parent/child w outlinerze Mayi albo Blendera.</p>
 
     <div class="formula">M_world = M_parent · M_local<span class="sub">macierze transformacji składają się przez mnożenie, od korzenia drzewa aż do konkretnego obiektu</span></div>
     <a class="inline-deeper" href="../dodatki/dodatek-f-macierze.html">↓ Dodatek F — co dokładnie jest w środku macierzy M</a>
 
     <div class="diagram-frame">
       <div class="diagram-hud"><span>Scene.graph</span><span>parent → child</span></div>
-      <svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="380" cy="50" r="16" fill="#20242c" stroke="#9c82d8" stroke-width="2"/>
-        <text x="380" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#9c82d8">WORLD</text>
+      <svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Drzewo transformacji: WORLD nad SAMOCHÓD, pod nim NADWOZIE, a pod nadwoziem dwa koła">
+        <circle cx="380" cy="38" r="15" fill="#20242c" stroke="#9c82d8" stroke-width="2"/>
+        <text x="380" y="20" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#9c82d8">WORLD</text>
 
-        <line x1="380" y1="66" x2="380" y2="120" stroke="#4fc3c0" stroke-width="1.8"/>
-        <circle cx="380" cy="135" r="14" fill="#20242c" stroke="#4fc3c0" stroke-width="1.8"/>
-        <text x="380" y="115" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#4fc3c0">SAMOCHÓD (T1)</text>
+        <line x1="380" y1="53" x2="380" y2="96" stroke="#4fc3c0" stroke-width="1.8"/>
+        <circle cx="380" cy="110" r="14" fill="#20242c" stroke="#4fc3c0" stroke-width="1.8"/>
+        <text x="402" y="114" font-family="IBM Plex Mono" font-size="10.5" fill="#4fc3c0">SAMOCHÓD (T1)</text>
 
-        <line x1="380" y1="149" x2="220" y2="220" stroke="#e8a33d" stroke-width="1.5"/>
-        <line x1="380" y1="149" x2="380" y2="220" stroke="#e8a33d" stroke-width="1.5"/>
-        <line x1="380" y1="149" x2="540" y2="220" stroke="#e8a33d" stroke-width="1.5"/>
+        <line x1="380" y1="124" x2="380" y2="168" stroke="#e8a33d" stroke-width="1.6"/>
+        <circle cx="380" cy="182" r="14" fill="#20242c" stroke="#e8a33d" stroke-width="1.8"/>
+        <text x="402" y="186" font-family="IBM Plex Mono" font-size="10.5" fill="#e8a33d">NADWOZIE (T2)</text>
 
-        <circle cx="220" cy="230" r="10" fill="#e8a33d" fill-opacity="0.7"/>
-        <text x="220" y="252" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">KOŁO_PL (T2)</text>
-        <circle cx="380" cy="230" r="10" fill="#e8a33d" fill-opacity="0.7"/>
-        <text x="380" y="252" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">KOŁO_PP (T3)</text>
-        <circle cx="540" cy="230" r="10" fill="#e8a33d" fill-opacity="0.7"/>
-        <text x="540" y="252" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">NADWOZIE (T4)</text>
+        <line x1="380" y1="196" x2="250" y2="238" stroke="#e8a33d" stroke-width="1.5"/>
+        <line x1="380" y1="196" x2="510" y2="238" stroke="#e8a33d" stroke-width="1.5"/>
+
+        <circle cx="250" cy="248" r="10" fill="#e8a33d" fill-opacity="0.7"/>
+        <text x="250" y="270" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">KOŁO_PL (T3)</text>
+        <circle cx="510" cy="248" r="10" fill="#e8a33d" fill-opacity="0.7"/>
+        <text x="510" y="270" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#8b909b">KOŁO_PP (T4)</text>
       </svg>
-      <div class="diagram-caption">Każde T to transformacja względna do rodzica — poruszenie SAMOCHODU automatycznie poruszy wszystkie koła.</div>
+      <div class="diagram-caption">Każde T to transformacja względna do rodzica. Koło nie wie, gdzie jest w świecie — zna tylko swoją pozycję względem nadwozia, nadwozie względem samochodu, a samochód względem świata. Poruszenie SAMOCHODU przesuwa cały łańcuch pod spodem.</div>
     </div>
   </div>
 
