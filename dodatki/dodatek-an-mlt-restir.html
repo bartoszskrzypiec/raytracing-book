@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dodatek AN — MLT, ReSTIR i rekonstrukcja neuronowa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>MLT · mutuj, nie losuj</span><span>ReSTIR · rezerwuar</span><span>REUSE · sąsiad i klatka</span><span>EXT OF · R.15, R.16, R.19</span>
+  </div>
+
+  <div class="eyebrow">Dodatek AN / Zaawansowany transport</div>
+  <h1>MLT, ReSTIR i rekonstrukcja neuronowa</h1>
+  <p class="subtitle">Rozdział 16 pokazał dwie odpowiedzi na pytanie „co, gdy losowa ścieżka prawie nigdy nie trafia w światło”: budowanie z dwóch stron i rozsiewanie fotonów. Są jeszcze trzy, zupełnie inne — i każda z nich opiera się na tym samym pomyśle: <strong>nie wyrzucaj pracy, którą już wykonałeś</strong>.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>MLT bierze ścieżkę, która już znalazła światło, i <em>modyfikuje</em> ją drobnymi krokami zamiast losować nową od zera.</li>
+      <li>ReSTIR zauważa, że sąsiedni piksel i poprzednia klatka widzą prawie to samo — więc ich próbki można pożyczyć zamiast liczyć od nowa.</li>
+      <li>Rekonstrukcja neuronowa idzie najdalej: uczy sieć, jak wygląda poprawny wynik, i pozwala jej dopowiedzieć resztę.</li>
+      <li>Wszystkie trzy kupują zbieżność za cenę korelacji — błąd przestaje być niezależnym szumem z Rozdziału 15, a zaczyna mieć strukturę.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: MLT</div>
+    <h2>Mutuj ścieżkę, która już działa</h2>
+    <p>Wróćmy do kaustyki z Rozdziału 16: wąskie okno kierunków, przez które światło przechodzi do kamery, i miliony losowań, które w nie nie trafiają. Path tracer traktuje każdą próbkę niezależnie, więc po znalezieniu jednej udanej ścieżki wyrzuca ją i zaczyna od zera. To jest dokładnie ta praca, którą MLT postanawia zachować.</p>
+    <p><span class="term-cyan">Metropolis Light Transport</span> działa tak: znajdź jakąkolwiek ścieżkę, która niesie energię. Potem <em>zaburz</em> ją nieznacznie — przesuń jeden wierzchołek, zmień jeden kąt — i sprawdź, ile niesie nowa wersja. Jeśli niesie porównywalnie dużo, przyjmij ją i mutuj dalej. Jeśli znacznie mniej, odrzuć ją z odpowiednim prawdopodobieństwem i wróć do poprzedniej.</p>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Mutate.vs.resample</span><span>eksploracja waskiego okna</span></div>
+      <svg viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Po lewej losowanie od zera trafia w waskie okno raz na milion prob, po prawej mutacja znalezionej sciezki eksploruje jego okolice">
+        <line x1="380" y1="20" x2="380" y2="240" stroke="#2a2f38"/>
+        <text x="190" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">LOSOWANIE OD ZERA</text>
+        <text x="570" y="34" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">MUTACJA ZNALEZIONEJ</text>
+
+        <rect x="60" y="70" width="260" height="140" fill="#20242c" stroke="#2a2f38"/>
+        <rect x="196" y="112" width="20" height="26" fill="#e8a33d" fill-opacity="0.5" stroke="#e8a33d" stroke-width="1.2"/>
+        <g fill="#5a6068">
+          <circle cx="96" cy="98" r="2.6"/><circle cx="142" cy="170" r="2.6"/><circle cx="258" cy="92" r="2.6"/>
+          <circle cx="290" cy="180" r="2.6"/><circle cx="110" cy="150" r="2.6"/><circle cx="242" cy="152" r="2.6"/>
+          <circle cx="170" cy="86" r="2.6"/><circle cx="300" cy="128" r="2.6"/><circle cx="80" cy="188" r="2.6"/>
+          <circle cx="214" cy="196" r="2.6"/><circle cx="126" cy="118" r="2.6"/><circle cx="278" cy="112" r="2.6"/>
+        </g>
+        <circle cx="206" cy="124" r="3.4" fill="#e8a33d"/>
+        <text x="190" y="230" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">1 trafienie na 12 prób</text>
+
+        <rect x="440" y="70" width="260" height="140" fill="#20242c" stroke="#2a2f38"/>
+        <rect x="576" y="112" width="20" height="26" fill="#e8a33d" fill-opacity="0.5" stroke="#e8a33d" stroke-width="1.2"/>
+        <g fill="#e8a33d">
+          <circle cx="586" cy="124" r="3.4"/><circle cx="580" cy="118" r="3"/><circle cx="591" cy="130" r="3"/>
+          <circle cx="583" cy="132" r="3"/><circle cx="590" cy="117" r="3"/><circle cx="578" cy="127" r="3"/>
+          <circle cx="594" cy="122" r="3"/><circle cx="586" cy="135" r="3"/>
+        </g>
+        <path d="M 586,124 L 580,118 M 580,118 L 591,130 M 591,130 L 583,132 M 583,132 L 590,117" stroke="#9c82d8" stroke-width="1.1" fill="none"/>
+        <text x="570" y="230" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">wszystkie próby w oknie</text>
+        <text x="632" y="102" font-family="IBM Plex Mono" font-size="9.5" fill="#e8a33d">okno</text>
+      </svg>
+      <div class="diagram-caption">Pomarańczowy prostokąt to zbiór ścieżek niosących energię. Losowanie od zera trafia w niego przypadkiem; mutacja, raz w nim wylądowawszy, zostaje i eksploruje okolicę — bo zaburzenie dobrej ścieżki najczęściej daje inną dobrą ścieżkę.</div>
+    </div>
+
+    <p>Reguła akceptacji nie jest dowolna — pochodzi z algorytmu Metropolisa-Hastingsa i gwarantuje, że po dostatecznie wielu krokach ścieżki są odwiedzane z częstością proporcjonalną do niesionej energii. Estymator pozostaje więc nieobciążony, mimo że kolejne próbki są ze sobą jawnie skorelowane.</p>
+    <p>Ta korelacja jest zarazem ceną. Szum przestaje wyglądać jak ziarno z Rozdziału 15, a zaczyna jak nierówne plamy: jeden fragment obrazu jest wygładzony, bo łańcuch spędził tam dużo kroków, sąsiedni zaszumiony, bo nie zdążył go odwiedzić. W animacji plamy migoczą między klatkami. Dlatego MLT, mimo teoretycznej siły, pozostaje narzędziem do konkretnych trudnych ujęć, a nie domyślnym trybem produkcyjnym.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: ReSTIR</div>
+    <h2>Pożycz próbkę od sąsiada</h2>
+    <p>Drugi pomysł wychodzi od obserwacji o samym obrazie, nie o ścieżkach: sąsiedni piksel prawie zawsze patrzy na tę samą powierzchnię, w podobnym oświetleniu. Jeśli on znalazł dobre światło do próbkowania, to jest spora szansa, że dla mnie też będzie dobre.</p>
+    <p>ReSTIR zamienia tę intuicję w algorytm. Każdy piksel trzyma <span class="term-amber">rezerwuar</span> — jedną wybraną próbkę wraz z wagą podsumowującą wszystkich kandydatów, którzy się o to miejsce ubiegali. Rezerwuary można <strong>łączyć</strong>: biorąc rezerwuar sąsiada, dostajesz jego kandydatów bez ponownego liczenia czegokolwiek, a wagi pilnują, żeby wynik pozostał statystycznie poprawny.</p>
+    <p>Dalej robi się to w dwóch osiach naraz. <strong>Przestrzennie</strong> — łącząc z kilkoma sąsiadami w obrazie. <strong>Czasowo</strong> — łącząc z rezerwuarem tego samego punktu w poprzedniej klatce, znalezionym przez reprojekcję opisaną w Rozdziale 19. Po kilku klatkach jeden piksel dysponuje efektywnie setkami kandydatów, choć w każdej klatce policzył kilku.</p>
+    <p>To dlatego ReSTIR był przełomem dla czasu rzeczywistego: pozwolił na sensowne oświetlenie od tysięcy źródeł przy budżecie kilku próbek na piksel. Ograniczenia są lustrzanym odbiciem zalet — reprojekcja zawodzi tam, gdzie historia jest nieprawdziwa, czyli przy cięciu montażowym, szybkim ruchu i odsłanianiu wcześniej zasłoniętej geometrii. Wtedy trzeba historię odrzucić i zacząć zbierać od nowa, co widać jako chwilowy skok szumu.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Sieci</div>
+    <h2>Dopowiedzenie zamiast policzenia</h2>
+    <p>Rozdział 19 opisał denoiser neuronowy jako filtr na końcu procesu: szumiący obraz plus czyste bufory na wejściu, wygładzony obraz na wyjściu. To najbardziej oswojone zastosowanie sieci w rendererze, ale nie jedyne.</p>
+    <p><strong>Rekonstrukcja klatek</strong> przenosi ten sam pomysł na czas i rozdzielczość: sieć dostaje serię klatek w niższej rozdzielczości wraz z wektorami ruchu i produkuje klatki w wyższej, a czasem także klatki pośrednie, których nikt nie renderował. Renderer liczy wtedy ułamek pikseli, a resztę dopowiada model.</p>
+    <p><strong>Neuronowy cache radiancji</strong> idzie głębiej — do samego wnętrza pętli z Rozdziału 15. Zamiast kontynuować odbicia aż do końca ścieżki, po kilku odbiciach renderer pyta małą sieć: „ile światła przychodzi mniej więcej do tego punktu z tego kierunku?”. Sieć uczy się tego w trakcie renderowania, na bieżąco. Ścieżki robią się krótsze, a ich ogony — najdroższe i wnoszące najmniej — zastępuje jedno zapytanie.</p>
+    <p>Warto nazwać wspólną cechę wszystkich tych metod uczciwie: <strong>przestają być nieobciążone</strong>. Path tracer z Rozdziału 15 gwarantował, że przy dostatecznej liczbie próbek zbiegnie do prawidłowego wyniku. Sieć nie daje takiej gwarancji — daje wynik <em>wiarygodny</em>, dopasowany do tego, na czym ją wytrenowano. Dla filmu i gry to zwykle wystarcza aż nadto; dla symulacji, w której obraz jest pomiarem, nie wystarcza wcale. To rozróżnienie decyduje o tym, gdzie tych metod wolno używać.</p>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Z tej trójki w produkcji filmowej spotkasz przede wszystkim rekonstrukcję neuronową w postaci denoisera (Rozdział 19). MLT bywa dostępny w silnikach jako osobny tryb integratora i włącza się go świadomie, do ujęcia z trudnym transportem — nie jako ustawienie domyślne. ReSTIR żyje głównie po stronie czasu rzeczywistego, w silnikach gier i podglądach interaktywnych.</p>
+    <p>Wspólny objaw diagnostyczny, po którym poznaje się wszystkie trzy: gdy szum przestaje być drobnoziarnisty i zaczyna mieć <em>strukturę</em> — plamy, smugi za ruchem, migotanie między klatkami — to znak, że któraś z tych technik ponownie użyła informacji, która przestała być prawdziwa. Zwiększanie liczby próbek pomaga wtedy dużo wolniej, niż podpowiada intuicja z Rozdziału 8.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Słowniczek</div>
+    <dl>
+      <dt>MLT</dt><dd>Metropolis Light Transport — eksploracja przestrzeni ścieżek przez mutowanie ścieżki niosącej energię.</dd>
+      <dt>Mutacja</dt><dd>Drobne zaburzenie istniejącej ścieżki; podstawowy krok MLT.</dd>
+      <dt>ReSTIR</dt><dd>Ponowne próbkowanie przez rezerwuary, z reużyciem przestrzennym i czasowym.</dd>
+      <dt>Rezerwuar</dt><dd>Jedna wybrana próbka plus waga podsumowująca wszystkich kandydatów; rezerwuary można łączyć.</dd>
+      <dt>Neuronowy cache radiancji</dt><dd>Sieć uczona w trakcie renderu, zastępująca dalsze odbicia ścieżki jednym zapytaniem.</dd>
+      <dt>Estymator nieobciążony</dt><dd>Taki, którego wartość oczekiwana równa się prawidłowemu wynikowi; metody z tego dodatku tę własność tracą.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>To domyka Część VIII i całą książkę. Wszystkie osiem dodatków tej części łączy jedno: opisują to, co dzieje się <em>wokół</em> mechanizmu z rozdziałów głównych — a mechanizm zostaje ten sam, niezależnie od tego, ile warstw narośnie nad nim w kolejnej dekadzie.</p>
+  </div>
+
+<div class="deeper">
+  <div class="deeper-label">Idź głębiej</div>
+  <a href="dodatek-b-importance-sampling.html">Dodatek B — Importance sampling i MIS</a>
+  <a href="dodatek-v-monte-carlo-estymatory.html">Dodatek V — Estymatory i odwrotna CDF</a>
+  <a href="dodatek-d-denoising.html">Dodatek D — Mechanika denoisera</a>
+</div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-15-path-tracing.html">↑ Rozdział 15: Path tracing</a>
+</div>
+</div>
+<script src="../assets/interactive.js"></script>
+</body>
+</html>

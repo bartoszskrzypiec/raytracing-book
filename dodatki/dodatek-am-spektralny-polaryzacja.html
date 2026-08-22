@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dodatek AM — Poza RGB: rendering spektralny i polaryzacja</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="viewport-readout">
+    <span>RGB · 3 próbki widma</span><span>HERO λ · 1 na ścieżkę</span><span>STOKES · 4 liczby</span><span>EXT OF · R.7, R.10</span>
+  </div>
+
+  <div class="eyebrow">Dodatek AM / Zaawansowany transport</div>
+  <h1>Poza RGB: rendering spektralny i polaryzacja</h1>
+  <p class="subtitle">Cała ta książka liczyła światło trzema liczbami. To założenie było tak wygodne, że nikt go dotąd nie zakwestionował — a jest przybliżeniem, i to takim, które w konkretnych, rozpoznawalnych sytuacjach się rozpada. Ten dodatek pokazuje, gdzie dokładnie i co się wtedy robi.</p>
+
+  <div class="panel">
+    <div class="panel-label">TL;DR</div>
+    <ul>
+      <li>Światło jest widmem ciągłym. RGB to trzy próbki tego widma — działa, dopóki nic po drodze nie zależy silnie od długości fali.</li>
+      <li>Zawodzi tam, gdzie zależy: dyspersja, cienkie warstwy, fluorescencja i dokładne dopasowanie barwy do pomiaru.</li>
+      <li>Rendering spektralny losuje długość fali tak samo, jak Rozdział 15 losował kierunek — to kolejny wymiar całki, nie osobny silnik.</li>
+      <li>Polaryzacja to druga pominięta właściwość światła; opisuje ją czwórka liczb zamiast jednej jasności.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Trzy próbki</div>
+    <h2>Czym właściwie jest „kolor” w tej książce</h2>
+    <p>Kiedy Rozdział 10 mnożył albedo przez światło kanał po kanale, milcząco zakładał, że trzy liczby wystarczą, żeby opisać, co się dzieje. Fizycznie światło jest rozkładem energii po długościach fali — funkcją ciągłą, nie trójką. Oko sprowadza tę funkcję do trzech wartości, bo ma trzy typy czopków, i właśnie dlatego RGB w ogóle działa: <em>na końcu</em> i tak wszystko trafia do trzech receptorów.</p>
+    <p>Problem polega na tym, że sprowadzenie do trójki następuje w rendererze <strong>na początku</strong>, a nie na końcu. Każde mnożenie po drodze — odbicie, załamanie, przejście przez ośrodek — wykonuje się wtedy na trzech liczbach zamiast na widmie. Dopóki żaden z tych kroków nie zależy mocno od długości fali, wynik jest praktycznie taki sam. Gdy zależy, wyniki się rozjeżdżają.</p>
+
+    <div class="formula">RGB: &nbsp;(r₁·r₂, g₁·g₂, b₁·b₂)&nbsp;&nbsp;&nbsp;kontra&nbsp;&nbsp;&nbsp;widmo: &nbsp;∫ S₁(λ)·S₂(λ)·x̄(λ) dλ<span class="sub"><strong>λ</strong> — długość fali; <strong>S(λ)</strong> — widmo (odbicia albo światła) jako funkcja ciągła; <strong>x̄(λ)</strong> — funkcja dopasowania koloru opisująca czułość oka. Po lewej mnożysz trzy próbki i dopiero to jest wynikiem; po prawej mnożysz całe widma i sprowadzasz do trójki dopiero na samym końcu. Te dwie operacje <em>nie</em> są równoważne</span></div>
+
+    <div class="diagram-frame">
+      <div class="diagram-hud"><span>Metamerism</span><span>dwa widma, ten sam RGB</span></div>
+      <svg viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dwa rozne widma odbicia - jedno gladkie, jedno z dwoma pikami - sprowadzone do tych samych trzech probek RGB">
+        <line x1="100" y1="195" x2="670" y2="195" stroke="#3a4048" stroke-width="1"/>
+        <line x1="100" y1="85" x2="100" y2="195" stroke="#3a4048" stroke-width="1"/>
+        <text x="92" y="199" text-anchor="end" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">0</text>
+        <text x="92" y="94" text-anchor="end" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">1</text>
+        <text x="100" y="214" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">400</text>
+        <text x="380" y="214" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">550</text>
+        <text x="660" y="214" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#8b909b">700 nm</text>
+        <text x="385" y="234" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">długość fali λ</text>
+        <text x="385" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#8b909b">DWA RÓŻNE WIDMA ODBICIA</text>
+
+        <path d="M 100,167.9 L 123.3,167.6 L 146.7,167.1 L 170,166.5 L 193.3,165.7 L 216.7,164.6 L 240,163.2 L 263.3,161.3 L 286.7,158.9 L 310,155.9 L 333.3,152.3 L 356.7,148.2 L 380,143.7 L 403.3,138.9 L 426.7,134.2 L 450,129.9 L 473.3,125.9 L 496.7,122.6 L 520,119.8 L 543.3,117.6 L 566.7,115.9 L 590,114.6 L 613.3,113.7 L 636.7,112.9 L 660,112.4" fill="none" stroke="#4fc3c0" stroke-width="2.2"/>
+        <text x="672" y="112" font-family="IBM Plex Mono" font-size="10" fill="#4fc3c0">A</text>
+
+        <path d="M 100,174 L 123.3,173.9 L 146.7,171.1 L 170,151.4 L 193.3,114.3 L 216.7,120.4 L 240,157.7 L 263.3,172.3 L 286.7,173.9 L 310,174 L 333.3,174 L 356.7,174 L 380,174 L 403.3,173.7 L 426.7,170.6 L 450,153.3 L 473.3,116.8 L 496.7,101.6 L 520,132.1 L 543.3,162.9 L 566.7,172.7 L 590,173.9 L 613.3,174 L 636.7,174 L 660,174" fill="none" stroke="#9c82d8" stroke-width="2.2"/>
+        <text x="672" y="176" font-family="IBM Plex Mono" font-size="10" fill="#9c82d8">B</text>
+
+        <line x1="193.3" y1="85" x2="193.3" y2="195" stroke="#6e93be" stroke-width="1" stroke-dasharray="3 3"/>
+        <line x1="380" y1="85" x2="380" y2="195" stroke="#6fbf73" stroke-width="1" stroke-dasharray="3 3"/>
+        <line x1="566.7" y1="85" x2="566.7" y2="195" stroke="#e06c5a" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="193.3" y="78" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#6e93be">B</text>
+        <text x="380" y="78" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#6fbf73">G</text>
+        <text x="566.7" y="78" text-anchor="middle" font-family="IBM Plex Mono" font-size="9.5" fill="#e06c5a">R</text>
+        <text x="385" y="58" text-anchor="middle" font-family="IBM Plex Mono" font-size="10" fill="#8b909b">renderer RGB widzi tylko to, co przetnie te trzy linie</text>
+      </svg>
+      <div class="diagram-caption">Widmo A jest gładkie, widmo B ma dwa wąskie piki — dla oka i dla renderera RGB mogą dać ten sam kolor. Ale gdy zmieni się oświetlenie, każde z nich zareaguje inaczej, bo mnożenie zachodzi na całej krzywej, a nie w trzech punktach. W RGB ta różnica nie ma jak zaistnieć: została wyrzucona, zanim cokolwiek policzono.</div>
+    </div>
+
+    <p>Skutek nazywa się <span class="term-cyan">metameryzmem</span>: dwa różne widma mogą dawać identyczne RGB w jednym oświetleniu i wyraźnie różne w innym. Tkanina dopasowana kolorystycznie w świetle dziennym rozjeżdża się pod świetlówką — w realnym świecie to codzienność, w rendererze RGB nie ma prawa się wydarzyć, bo informacja o widmie została wyrzucona na wejściu.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Gdzie RGB pęka</div>
+    <h2>Cztery rozpoznawalne objawy</h2>
+    <ul class="compact">
+      <li><strong>Dyspersja.</strong> Współczynnik załamania z Rozdziału 7 zależy od długości fali — to cała przyczyna tęczy w pryzmacie. W RGB da się to udawać, licząc trzy osobne promienie o trzech różnych IOR, ale trzy paski to nie tęcza. To temat Dodatku H.</li>
+      <li><strong>Cienkie warstwy.</strong> Bańka mydlana, plama oleju, iryzacja na skrzydle owada, powłoki antyrefleksyjne. Kolor powstaje z interferencji zależnej od grubości warstwy <em>i</em> długości fali — trzy próbki dają trzy prążki zamiast płynnego przejścia.</li>
+      <li><strong>Fluorescencja.</strong> Materiał pochłania światło o jednej długości fali i emituje o innej, dłuższej — markery, proszki do prania, niektóre minerały. W RGB nie ma jak tego wyrazić, bo energia musiałaby przejść między kanałami.</li>
+      <li><strong>Dopasowanie do pomiaru.</strong> Wszędzie tam, gdzie render ma odpowiadać zmierzonej próbce (motoryzacja, kosmetyki, druk), różnica między mnożeniem widm a mnożeniem trójek przestaje być akademicka.</li>
+    </ul>
+    <a class="inline-deeper" href="dodatek-h-dyspersja.html">↓ Dodatek H — dyspersja i aberracja chromatyczna</a>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Hero wavelength</div>
+    <h2>Jak się to liczy bez płacenia stukrotnie</h2>
+    <p>Naiwne podejście do renderingu spektralnego — policz obraz osobno dla trzydziestu długości fali i złóż wyniki — jest trzydzieści razy droższe i nikt tak nie robi. Rozwiązanie jest dokładnie tym samym chwytem, którym Rozdział 15 poradził sobie z całką po hemisferze: <strong>losowaniem</strong>.</p>
+    <p>Skoro długość fali to kolejny wymiar całki, to można ją próbkować tak samo jak kierunek. Każda ścieżka dostaje wylosowaną długość fali — <span class="term-amber">hero wavelength</span> — i jest liczona wyłącznie dla niej, z wagą uwzględniającą prawdopodobieństwo tego wyboru. Uśrednienie wielu ścieżek zbiega się do prawidłowej całki po widmie, dokładnie tak jak uśrednianie kierunków zbiegało do całki po hemisferze.</p>
+    <p>Koszt pojedynczej ścieżki jest więc porównywalny z RGB. Płaci się szumem: pojawia się dodatkowy wymiar do pokrycia próbkami, więc przy tej samej liczbie próbek obraz jest bardziej zaszumiony, zwłaszcza w miejscach silnie zależnych od długości fali. W praktyce próbkuje się kilka długości naraz wokół tej wylosowanej, żeby ten szum ograniczyć.</p>
+    <p>To jest powód, dla którego rendering spektralny nie wymaga „innego renderera”. To ten sam path tracer z Rozdziału 15 z jedną dodatkową współrzędną w losowaniu.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-eyebrow">Pass: Polaryzacja</div>
+    <h2>Druga rzecz, o której książka milczała</h2>
+    <p>Światło ma jeszcze jedną właściwość, której ta książka nigdzie nie modelowała: <strong>kierunek drgań</strong>. Fala świetlna drga prostopadle do kierunku lotu, a to, czy drgania są uporządkowane, czy przypadkowe, zmienia sposób, w jaki światło oddziałuje z powierzchniami.</p>
+    <p>Zjawisko jest pospolite. Odbicie od gładkiej powierzchni dielektrycznej — wody, szkła, lakieru — polaryzuje światło częściowo, a przy pewnym kącie niemal całkowicie. Na tym opiera się filtr polaryzacyjny fotografa: obraca się go tak, żeby wyciął uporządkowane drgania odbicia, zostawiając światło od obiektu. Efekt „zniknęły odblaski z wody” jest realny i wyraźny, a w renderze RGB nieosiągalny.</p>
+
+    <div class="formula">S = (S₀, S₁, S₂, S₃)<span class="sub">Wektor Stokesa — cztery liczby zamiast jednej jasności. <strong>S₀</strong> to całkowita jasność, czyli dokładnie ta wielkość, którą liczyła cała ta książka; pozostałe trzy opisują, jak bardzo i w jaki sposób drgania są uporządkowane. Oddziaływanie z powierzchnią przestaje być mnożeniem przez liczbę, a staje się mnożeniem przez macierz 4×4 (macierz Muellera)</span></div>
+
+    <p>Widać stąd, dlaczego polaryzacji nie ma w standardowych rendererach: nie da się jej „dołożyć” jako opcji. Zmienia typ wielkości niesionej przez promień z jednej liczby na czwórkę i typ operacji z mnożenia na mnożenie macierzowe — czyli przebudowuje rdzeń całego silnika. Płaci się za to czterokrotnie większym kosztem transportu, a widać ją w niewielkim ułamku ujęć. Dlatego renderują ją zwykle silniki badawcze i te używane w symulacjach optycznych, a nie w produkcji filmowej.</p>
+  </div>
+
+  <div class="panel practice">
+    <div class="panel-label">Z praktyki</div>
+    <p>Rendering spektralny jest dostępny w kilku silnikach produkcyjnych i badawczych — bywa domyślny tam, gdzie priorytetem jest wierność barwy, a opcjonalny tam, gdzie liczy się czas. Warto wiedzieć, że włączenie go zmienia znaczenie wejść materiału: kolor RGB trzeba wtedy <em>podnieść</em> do widma (upsampling), a ten krok nie jest jednoznaczny — kilka różnych widm daje ten sam RGB, więc renderer wybiera jedno według przyjętej reguły. Stąd drobne różnice barwy między trybem RGB a spektralnym przy identycznych wartościach.</p>
+    <p>Praktyczna wskazówka: jeśli tęcza w szkle wygląda jak trzy oddzielne paski zamiast płynnego przejścia, to nie jest kwestia liczby próbek, tylko właśnie granicy modelu RGB. Żadna wartość w ustawieniach jakości tego nie naprawi.</p>
+  </div>
+
+  <div class="panel glossary">
+    <div class="panel-label">Słowniczek</div>
+    <dl>
+      <dt>Widmo (SPD)</dt><dd>Rozkład energii światła po długościach fali; funkcja ciągła, nie trójka liczb.</dd>
+      <dt>Metameryzm</dt><dd>Dwa różne widma dające ten sam kolor w jednym oświetleniu, a różny w innym.</dd>
+      <dt>Hero wavelength</dt><dd>Długość fali wylosowana dla danej ścieżki; sprowadza koszt spektralny do poziomu RGB.</dd>
+      <dt>Upsampling widmowy</dt><dd>Podniesienie koloru RGB do widma; niejednoznaczne, stąd drobne różnice barwy.</dd>
+      <dt>Wektor Stokesa</dt><dd>Czwórka liczb opisująca jasność i stan polaryzacji światła.</dd>
+      <dt>Macierz Muellera</dt><dd>Macierz 4×4 opisująca, jak powierzchnia zmienia wektor Stokesa.</dd>
+    </dl>
+  </div>
+
+  <div class="next">
+    <div class="panel-label" style="color:var(--violet);">Co dalej</div>
+    <p>Ten dodatek rozszerzył to, <em>co</em> promień niesie. Ostatni dodatek tej części wraca do pytania, <em>jak</em> te promienie znajdować — do metod transportu, których Rozdziały 15 i 16 nie objęły.</p>
+  </div>
+
+<div class="deeper">
+  <div class="deeper-label">Idź głębiej</div>
+  <a href="dodatek-h-dyspersja.html">Dodatek H — Dyspersja i aberracja chromatyczna</a>
+  <a href="dodatek-e-kolor-tonemapping.html">Dodatek E — Przestrzenie kolorów, gamma i tone mapping</a>
+  <a href="dodatek-t-radiometria.html">Dodatek T — Radiometria: czym naprawdę jest „L”</a>
+</div>
+
+<div class="site-nav">
+    <a href="../index.html">← Spis treści</a>
+    <a href="../rozdzialy/rozdzial-07-odbicia-i-zalamania.html">↑ Rozdział 7: Odbicia i załamania</a>
+</div>
+</div>
+<script src="../assets/interactive.js"></script>
+</body>
+</html>
